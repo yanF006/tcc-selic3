@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+build
+package-lock.json
+next-env.d.ts
+playwright-report
+test-results
+coverage
+Contexto
+openspec
+public

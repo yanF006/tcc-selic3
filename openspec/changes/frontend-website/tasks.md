@@ -1,18 +1,18 @@
 ## 1. Fundação do projeto
 
-- [ ] 1.1 Inicializar o Git com `.gitignore` e fazer o primeiro commit de `Contexto/` e `openspec/` — verificação: `git status` limpo e `git log --oneline` com um commit
-- [ ] 1.2 Criar o app com create-next-app em TypeScript, App Router e Tailwind na raiz do repositório — verificação: `npm run dev` sobe e `npm run build` conclui sem erro
-- [ ] 1.3 Inicializar shadcn/ui e adicionar os componentes base (button, input, label, select, checkbox, textarea, dialog, table, badge, tabs, toast, form, card) — verificação: página de laboratório renderiza todos os componentes sem erro de console
-- [ ] 1.4 Configurar Vitest, Testing Library e Playwright com os scripts `test:unit`, `test:e2e`, `lint` e `typecheck` — verificação: `npm run test:unit` executa um teste de exemplo e `npm run typecheck` passa
-- [ ] 1.5 Configurar ESLint e Prettier conforme o padrão do Next.js — verificação: `npm run lint` passa sem aviso
-- [ ] 1.6 Criar a estrutura `src/app`, `src/components/ui`, `src/features`, `src/lib/domain`, `src/lib/services`, `src/lib/mask`, `src/lib/auth` e `src/lib/fixtures` — verificação: `ls src/lib` mostra todos os diretórios
+- [x] 1.1 Inicializar o Git com `.gitignore` e fazer o primeiro commit de `Contexto/` e `openspec/` — verificação: `git status` limpo e `git log --oneline` com um commit
+- [x] 1.2 Criar o app com create-next-app em TypeScript, App Router e Tailwind na raiz do repositório — verificação: `npm run dev` sobe e `npm run build` conclui sem erro
+- [x] 1.3 Inicializar shadcn/ui e adicionar os componentes base (button, input, label, select, checkbox, textarea, dialog, table, badge, tabs, toast, form, card) — verificação: página de laboratório renderiza todos os componentes sem erro de console
+- [x] 1.4 Configurar Vitest, Testing Library e Playwright com os scripts `test:unit`, `test:e2e`, `lint` e `typecheck` — verificação: `npm run test:unit` executa um teste de exemplo e `npm run typecheck` passa
+- [x] 1.5 Configurar ESLint e Prettier conforme o padrão do Next.js — verificação: `npm run lint` passa sem aviso
+- [x] 1.6 Criar a estrutura `src/app`, `src/components/ui`, `src/features`, `src/lib/domain`, `src/lib/services`, `src/lib/mask`, `src/lib/auth` e `src/lib/fixtures` — verificação: `ls src/lib` mostra todos os diretórios
 - [ ] 1.7 Escrever o README com setup, comandos e a lista do que ainda é simulado — verificação: um leitor novo consegue rodar e testar o projeto seguindo só o README
 
 ## 2. Tokens, temas e identidade visual
 
-- [ ] 2.1 Criar arquivo único de tokens com a rampa de verde como cor principal e as variáveis semânticas de fundo, texto, borda, foco e estado, nos dois temas — verificação: os componentes base renderizam com o verde aplicado e contraste de texto sobre fundo medido em 4,5:1 ou mais nos dois temas
+- [x] 2.1 Criar arquivo único de tokens com a rampa de verde como cor principal e as variáveis semânticas de fundo, texto, borda, foco e estado, nos dois temas — verificação: os componentes base renderizam com o verde aplicado e contraste de texto sobre fundo medido em 4,5:1 ou mais nos dois temas
 - [ ] 2.2 Instalar next-themes com atributo por classe e injetar o script antiflash no layout raiz — verificação: com tema escuro salvo, a primeira renderização da página já sai escura, sem piscar o tema claro
-- [ ] 2.3 Criar o controle de alternância de tema com as opções claro, escuro e sistema — verificação: alternar o tema muda todas as telas sem recarregar a página
+- [x] 2.3 Criar o controle de alternância de tema com as opções claro, escuro e sistema — verificação: alternar o tema muda todas as telas sem recarregar a página
 - [ ] 2.4 Implementar a preferência de tema com persistência entre sessões e acompanhamento da preferência do sistema — verificação: teste unitário da preferência e teste E2E de persistência após logout e novo login
 - [ ] 2.5 Isolar o preview de documento em um escopo de tokens de impressão com fundo claro e texto escuro — verificação: preview aberto em tema escuro continua claro e a impressão sai sem áreas escuras de fundo
 - [ ] 2.6 Criar o item de logotipo do SELic com variante por tema e o ícone do navegador, e implementar a navegação recolhida em tela estreita — verificação: logotipo legível nos dois temas e navegação acessível por botão abaixo de 640 px

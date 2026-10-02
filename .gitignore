@@ -38,3 +38,11 @@ yarn-debug.log*
 yarn-error.log*
 # ferramentas do agente
 /.opencode/
+
+# ferramentas do agente
+/.opencode/
+
+# cache de ferramentas
+.eslintcache
+/playwright-report
+/test-results

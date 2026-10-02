@@ -1,0 +1,184 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ==========================================================================
+   SELic — tokens de design
+   Rampa verde provisoria como cor principal. Trocar pelo verde oficial do
+   IFRJ significa alterar apenas este bloco.
+   ========================================================================== */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #ffffff;
+  --foreground: #101a14;
+  --card: #ffffff;
+  --card-foreground: #101a14;
+  --popover: #ffffff;
+  --popover-foreground: #101a14;
+  --primary: #1a6b45;
+  --primary-foreground: #ffffff;
+  --secondary: #e9f1ec;
+  --secondary-foreground: #14301f;
+  --muted: #f1f5f2;
+  --muted-foreground: #4a5a51;
+  --accent: #dcebe2;
+  --accent-foreground: #14301f;
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
+  --success: #1a7f4b;
+  --success-foreground: #ffffff;
+  --warning: #a15c07;
+  --warning-foreground: #ffffff;
+  --info: #0e6ba8;
+  --info-foreground: #ffffff;
+  --border: #d7e0da;
+  --input: #7f9188;
+  --ring: #1a6b45;
+  --chart-1: #1a6b45;
+  --chart-2: #2f8f5f;
+  --chart-3: #0e6ba8;
+  --chart-4: #a15c07;
+  --chart-5: #6b7a72;
+}
+
+.dark {
+  --background: #0b120e;
+  --foreground: #e7efe9;
+  --card: #111a15;
+  --card-foreground: #e7efe9;
+  --popover: #111a15;
+  --popover-foreground: #e7efe9;
+  --primary: #5cc78d;
+  --primary-foreground: #05240f;
+  --secondary: #1b2a21;
+  --secondary-foreground: #dcebe2;
+  --muted: #16211b;
+  --muted-foreground: #a3b3aa;
+  --accent: #223328;
+  --accent-foreground: #dcebe2;
+  --destructive: #f97066;
+  --destructive-foreground: #2b0906;
+  --success: #5cc78d;
+  --success-foreground: #05240f;
+  --warning: #e8a33d;
+  --warning-foreground: #2b1a03;
+  --info: #6bb8e8;
+  --info-foreground: #04202f;
+  --border: #26332c;
+  --input: #5c6b62;
+  --ring: #5cc78d;
+  --chart-1: #5cc78d;
+  --chart-2: #2f8f5f;
+  --chart-3: #6bb8e8;
+  --chart-4: #e8a33d;
+  --chart-5: #93a49a;
+}
+
+/* Escopo de impressão: o preview de documento é sempre em fundo claro,
+   independentemente do tema da interface. */
+.impressao {
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #ffffff;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+  --primary: #1a6b45;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f4;
+  --secondary-foreground: #111111;
+  --muted: #f7f7f7;
+  --muted-foreground: #3f3f3f;
+  --accent: #f0f0f0;
+  --accent-foreground: #111111;
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
+  --success: #1a7f4b;
+  --success-foreground: #ffffff;
+  --warning: #a15c07;
+  --warning-foreground: #ffffff;
+  --info: #0e6ba8;
+  --info-foreground: #ffffff;
+  --border: #cfcfcf;
+  --input: #8f9490;
+  --ring: #1a6b45;
+}
+
+.impressao,
+.impressao * {
+  color: #111111;
+  background: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* Foco visível em todos os elementos interativos (requisito de teclado). */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@media print {
+  .sem-impressao {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+}
