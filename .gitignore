@@ -1,0 +1,38 @@
+# dependencias
+/node_modules
+/.pnp
+.pnp.js
+
+# build
+/.next/
+/out/
+/build
+/dist
+
+# testes
+/coverage
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
+# ambiente
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# tipos e cache
+next-env.d.ts
+*.tsbuildinfo
+.eslintcache
+
+# sistema
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
