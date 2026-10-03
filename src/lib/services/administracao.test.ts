@@ -1,0 +1,244 @@
+import { beforeEach, describe, expect, it } from "vitest";
+
+import type { Campus } from "@/lib/domain/types";
+
+import {
+  cadastrarUsuario,
+  contarUsuariosPorSituacao,
+  decidirSolicitacao,
+  editarUsuario,
+  excluirUsuario,
+  importarMatriculas,
+  inativarUsuario,
+  listarMatriculas,
+  listarSolicitacoes,
+  listarUsuarios,
+  matricularAlunoImportado,
+  reativarUsuario,
+  usuarioPorId,
+} from "./administracao";
+import { convenioPorId } from "./catalogo";
+import { entrar, temPapel, usuarioAtual } from "./sessao";
+import { reiniciarEstado } from "./store";
+
+beforeEach(() => {
+  reiniciarEstado();
+});
+
+async function entrarComoAdministrador() {
+  await entrar("felipe.andrade@ifrj.edu.br", "selic123");
+
+  return usuarioAtual()!;
+}
+
+describe("usuários", () => {
+  it("lista por papel, por situação e por busca", async () => {
+    const alunos = await listarUsuarios({ papel: "aluno" });
+
+    expect(alunos.itens.every((usuario) => usuario.papeis.includes("aluno"))).toBe(true);
+    expect(alunos.total).toBeGreaterThanOrEqual(2);
+
+    const inativos = await listarUsuarios({ papel: "aluno", situacao: "inativo" });
+
+    expect(inativos.itens.every((usuario) => usuario.situacao === "inativo")).toBe(true);
+
+    const busca = await listarUsuarios({ busca: "maria" });
+
+    expect(buscadosNomes(busca.itens)).toEqual(["Maria de Souza Oliveira"]);
+  });
+
+  it("pagina a lista de usuários", async () => {
+    const primeira = await listarUsuarios({ tamanho: 3, pagina: 1 });
+    const segunda = await listarUsuarios({ tamanho: 3, pagina: 2 });
+
+    expect(primeira.total).toBe(segunda.total);
+    expect(primeira.itens).toHaveLength(3);
+    expect(segunda.itens[0].id).not.toBe(primeira.itens[0].id);
+  });
+
+  it("cadastra aluno exigindo matrícula e autorização fora do SIGAA", async () => {
+    await entrarComoAdministrador();
+
+    const semAutorizacao = cadastrarUsuario({
+      nome: "Novo Aluno",
+      email: "novo.aluno@aluno.ifrj.edu.br",
+      papeis: ["aluno"],
+      matricula: "2026009999",
+    });
+
+    await expect(semAutorizacao).rejects.toThrow(/não consta no SIGAA/);
+
+    const aluno = await cadastrarUsuario({
+      nome: "Novo Aluno",
+      email: "novo.aluno@aluno.ifrj.edu.br",
+      papeis: ["aluno"],
+      matricula: "2026009999",
+      matriculaNaoRegistrada: true,
+    });
+
+    expect(aluno.situacao).toBe("pendente");
+    expect(aluno.matriculaAutorizadaForaDoSigaa).toBe(true);
+    expect(aluno.campus).toBe("Pinheiral");
+    expect(await usuarioPorId(aluno.id)).toMatchObject({ nome: "Novo Aluno" });
+  });
+
+  it("recusa cadastro sem papel, e-mail repetido e campus fora de Pinheiral", async () => {
+    await entrarComoAdministrador();
+
+    await expect(
+      cadastrarUsuario({ nome: "Sem Papel", email: "sem.papel@ifrj.edu.br", papeis: [] }),
+    ).rejects.toThrow(/papel/);
+    await expect(
+      cadastrarUsuario({
+        nome: "Ana Correia",
+        email: "ana.correia@ifrj.edu.br",
+        papeis: ["coordenador_estagio"],
+      }),
+    ).rejects.toThrow(/já utilizado/);
+    await expect(
+      cadastrarUsuario({
+        nome: "Outro Campus",
+        email: "outro.campus@ifrj.edu.br",
+        papeis: ["administrador"],
+        campus: "Volta Redonda" as Campus,
+      }),
+    ).rejects.toThrow(/Pinheiral/);
+  });
+
+  it("edita nome e curso do coordenador", async () => {
+    const lista = await listarUsuarios({ papel: "coordenador_curso" });
+    const [coordenador] = lista.itens;
+
+    const editado = await editarUsuario(coordenador.id, {
+      nome: "Carla Menezes de Souza",
+      cursoId: "cur-informatica",
+    });
+
+    expect(editado.nome).toBe("Carla Menezes de Souza");
+    expect(editado.cursoId).toBe("cur-informatica");
+  });
+
+  it("inativa preservando os registros criados pelo usuário", async () => {
+    const administrador = await entrarComoAdministrador();
+    const loginAntes = await usuarioPorId(administrador.id);
+
+    await inativarUsuario(administrador.id);
+
+    expect((await usuarioPorId(administrador.id))?.situacao).toBe("inativo");
+    expect(loginAntes?.email).toBe(administrador.email);
+    await expect(inativarUsuario(administrador.id)).rejects.toThrow(/já está inativo/);
+
+    await reativarUsuario(administrador.id);
+
+    expect((await usuarioPorId(administrador.id))?.situacao).toBe("ativo");
+    expect(await contarUsuariosPorSituacao()).toMatchObject({ ativo: expect.any(Number) });
+  });
+
+  it("recusa excluir aluno com estágios registrados", async () => {
+    await entrarComoAdministrador();
+
+    await expect(excluirUsuario("usr-maria")).rejects.toThrow(/Inative o cadastro/);
+    await expect(excluirUsuario("usr-inexistente")).rejects.toThrow(/não encontrado/);
+  });
+});
+
+describe("solicitações de acesso", () => {
+  it("filtra pendentes e autoriza liberando o acesso do aluno", async () => {
+    const administrador = await entrarComoAdministrador();
+    const pendentes = await listarSolicitacoes({ situacao: "pendente" });
+
+    expect(pendentes.total).toBeGreaterThan(0);
+
+    const solicitacao = pendentes.itens[0];
+    const decidida = await decidirSolicitacao(
+      solicitacao.id,
+      "autorizado",
+      administrador.id,
+      "Matrícula conferida no SIGAA.",
+    );
+
+    expect(decidida.situacao).toBe("autorizado");
+    expect(decidida.decididoEm).toBeTruthy();
+    expect(decidida.decididoPorId).toBe(administrador.id);
+
+    const usuario = await listarUsuarios({ busca: solicitacao.email });
+
+    expect(usuario.itens[0].situacao).toBe("ativo");
+    await expect(decidirSolicitacao(solicitacao.id, "recusado", administrador.id)).rejects.toThrow(
+      /já autorizado/,
+    );
+  });
+
+  it("recusa deferir solicitação inexistente", async () => {
+    const administrador = await entrarComoAdministrador();
+
+    await expect(
+      decidirSolicitacao("sol-inexistente", "recusado", administrador.id),
+    ).rejects.toThrow(/não encontrada/);
+  });
+});
+
+describe("importação manual de matrículas", () => {
+  it("classifica válidas, ignoradas e rejeitadas", async () => {
+    const resultado = await importarMatriculas("matriculas-2026-1.csv", [
+      { matricula: "2026001", nome: "Ana Paula Souza", curso: "Informática" },
+      { matricula: "2026001", nome: "Ana Paula Souza", curso: "Informática" },
+      { matricula: "", nome: "Sem matrícula", curso: "Informática" },
+    ]);
+
+    expect(resultado.validas).toBe(1);
+    expect(resultado.ignoradas).toBe(1);
+    expect(resultado.rejeitadas).toBe(1);
+    expect(resultado.itens[1].resultado).toBe("ignorada");
+    expect(resultado.itens[2].motivo).toMatch(/obrigatórios/);
+    expect(resultado.arquivo).toBe("matriculas-2026-1.csv");
+  });
+
+  it("lista matrículas com origem e total importado", async () => {
+    const pagina = await listarMatriculas({ busca: "informática" });
+
+    expect(pagina.total).toBeGreaterThan(0);
+    expect(pagina.itens[0].origem).toBe("cadastro_administrador");
+
+    const importadas = await listarMatriculas({ origem: "importacao" });
+
+    expect(importadas.total).toBe(2);
+    expect(importadas.itens.every((matricula) => matricula.matricula.length === 10)).toBe(true);
+  });
+
+  it("libera o acesso do aluno cuja matrícula foi importada", async () => {
+    await entrarComoAdministrador();
+
+    const matricula = (await listarMatriculas()).itens[0];
+    const pendente = await cadastrarUsuario({
+      nome: matricula.nome,
+      email: `${matricula.matricula}@aluno.ifrj.edu.br`,
+      papeis: ["aluno"],
+      matricula: matricula.matricula,
+      matriculaNaoRegistrada: true,
+    });
+
+    await matricularAlunoImportado(matricula.matricula, pendente.id);
+
+    expect((await usuarioPorId(pendente.id))?.situacao).toBe("ativo");
+    await expect(matricularAlunoImportado("9999999", pendente.id)).rejects.toThrow(/não pertence/);
+  });
+});
+
+describe("isolamento dos serviços", () => {
+  it("não deixa a tela alcançar convênio sem passar pelo serviço", async () => {
+    const convenio = await convenioPorId("conv-cooperativa-serrinha");
+
+    expect(convenio?.instituicao).toContain("Cooperativa");
+  });
+
+  it("mantém os papéis da sessão simulada", async () => {
+    await entrar("carla.menezes@ifrj.edu.br", "selic123");
+
+    expect(temPapel("coordenador_curso")).toBe(true);
+  });
+});
+
+function buscadosNomes(usuarios: { nome: string }[]): string[] {
+  return usuarios.map((usuario) => usuario.nome);
+}
