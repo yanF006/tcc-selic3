@@ -6,7 +6,7 @@
 - [x] 1.4 Configurar Vitest, Testing Library e Playwright com os scripts `test:unit`, `test:e2e`, `lint` e `typecheck` — verificação: `npm run test:unit` executa um teste de exemplo e `npm run typecheck` passa
 - [x] 1.5 Configurar ESLint e Prettier conforme o padrão do Next.js — verificação: `npm run lint` passa sem aviso
 - [x] 1.6 Criar a estrutura `src/app`, `src/components/ui`, `src/features`, `src/lib/domain`, `src/lib/services`, `src/lib/mask`, `src/lib/auth` e `src/lib/fixtures` — verificação: `ls src/lib` mostra todos os diretórios
-- [ ] 1.7 Escrever o README com setup, comandos e a lista do que ainda é simulado — verificação: um leitor novo consegue rodar e testar o projeto seguindo só o README
+- [x] 1.7 Escrever o README com setup, comandos e a lista do que ainda é simulado — verificação: um leitor novo consegue rodar e testar o projeto seguindo só o README
 
 ## 2. Tokens, temas e identidade visual
 
@@ -16,39 +16,39 @@
 - [ ] 2.4 Implementar a preferência de tema com persistência entre sessões e acompanhamento da preferência do sistema — verificação: teste unitário da preferência e teste E2E de persistência após logout e novo login
 - [ ] 2.5 Isolar o preview de documento em um escopo de tokens de impressão com fundo claro e texto escuro — verificação: preview aberto em tema escuro continua claro e a impressão sai sem áreas escuras de fundo
 - [ ] 2.6 Criar o item de logotipo do SELic com variante por tema e o ícone do navegador, e implementar a navegação recolhida em tela estreita — verificação: logotipo legível nos dois temas e navegação acessível por botão abaixo de 640 px
-- [ ] 2.7 Centralizar em `lib/domain/status` os rótulos, variantes de cor e ícones de cada situação de documento e de estágio, sempre com rótulo textual — verificação: teste unitário garantindo que toda situação tem rótulo, cor e ícone
+- [x] 2.7 Centralizar em `lib/domain/status` os rótulos, variantes de cor e ícones de cada situação de documento e de estágio, sempre com rótulo textual — verificação: teste unitário garantindo que toda situação tem rótulo, cor e ícone
 
 ## 3. Domínio e camada de dados simulada
 
-- [ ] 3.1 Tipar os agregados de domínio: usuário e papéis, aluno, curso, turma, período, convênio, estágio, documento, template, parecer, notificação e lançamento de horas — verificação: `npm run typecheck` passa
-- [ ] 3.2 Criar fixtures realistas com pelo menos dois cursos, turmas e períodos, convênios ativos e expirados, orientadores, supervisores, estágios em andamento e concluídos e documentos em todas as situações — verificação: script de validação de fixtures executa sem referência quebrada
-- [ ] 3.3 Implementar um módulo de serviço por agregado com funções assíncronas, busca, filtro e paginação — verificação: testes unitários chamando cada serviço e conferindo o retorno
-- [ ] 3.4 Implementar mutações em memória de criar, editar, excluir e inativar com duração da sessão do navegador — verificação: teste E2E de criar, editar e inativar um registro
-- [ ] 3.5 Definir as transições válidas de situação de documento e de estágio em `lib/domain/status` — verificação: teste unitário das transições aceitas e recusadas
-- [ ] 3.6 Escrever as máscaras puras de CPF, RG, celular, telefone, CEP e data — verificação: testes unitários com valores válidos, inválidos e colagem de texto
-- [ ] 3.7 Escrever os esquemas Zod reutilizáveis de CPF com dígito verificador, e-mail, telefone, intervalo de datas e campos condicionais — verificação: testes unitários de cada esquema
-- [ ] 3.8 Implementar a formatação pt-BR de datas, números e moeda com fuso America/Sao_Paulo — verificação: testes unitários dos formatos gerados
+- [x] 3.1 Tipar os agregados de domínio: usuário e papéis, aluno, curso, turma, período, convênio, estágio, documento, template, parecer, notificação e lançamento de horas — verificação: `npm run typecheck` passa
+- [x] 3.2 Criar fixtures realistas com pelo menos dois cursos, turmas e períodos, convênios ativos e expirados, orientadores, supervisores, estágios em andamento e concluídos e documentos em todas as situações — verificação: script de validação de fixtures executa sem referência quebrada
+- [x] 3.3 Implementar um módulo de serviço por agregado com funções assíncronas, busca, filtro e paginação — verificação: testes unitários chamando cada serviço e conferindo o retorno
+- [x] 3.4 Implementar mutações em memória de criar, editar, excluir e inativar com duração da sessão do navegador — verificação: teste E2E de criar, editar e inativar um registro
+- [x] 3.5 Definir as transições válidas de situação de documento e de estágio em `lib/domain/status` — verificação: teste unitário das transições aceitas e recusadas
+- [x] 3.6 Escrever as máscaras puras de CPF, RG, celular, telefone, CEP e data — verificação: testes unitários com valores válidos, inválidos e colagem de texto
+- [x] 3.7 Escrever os esquemas Zod reutilizáveis de CPF com dígito verificador, e-mail, telefone, intervalo de datas e campos condicionais — verificação: testes unitários de cada esquema
+- [x] 3.8 Implementar a formatação pt-BR de datas, números e moeda com fuso America/Sao_Paulo — verificação: testes unitários dos formatos gerados
 
 ## 4. Shell, sessão simulada e navegação por papel
 
-- [ ] 4.1 Criar os layouts de route group para público, aluno, coordenação e administração, com guarda única lendo a sessão do cookie — verificação: acesso sem sessão a `/documentos` redireciona para `/login`
-- [ ] 4.2 Criar o registro `nav.ts` com `requiredRoles` e filtrar a navegação pelo conjunto de papéis do usuário — verificação: teste unitário do filtro para cada papel
-- [ ] 4.3 Montar a navbar do aluno com logotipo e os itens Documentos, Estágio e Perfil — verificação: aluno autenticado não vê nenhum item administrativo
-- [ ] 4.4 Derivar a navbar dos demais cargos do mesmo registro — verificação: coordenador de curso não vê itens de administração nem de estágio
-- [ ] 4.5 Criar as páginas de acesso não autorizado e de não encontrado sem expor dados — verificação: coordenador de curso acessando rota de admin recebe aviso e a resposta não contém dados do sistema
-- [ ] 4.6 Implementar a sessão simulada em cookie, o hook de sessão e o logout descartando as credenciais — verificação: teste E2E de logout seguido de recarga voltando para o login
-- [ ] 4.7 Criar o seletor de papel atrás de flag de ambiente — verificação: com a flag desligada o seletor não aparece e o build de produção não o inclui
-- [ ] 4.8 Implementar a matriz de autorização em que o administrador satisfaz qualquer exigência de papel — verificação: teste unitário da matriz para os quatro papéis
+- [x] 4.1 Criar os layouts de route group para público, aluno, coordenação e administração, com guarda única lendo a sessão do cookie — verificação: acesso sem sessão a `/documentos` redireciona para `/login`
+- [x] 4.2 Criar o registro `nav.ts` com `requiredRoles` e filtrar a navegação pelo conjunto de papéis do usuário — verificação: teste unitário do filtro para cada papel
+- [x] 4.3 Montar a navbar do aluno com logotipo e os itens Documentos, Estágio e Perfil — verificação: aluno autenticado não vê nenhum item administrativo
+- [x] 4.4 Derivar a navbar dos demais cargos do mesmo registro — verificação: coordenador de curso não vê itens de administração nem de estágio
+- [x] 4.5 Criar as páginas de acesso não autorizado e de não encontrado sem expor dados — verificação: coordenador de curso acessando rota de admin recebe aviso e a resposta não contém dados do sistema
+- [x] 4.6 Implementar a sessão simulada em cookie, o hook de sessão e o logout descartando as credenciais — verificação: teste E2E de logout seguido de recarga voltando para o login
+- [x] 4.7 Criar o seletor de papel atrás de flag de ambiente — verificação: com a flag desligada o seletor não aparece e o build de produção não o inclui
+- [x] 4.8 Implementar a matriz de autorização em que o administrador satisfaz qualquer exigência de papel — verificação: teste unitário da matriz para os quatro papéis
 
 ## 5. Autenticação, cadastro e recuperação de senha
 
-- [ ] 5.1 Criar a tela de login com validação de e-mail e senha e mensagem de erro genérica — verificação: e-mail inexistente e senha incorreta exibem exatamente a mesma mensagem
-- [ ] 5.2 Criar a primeira etapa do cadastro com matrícula, e-mail, senha e confirmação — verificação: confirmação divergente bloqueia o avanço com erro no campo
-- [ ] 5.3 Validar unicidade de e-mail no cadastro sem revelar dados da conta existente — verificação: teste E2E de recusa com e-mail já cadastrado
-- [ ] 5.4 Verificar a matrícula contra os registros importados e sinalizar cadastro pendente — verificação: matrícula inexistente gera estado pendente e mensagem de aguardo de autorização
-- [ ] 5.5 Criar a segunda etapa do cadastro com os dados pessoais e selects dependentes de curso, turma e período — verificação: trocar o curso limpa turma e período e exige nova seleção
-- [ ] 5.6 Criar a fila de autorização de cadastro pendente para coordenadores e administrador, com decisão e motivo — verificação: teste E2E de autorização liberando o acesso e de recusa mantendo o cadastro inativo
-- [ ] 5.7 Bloquear o acesso de cadastro pendente a áreas autenticadas — verificação: teste E2E de aluno pendente em `/documentos` vendo aviso e nenhum dado do sistema
+- [x] 5.1 Criar a tela de login com validação de e-mail e senha e mensagem de erro genérica — verificação: e-mail inexistente e senha incorreta exibem exatamente a mesma mensagem
+- [x] 5.2 Criar a primeira etapa do cadastro com matrícula, e-mail, senha e confirmação — verificação: confirmação divergente bloqueia o avanço com erro no campo
+- [x] 5.3 Validar unicidade de e-mail no cadastro sem revelar dados da conta existente — verificação: teste E2E de recusa com e-mail já cadastrado
+- [x] 5.4 Verificar a matrícula contra os registros importados e sinalizar cadastro pendente — verificação: matrícula inexistente gera estado pendente e mensagem de aguardo de autorização
+- [x] 5.5 Criar a segunda etapa do cadastro com os dados pessoais e selects dependentes de curso, turma e período — verificação: trocar o curso limpa turma e período e exige nova seleção
+- [x] 5.6 Criar a fila de autorização de cadastro pendente para coordenadores e administrador, com decisão e motivo — verificação: teste E2E de autorização liberando o acesso e de recusa mantendo o cadastro inativo
+- [x] 5.7 Bloquear o acesso de cadastro pendente a áreas autenticadas — verificação: teste E2E de aluno pendente em `/documentos` vendo aviso e nenhum dado do sistema
 - [ ] 5.8 Implementar a recuperação de senha com pedido, confirmação genérica e link de uso único — verificação: e-mail inexistente recebe a mesma confirmação e o link reutilizado é recusado
 - [ ] 5.9 Implementar a troca de senha autenticada exigindo a senha atual — verificação: teste E2E de senha atual incorreta mantendo a senha anterior
 - [ ] 5.10 Adaptar login e cadastro ao celular com navegação recolhida e sem perder o preenchimento ao redimensionar — verificação: teste E2E de viewport móvel e de resize com formulário preenchido
@@ -133,9 +133,9 @@
 
 ## 11. Administração do sistema
 
-- [ ] 11.1 Cadastrar, editar e excluir alunos pela administração, com autorização explícita de matrícula não registrada — verificação: testes E2E de cadastro com e sem autorização
-- [ ] 11.2 Cadastrar coordenadores de estágio, coordenadores de curso e administradores com papel obrigatório e curso vinculado — verificação: testes E2E do CRUD e da recusa sem papel
-- [ ] 11.3 Listar usuários com filtro por papel e situação, busca e inativação sem exclusão — verificação: teste E2E do filtro e da inativação bloqueando o acesso
+- [x] 11.1 Cadastrar, editar e excluir alunos pela administração, com autorização explícita de matrícula não registrada — verificação: testes E2E de cadastro com e sem autorização
+- [x] 11.2 Cadastrar coordenadores de estágio, coordenadores de curso e administradores com papel obrigatório e curso vinculado — verificação: testes E2E do CRUD e da recusa sem papel
+- [x] 11.3 Listar usuários com filtro por papel e situação, busca e inativação sem exclusão — verificação: teste E2E do filtro e da inativação bloqueando o acesso
 - [ ] 11.4 Gerenciar templates com cadastro de nova versão, campos de preenchimento e histórico de versões — verificação: teste E2E do versioning com a versão vigente indicada
 - [ ] 11.5 Recusar arquivo de template fora do formato docx e inativar template preservando os documentos gerados — verificação: testes E2E da recusa e da inativação
 - [ ] 11.6 Manter a versão usada por documentos já preenchidos sem reaplicar os campos da nova versão — verificação: teste E2E de reabertura de documento com versão anterior
