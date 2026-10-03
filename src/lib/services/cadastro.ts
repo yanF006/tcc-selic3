@@ -1,7 +1,15 @@
-import { MATRICULA_SIGAA, esquemaCpf, esquemaEmail, esquemaSenha } from "@/lib/domain/schemas";
+import {
+  MATRICULA_SIGAA,
+  esquemaCpf,
+  esquemaData,
+  esquemaEmail,
+  esquemaEndereco,
+  esquemaSenha,
+} from "@/lib/domain/schemas";
 import type { DadosPessoais, Endereco, SituacaoUsuario, Usuario } from "@/lib/domain/types";
 
 import { agora, obterEstado, novoId } from "./store";
+import { definirSenha } from "./credenciais";
 
 /**
  * Cadastro público do aluno em duas etapas (5.2 a 5.7).
@@ -192,15 +200,29 @@ export async function concluirCadastro(
     return { ok: false, campo: "dados", erro: "Informe um CPF válido." };
   }
 
+  // A data chega mascarada (dd/mm/aaaa) e a validação a converte para ISO, que é
+  // como as fixtures guardam: sem isso o perfil abriria a data em outro formato.
+  const nascimento = esquemaData.safeParse(dados.dataNascimento);
+
+  if (!nascimento.success) {
+    return { ok: false, campo: "dados", erro: "Informe uma data de nascimento válida." };
+  }
+
+  const endereco = esquemaEndereco.safeParse(dados.endereco);
+
+  if (!endereco.success) {
+    return { ok: false, campo: "dados", erro: "Confira o endereço informado." };
+  }
+
   const dadosPessoais: DadosPessoais = {
     nomeCompleto: dados.nomeCompleto.trim(),
-    cpf: dados.cpf.trim(),
+    cpf: cpfValido.data,
     rg: dados.rg.trim(),
-    dataNascimento: dados.dataNascimento,
+    dataNascimento: nascimento.data,
     email: previa.email,
     telefone: dados.telefone.trim(),
     celular: dados.celular.trim(),
-    endereco: dados.endereco,
+    endereco: endereco.data,
     cursoId: curso.id,
     turmaId: turma.id,
     periodoId: periodo.id,
@@ -221,6 +243,11 @@ export async function concluirCadastro(
   };
 
   estado.usuarios.push(usuario);
+
+  // A senha escolhida na primeira etapa vira credencial: sem isso o cadastro
+  // concluído não liberaria acesso a ninguém (o §5.4 exige liberar a área do
+  // aluno), e a recuperação de senha (5.8) não teria o que redefinir.
+  await definirSenha(usuario.email, previa.senha, "cadastro_publico");
 
   let solicitacaoId: string | undefined;
 

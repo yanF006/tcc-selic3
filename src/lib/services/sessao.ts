@@ -3,6 +3,8 @@ import type { Papel, Usuario } from "@/lib/domain/types";
 import { CONTAS_DE_DESENVOLVIMENTO } from "@/lib/fixtures/base";
 
 import { agora, obterEstado, novoId } from "./store";
+import { conferirSenha } from "./credenciais";
+import { usuarioPorEmail } from "./administracao";
 
 /**
  * Sessão simulada (D5). A sessão vive em memória no navegador; o servidor vai
@@ -68,19 +70,12 @@ export function membroComissaoEstagio(): boolean {
 }
 
 export async function entrar(email: string, senha: string): Promise<ResultadoLogin> {
-  const conta = CONTAS_DE_DESENVOLVIMENTO.find(
-    (candidato) => candidato.email.toLowerCase() === email.trim().toLowerCase(),
-  );
+  const alvo = email.trim().toLowerCase();
+  const usuario = await usuarioPorEmail(alvo);
 
-  if (!conta || conta.senha !== senha) {
-    return { ok: false, erro: "E-mail ou senha inválidos." };
-  }
-
-  const usuario = obterEstado().usuarios.find((candidato) => candidato.id === conta.id);
-
-  // Cadastro pendente entra no sistema para ver o aviso de aguardo (5.7);
-  // inativo é recusado com a mesma mensagem genérica do e-mail inexistente.
-  if (!usuario || usuario.situacao === "inativo") {
+  // E-mail inexistente e senha incorreta recebem a mesma mensagem (5.1), e o
+  // cadastro inativo também: o login não diz o que existe no sistema.
+  if (!(await conferirSenha(alvo, senha)) || !usuario || usuario.situacao === "inativo") {
     return { ok: false, erro: "E-mail ou senha inválidos." };
   }
 

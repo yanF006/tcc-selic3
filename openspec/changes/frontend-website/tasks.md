@@ -49,20 +49,20 @@
 - [x] 5.5 Criar a segunda etapa do cadastro com os dados pessoais e selects dependentes de curso, turma e período — verificação: trocar o curso limpa turma e período e exige nova seleção
 - [x] 5.6 Criar a fila de autorização de cadastro pendente para coordenadores e administrador, com decisão e motivo — verificação: teste E2E de autorização liberando o acesso e de recusa mantendo o cadastro inativo
 - [x] 5.7 Bloquear o acesso de cadastro pendente a áreas autenticadas — verificação: teste E2E de aluno pendente em `/documentos` vendo aviso e nenhum dado do sistema
-- [ ] 5.8 Implementar a recuperação de senha com pedido, confirmação genérica e link de uso único — verificação: e-mail inexistente recebe a mesma confirmação e o link reutilizado é recusado
-- [ ] 5.9 Implementar a troca de senha autenticada exigindo a senha atual — verificação: teste E2E de senha atual incorreta mantendo a senha anterior
+- [x] 5.8 Implementar a recuperação de senha com pedido, confirmação genérica e link de uso único — verificação: e-mail inexistente recebe a mesma confirmação e o link reutilizado é recusado
+- [x] 5.9 Implementar a troca de senha autenticada exigindo a senha atual — verificação: teste E2E de senha atual incorreta mantendo a senha anterior
 - [x] 5.10 Adaptar login e cadastro ao celular com navegação recolhida, sem rolagem horizontal e sem perder o preenchimento ao redimensionar — verificação: teste E2E de viewport móvel, de ausência de rolagem horizontal e de resize com formulário preenchido
 
 ## 6. Dados pessoais do aluno
 
-- [ ] 6.1 Criar o componente de campo com máscara como adaptador controlado sobre React Hook Form — verificação: digitar onze dígitos no celular exibe o valor formatado e letras são recusadas
-- [ ] 6.2 Validar CPF com dígito verificador ao sair do campo, recusando dígitos repetidos — verificação: testes unitários da validação e teste E2E de campo inválido
-- [ ] 6.3 Validar e-mail, telefone e celular conforme DDD e dez ou onze dígitos — verificação: testes unitários de formato válido e inválido
-- [ ] 6.4 Implementar a busca de endereço por CEP preenchendo logradouro, bairro, cidade e estado e mantendo os campos editáveis — verificação: teste E2E de CEP válido preenchendo os campos e de CEP inválido mantendo o formulário em branco
-- [ ] 6.5 Restringir curso, turma e período às opções cadastradas, sem digitação livre — verificação: teste E2E tentando valor não cadastrado e sendo recusado
-- [ ] 6.6 Criar a tela de perfil com edição de todos os dados e as mesmas validações do cadastro — verificação: teste E2E salvando alteração válida e recusando alteração inválida
-- [ ] 6.7 Exibir a matrícula em modo somente leitura e impedir sua alteração — verificação: teste E2E tentando editar a matrícula e confirmando que o valor original permanece
-- [ ] 6.8 Garantir que dados pessoais não sejam gravados fora da sessão — verificação: teste automatizado de varredura falhando se algum dado do aluno aparecer em armazenamento do navegador
+- [x] 6.1 Criar o componente de campo com máscara como adaptador controlado sobre React Hook Form — verificação: digitar onze dígitos no celular exibe o valor formatado e letras são recusadas
+- [x] 6.2 Validar CPF com dígito verificador ao sair do campo, recusando dígitos repetidos — verificação: testes unitários da validação e teste E2E de campo inválido
+- [x] 6.3 Validar e-mail, telefone e celular conforme DDD e dez ou onze dígitos — verificação: testes unitários de formato válido e inválido
+- [x] 6.4 Implementar a busca de endereço por CEP preenchendo logradouro, bairro, cidade e estado e mantendo os campos editáveis — verificação: teste E2E de CEP válido preenchendo os campos e de CEP inválido mantendo o formulário em branco
+- [x] 6.5 Restringir curso, turma e período às opções cadastradas, sem digitação livre — verificação: teste E2E tentando valor não cadastrado e sendo recusado
+- [x] 6.6 Criar a tela de perfil com edição de todos os dados e as mesmas validações do cadastro — verificação: teste E2E salvando alteração válida e recusando alteração inválida
+- [x] 6.7 Exibir a matrícula em modo somente leitura e impedir sua alteração — verificação: teste E2E tentando editar a matrícula e confirmando que o valor original permanece
+- [x] 6.8 Garantir que dados pessoais não sejam gravados fora da sessão — verificação: teste automatizado de varredura falhando se algum dado do aluno aparecer em armazenamento do navegador
 
 ## 7. Estágios do aluno
 

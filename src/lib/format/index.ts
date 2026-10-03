@@ -127,15 +127,31 @@ export function formatarHoras(valor: number): string {
   return `${formatarNumero(valor)} h`;
 }
 
-/** Converte "01/02/2026" ou "2026-02-01" em "2026-02-01", para gravar. */
+/**
+ * Converte "01/02/2026" ou "2026-02-01" em "2026-02-01", para gravar.
+ *
+ * A data precisa existir no calendário: 31/02 e 31/04 viram março, não uma data,
+ * então devolvem `null` e quem valida recusa o campo (6.2).
+ */
 export function dataParaIso(valor: string): string | null {
-  const br = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor.trim());
+  const texto = valor.trim();
+  const br = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto);
 
-  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  if (!br && !iso) return null;
 
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor.trim());
+  const dia = Number(br ? br[1] : iso?.[3]);
+  const mes = Number(br ? br[2] : iso?.[2]);
+  const ano = Number(br ? br[3] : iso?.[1]);
 
-  return iso ? iso[0] : null;
+  const data = new Date(ano, mes - 1, dia);
+
+  const existe =
+    data.getFullYear() === ano && data.getMonth() === mes - 1 && data.getDate() === dia;
+
+  if (!existe) return null;
+
+  return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
 /** Rótulo do período letivo a partir do ano e do semestre. */

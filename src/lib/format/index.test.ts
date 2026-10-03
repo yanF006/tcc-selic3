@@ -84,6 +84,14 @@ describe("datas em Iso e em brasileiro", () => {
   it("devolve null para formato desconhecido", () => {
     expect(dataParaIso("01-02-26")).toBeNull();
   });
+
+  it("recusa data que não existe no calendário", () => {
+    expect(dataParaIso("31/02/2026")).toBeNull();
+    expect(dataParaIso("2026-02-31")).toBeNull();
+    expect(dataParaIso("00/01/2026")).toBeNull();
+    expect(dataParaIso("29/02/2024")).toBe("2024-02-29");
+    expect(dataParaIso("29/02/2026")).toBeNull();
+  });
 });
 
 describe("período e semanas", () => {

@@ -99,6 +99,15 @@ export async function usuarioPorId(id: string): Promise<Usuario | null> {
   return obterEstado().usuarios.find((usuario) => usuario.id === id) ?? null;
 }
 
+/** Usuário pelo e-mail, que é o identificador do login; null quando não existe. */
+export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
+  const alvo = email.trim().toLowerCase();
+
+  return (
+    obterEstado().usuarios.find((usuario) => usuario.email.trim().toLowerCase() === alvo) ?? null
+  );
+}
+
 export async function contarUsuariosPorSituacao(): Promise<Record<SituacaoUsuario, number>> {
   const usuarios = obterEstado().usuarios;
 

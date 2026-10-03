@@ -19,6 +19,8 @@ import type {
 import * as fixtures from "@/lib/fixtures/base";
 import { templates as templatesFixture } from "@/lib/fixtures/templates";
 
+import { reiniciarCredenciais } from "./credenciais";
+
 /**
  * Estado em memória do simulador (D4). Os serviços leem e escrevem aqui; no
  * backend, cada função passa a consultar o banco e este arquivo desaparece.
@@ -71,6 +73,10 @@ export function obterEstado(): EstadoSimulado {
 /** Usado pelos testes e pela tela de demonstração para voltar ao estado inicial. */
 export function reiniciarEstado(): EstadoSimulado {
   estado = estadoLimpo();
+
+  // As senhas em memória fazem parte do estado simulado: sem esta linha, uma
+  // senha trocada em um teste vazaria para o seguinte.
+  reiniciarCredenciais();
 
   return estado;
 }

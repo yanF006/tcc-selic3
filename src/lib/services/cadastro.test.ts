@@ -130,7 +130,7 @@ describe("cadastro público", () => {
     expect(pendentes.itens[0].matricula).toBe("2023777000");
   });
 
-  it("recusa conclusão sem selects dependentes coerentes", async () => {
+  it("recusa conclusão com selects dependentes incoerentes", async () => {
     const primeira = await validarEtapaUm({
       matricula: "2023100457",
       email: "coerente@aluno.ifrj.edu.br",
@@ -145,6 +145,38 @@ describe("cadastro público", () => {
 
     expect(conclusao.ok).toBe(false);
     expect(conclusao.ok === false && conclusao.erro).toMatch(/turma/i);
+  });
+
+  it("recusa curso, turma e período que não estão cadastrados (6.5)", async () => {
+    const primeira = await validarEtapaUm({
+      matricula: "2023100457",
+      email: "selecao@aluno.ifrj.edu.br",
+      senha,
+      confirmacao: senha,
+    });
+    const previaId = primeira.ok ? primeira.previa.id : "";
+
+    const cursoInexistente = await concluirCadastro(previaId, {
+      ...etapaDois,
+      cursoId: "curso-inexistente",
+    });
+
+    expect(cursoInexistente).toMatchObject({ ok: false, campo: "dados" });
+    expect(cursoInexistente.ok === false && cursoInexistente.erro).toMatch(/selecione/i);
+
+    const turmaInexistente = await concluirCadastro(previaId, {
+      ...etapaDois,
+      turmaId: "turma-inexistente",
+    });
+
+    expect(turmaInexistente.ok).toBe(false);
+
+    const periodoInexistente = await concluirCadastro(previaId, {
+      ...etapaDois,
+      periodoId: "periodo-2099-1",
+    });
+
+    expect(periodoInexistente.ok).toBe(false);
   });
 
   it("recusa conclusão com prévia inexistente", async () => {

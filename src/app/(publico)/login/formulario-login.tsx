@@ -79,6 +79,12 @@ export function FormularioLogin({ destino }: { destino?: string }) {
           </Button>
 
           <p className="text-muted-foreground text-center text-xs">
+            <Link className="underline" href="/recuperar-senha">
+              Esqueci minha senha
+            </Link>
+          </p>
+
+          <p className="text-muted-foreground text-center text-xs">
             Ainda não tem cadastro?{" "}
             <Link className="underline" href="/cadastro">
               Criar cadastro

@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDownIcon, LogOutIcon, MenuIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, KeyRoundIcon, LogOutIcon, MenuIcon, XIcon } from "lucide-react";
 
 import { rotuloPapel } from "@/lib/domain/status";
 import type { Usuario } from "@/lib/domain/types";
@@ -188,6 +188,12 @@ export function Navbar({
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link className="flex items-center gap-2" href="/conta/senha">
+                  <KeyRoundIcon className="size-4 shrink-0" aria-hidden="true" />
+                  Alterar senha
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <form action={sairAction}>
                   <button type="submit" className="flex w-full items-center gap-2 text-left">

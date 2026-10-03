@@ -56,10 +56,12 @@ interface MensagemCampoProps {
   id: string;
   tipo: TipoMensagem;
   children: React.ReactNode;
+  /** `invisible` reserva a altura da linha sem exibir nada. */
+  className?: string;
 }
 
 /** Mensagem de erro ou sucesso ligada ao campo por `aria-describedby`. */
-export function MensagemCampo({ id, tipo, children }: MensagemCampoProps) {
+export function MensagemCampo({ id, tipo, children, className }: MensagemCampoProps) {
   const Icone = tipo === "erro" ? AlertCircleIcon : CheckCircle2Icon;
 
   return (
@@ -68,11 +70,41 @@ export function MensagemCampo({ id, tipo, children }: MensagemCampoProps) {
       className={cn(
         "flex items-start gap-1 text-xs",
         tipo === "erro" ? "text-destructive" : "text-success",
+        className,
       )}
     >
       <Icone className="mt-px size-3.5 shrink-0" aria-hidden="true" />
       <span>{children}</span>
     </p>
+  );
+}
+
+interface LinhaMensagemProps {
+  /** `true` quando o campo confere o formato: a linha fica reservada desde o início. */
+  reservada: boolean;
+  /** `true` quando não há mensagem: a linha reservada fica invisível. */
+  vazia: boolean;
+  children: React.ReactNode;
+}
+
+/**
+ * Linha de mensagem do campo.
+ *
+ * Quando o campo pode conferir o formato, a linha é **reservada desde o começo**,
+ * só que invisível. Sem isso, a mensagem que aparece no `blur` empurra o botão
+ * de envio para baixo: o `mousedown` cai no botão, o `mouseup` já cai no
+ * formulário e o navegador descarta o clique — quem digita o e-mail e clica em
+ * "Enviar" teria de clicar duas vezes. Reservar a linha evita o deslocamento.
+ */
+export function LinhaMensagem({ reservada, vazia, children }: LinhaMensagemProps) {
+  if (!reservada) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className={cn(vazia && "invisible")}>
+      {vazia ? <span className="text-xs">{"\u00a0"}</span> : children}
+    </div>
   );
 }
 
@@ -136,6 +168,19 @@ export function CampoTexto({
     tipo === "email" && tocado && valor.trim().length > 0 && !esquemaEmail.safeParse(valor).success;
   const emailValido = tipo === "email" && tocado && valor.trim().length > 0 && !emailInvalido;
 
+  const confereFormato = tipo === "email";
+
+  const mensagemFormato =
+    !erro && emailInvalido ? (
+      <MensagemCampo id={idMensagem} tipo="erro">
+        Formato de e-mail inválido. Use nome@dominio.
+      </MensagemCampo>
+    ) : !erro && emailValido ? (
+      <MensagemCampo id={idFormatado} tipo="sucesso">
+        Formato de e-mail válido.
+      </MensagemCampo>
+    ) : null;
+
   const descricoes = [
     idDescricao,
     erro || emailInvalido ? idMensagem : null,
@@ -181,17 +226,9 @@ export function CampoTexto({
         </MensagemCampo>
       ) : null}
 
-      {!erro && emailInvalido ? (
-        <MensagemCampo id={idMensagem} tipo="erro">
-          Formato de e-mail inválido. Use nome@dominio.
-        </MensagemCampo>
-      ) : null}
-
-      {!erro && emailValido ? (
-        <MensagemCampo id={idFormatado} tipo="sucesso">
-          Formato de e-mail válido.
-        </MensagemCampo>
-      ) : null}
+      <LinhaMensagem reservada={confereFormato} vazia={mensagemFormato === null}>
+        {mensagemFormato}
+      </LinhaMensagem>
     </div>
   );
 }
@@ -239,6 +276,13 @@ export function CampoSenha({
   const minima =
     conferirMinimo && tocado && valor.length > 0 && !esquemaSenha.safeParse(valor).success;
   const descricoes = [idDescricao, erro || minima ? idMensagem : null].filter(Boolean).join(" ");
+
+  const mensagemMinima =
+    !erro && minima ? (
+      <MensagemCampo id={idMensagem} tipo="erro">
+        A senha deve ter ao menos 8 caracteres.
+      </MensagemCampo>
+    ) : null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -292,11 +336,9 @@ export function CampoSenha({
         </MensagemCampo>
       ) : null}
 
-      {!erro && minima ? (
-        <MensagemCampo id={idMensagem} tipo="erro">
-          A senha deve ter ao menos 8 caracteres.
-        </MensagemCampo>
-      ) : null}
+      <LinhaMensagem reservada={conferirMinimo} vazia={mensagemMinima === null}>
+        {mensagemMinima}
+      </LinhaMensagem>
     </div>
   );
 }

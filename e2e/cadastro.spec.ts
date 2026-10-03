@@ -28,8 +28,11 @@ async function preencherEtapaUm(
 async function preencherEtapaDois(page: import("@playwright/test").Page) {
   await page.getByLabel("Nome completo").fill(`Maria Nova ${SUFIXO}`);
   await page.getByLabel("CPF").fill("123.456.789-09");
-  await page.getByLabel("Data de nascimento").fill("2005-03-14");
+  await page.getByLabel("Data de nascimento").fill("14/03/2005");
+  await page.getByLabel("Celular").fill("21998761234");
+  await page.getByLabel("CEP").fill("23940000");
   await page.getByLabel("Endereço").fill("Rua das Acácias");
+  await page.getByLabel("Número").fill("120");
   await page.getByLabel("Bairro").fill("Centro");
   await page.getByLabel("Cidade").fill("Pinheiral");
 }
@@ -159,5 +162,51 @@ test.describe("cadastro público", () => {
 
     await expect(page.getByLabel("Turma", { exact: true })).toContainText("Selecione a turma");
     await expect(page.getByLabel("Período", { exact: true })).toContainText("Selecione o período");
+  });
+
+  test("oferece apenas opções cadastradas e recusa valor não cadastrado", async ({ page }) => {
+    await preencherEtapaUm(page, {
+      matricula: "2023100999",
+      email: email("selecao"),
+      senha: SENHA,
+      confirmacao: SENHA,
+    });
+
+    // Turma e período ficam bloqueados até o curso, e a lista é a cadastrada.
+    await expect(page.getByLabel("Turma", { exact: true })).toBeDisabled();
+    await expect(page.getByLabel("Período", { exact: true })).toBeDisabled();
+
+    await page.getByLabel("Curso", { exact: true }).click();
+
+    await expect(page.getByRole("option")).toHaveText([
+      "Análise e Desenvolvimento de Sistemas",
+      "Eletricidade",
+      "Informática",
+    ]);
+    await page.getByRole("option", { name: "Informática" }).click();
+
+    await expect(page.getByLabel("Turma", { exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Período", { exact: true })).toBeDisabled();
+
+    await page.getByLabel("Turma", { exact: true }).click();
+
+    const turmas = page.getByRole("option");
+
+    await expect(turmas).toHaveCount(1);
+    await expect(turmas.first()).toContainText("INF 2026.1");
+    await expect(turmas.first()).not.toContainText("ADS");
+
+    await turmas.first().click();
+
+    await expect(page.getByLabel("Período", { exact: true })).toBeEnabled();
+
+    // O select não aceita digitação livre: digitar não cria opção nova.
+    await page.getByLabel("Turma", { exact: true }).press("a");
+    await page.getByLabel("Turma", { exact: true }).click();
+
+    await expect(page.getByRole("option")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByLabel("Turma", { exact: true })).toContainText("INF 2026.1");
   });
 });

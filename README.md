@@ -37,9 +37,10 @@ npm run test:e2e:seletor # Playwright com o seletor de papel ligado
 2. `npm run dev`: `http://localhost:3000/login` entra no sistema e
    `http://localhost:3000/laboratorio` mostra os componentes base, o controle de
    tema claro/escuro e o contraste medido.
-3. `npm run test:unit` para a suíte unitária (289 testes), `npm run test:e2e`
-   para os fluxos de acesso e de gestão de usuários, `npm run test:e2e:seletor`
-   para o seletor de papel e `npm run typecheck` para a checagem de tipos.
+3. `npm run test:unit` para a suíte unitária (326 testes), `npm run test:e2e`
+   para os fluxos de acesso, de senhas e de gestão de usuários,
+   `npm run test:e2e:seletor` para o seletor de papel e `npm run typecheck` para a
+   checagem de tipos.
 
 ## Contas de desenvolvimento
 
@@ -67,8 +68,13 @@ Nada abaixo fala com a rede: tudo roda no navegador.
 - **Autenticação e sessão.** A sessão simulada vive em um cookie httpOnly com o
   identificador do usuário (`src/lib/auth/sessao-servidor.ts`), e o layout de
   servidor aplica a guarda de papel (`src/lib/auth/guard.ts`). Não há Better
-  Auth, senha real ou expiração por token: as quatro contas de desenvolvimento
-  são validadas por e-mail e senha fixa em `src/lib/services/sessao.ts`.
+  Auth: a senha fica em memória como sal + digest SHA-256
+  (`src/lib/services/credenciais.ts`), sem texto legível, e o cadastro público
+  passa a valer no login.
+- **E-mail de redefinição.** `/recuperar-senha` pede o link e `/conta/senha` troca
+  a senha autenticada (`src/lib/services/senhas.ts`). O link vale por 1 hora, é de
+  uso único e a resposta é a mesma exista ou não a conta; como não há Nodemailer, o
+  link aparece na própria tela para a demonstração.
 - **Persistência.** `src/lib/services/store.ts` guarda o estado em memória: ele
   se perde ao recarregar a página e vale enquanto a aba do navegador estiver
   aberta.
@@ -139,10 +145,15 @@ As telas ficam em route groups do App Router por área, com uma guarda única po
 | Área          | Route group             | Papéis exigidos                              |
 | ------------- | ----------------------- | -------------------------------------------- |
 | Público       | `src/app/(publico)`     | —                                            |
+| Conta         | `src/app/(conta)`       | qualquer usuário autenticado                 |
 | Aluno         | `src/app/(aluno)`       | `aluno`                                      |
 | Coordenação   | `src/app/(coordenacao)` | `coordenador_estagio` ou `coordenador_curso` |
 | Administração | `src/app/(admin)`       | `administrador`                              |
 | Gestão        | `src/app/(gestao)`      | coordenação ou administrador                  |
+
+- `/recuperar-senha` pede o link de redefinição, `/redefinir-senha` consome o link
+  e `/conta/senha` troca a senha de qualquer usuário autenticado, a partir do menu
+  de conta da navbar.
 
 - `/solicitacoes` é a fila de cadastros pendentes: a coordenação e a
   administração autorizam ou recusam com motivo registrado.

@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 
 import { gravarSessao, encerrarSessao, rotaInicial } from "@/lib/auth/sessao-servidor";
-import { entrar, contasDeDesenvolvimento } from "@/lib/services/sessao";
-import { usuarioPorId } from "@/lib/services/administracao";
+import { entrar } from "@/lib/services/sessao";
+import { usuarioPorEmail, usuarioPorId } from "@/lib/services/administracao";
 
 /**
  * Server Actions da sessão simulada (D3). O cookie é gravado no servidor para
@@ -22,14 +22,15 @@ export async function entrarAction(email: string, senha: string): Promise<Estado
 
   if (!resultado.ok) return { ok: false, erro: resultado.erro };
 
-  const conta = contasDeDesenvolvimento().find(
-    (candidata) => candidata.email.toLowerCase() === email.trim().toLowerCase(),
-  );
+  // O usuário vem do estado pelo e-mail, e não da conta de desenvolvimento: a
+  // senha pode ter sido redefinida (5.8) ou o cadastro pode ter vindo do
+  // cadastro público, e o login continua valendo.
+  const usuario = await usuarioPorEmail(email);
 
-  if (!conta) return { ok: false, erro: "Conta de desenvolvimento não encontrada." };
+  if (!usuario) return { ok: false, erro: "E-mail ou senha inválidos." };
 
-  await gravarSessao(conta.id);
-  redirect(rotaInicial(await usuarioPorId(conta.id)));
+  await gravarSessao(usuario.id);
+  redirect(rotaInicial(usuario));
 }
 
 /** Troca a sessão para outra conta, para demonstrar as quatro áreas. */
