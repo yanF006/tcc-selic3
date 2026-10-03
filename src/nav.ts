@@ -1,3 +1,4 @@
+import type { ChaveIcone } from "@/components/layout/nav-icons";
 import { podeAcessarAlgum } from "@/lib/auth/permissions";
 import type { Papel, Usuario } from "@/lib/domain/types";
 
@@ -7,11 +8,20 @@ import type { Papel, Usuario } from "@/lib/domain/types";
  * mão em nenhum layout.
  */
 
+/** Rótulo de cada grupo na navbar. */
+export const ROTULOS_GRUPO: Record<ItemNav["grupo"], string> = {
+  principal: "Acesso",
+  gestao: "Gestão",
+  administracao: "Administração",
+};
+
 export interface ItemNav {
   /** Segmento de rota, sem barra: `/documentos`. */
   href: string;
   rotulo: string;
   descricao?: string;
+  /** Chave do ícone em `components/layout/nav-icons`; a imagem fica na UI. */
+  icone: ChaveIcone;
   /** Papéis que enxergam o item; lista vazia significa "todos autenticados". */
   requiredRoles: Papel[];
   /** Item aparece apenas para quem participa da Comissão de Estágio. */
@@ -24,6 +34,7 @@ export interface ItemNav {
 export const NAV: ItemNav[] = [
   {
     href: "/documentos",
+    icone: "documentos",
     rotulo: "Documentos",
     descricao: "Preencher e acompanhar os documentos do Kit de Estágio.",
     requiredRoles: ["aluno"],
@@ -32,6 +43,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/estagio",
+    icone: "estagio",
     rotulo: "Estágio",
     descricao: "Cadastrar o estágio, o convênio e o horário.",
     requiredRoles: ["aluno"],
@@ -40,6 +52,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/perfil",
+    icone: "perfil",
     rotulo: "Perfil",
     descricao: "Dados pessoais, contato e preferências.",
     requiredRoles: ["aluno"],
@@ -48,6 +61,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/coordenacao/estagios",
+    icone: "estagios",
     rotulo: "Estágios",
     descricao: "Acompanhar estágios dos alunos.",
     requiredRoles: ["coordenador_estagio", "coordenador_curso"],
@@ -56,6 +70,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/coordenacao/frequencia",
+    icone: "frequencia",
     rotulo: "Frequência e avaliação",
     descricao: "Conferir a Ficha de Frequência e Avaliação.",
     requiredRoles: ["coordenador_estagio"],
@@ -65,6 +80,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/coordenacao/documentos",
+    icone: "documentos-curso",
     rotulo: "Documentos do curso",
     descricao: "Filtrar a fila de documentos por curso e situação.",
     requiredRoles: ["coordenador_curso", "coordenador_estagio"],
@@ -73,6 +89,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/solicitacoes",
+    icone: "solicitacoes",
     rotulo: "Cadastros pendentes",
     descricao: "Autorizar ou recusar cadastros de alunos aguardando matrícula conferida.",
     requiredRoles: ["coordenador_estagio", "coordenador_curso", "administrador"],
@@ -81,6 +98,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/admin/usuarios",
+    icone: "usuarios",
     rotulo: "Usuários",
     descricao: "Cadastrar, editar e inativar usuários.",
     requiredRoles: ["administrador"],
@@ -89,6 +107,7 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/admin/convenios",
+    icone: "convenios",
     rotulo: "Convênios",
     descricao: "Cadastrar convênios e registrar renovações.",
     requiredRoles: ["administrador"],
@@ -97,14 +116,16 @@ export const NAV: ItemNav[] = [
   },
   {
     href: "/admin/matriculas",
+    icone: "matriculas",
     rotulo: "Matrículas",
-    descricao: "Importar matrículas manualmente enquanto não houver SIGAA.",
+    descricao: "Lançar e consultar as matrículas válidas do sistema.",
     requiredRoles: ["administrador"],
     grupo: "administracao",
     ordem: 3,
   },
   {
     href: "/coordenacao/estatisticas",
+    icone: "estatisticas",
     rotulo: "Estatísticas",
     descricao: "Pesquisar estágios e indicadores por curso e instituição.",
     requiredRoles: ["administrador", "coordenador_estagio", "coordenador_curso"],

@@ -59,8 +59,6 @@ export interface Usuario {
   cursoId?: string;
   /** true quando o Coordenador de Estágio atua como membro da Comissão de Estágio. */
   membroComissaoEstagio?: boolean;
-  /** Autorização do administrador para matrícula ainda não registrada no SIGAA. */
-  matriculaAutorizadaForaDoSigaa?: boolean;
   dadosPessoais?: DadosPessoais;
   criadoEm: string;
 }

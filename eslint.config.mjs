@@ -9,6 +9,7 @@ export default defineConfig([
   prettier,
   globalIgnores([
     ".next/**",
+    ".opencode/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

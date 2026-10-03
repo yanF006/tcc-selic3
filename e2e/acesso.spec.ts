@@ -13,12 +13,25 @@ const SENHA = "selic123";
  * generoso porque o servidor de desenvolvimento compila a rota na primeira
  * visita.
  */
+/**
+ * Abre um grupo da navegação. Páginas fora dos quatro links da linha principal
+ * ficam em menu, então o item só existe no DOM depois de abrir o grupo.
+ */
+async function abrirGrupo(page: import("@playwright/test").Page, rotulo: string) {
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("button", { name: new RegExp(`^${rotulo}`) })
+    .click();
+
+  await expect(page.getByRole("menu")).toBeVisible();
+}
+
 async function entrar(page: import("@playwright/test").Page, email: string) {
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
 
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(SENHA);
+  await page.getByLabel("E-mail", { exact: true }).fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(SENHA);
 
   await Promise.all([
     page.waitForURL((url) => url.pathname !== "/login", { timeout: 60_000 }),
@@ -72,7 +85,10 @@ test.describe("login e logout", () => {
 
     const navegacao = page.getByRole("navigation", { name: "Navegação principal" });
 
-    await expect(navegacao.getByRole("link", { name: "Documentos do curso" })).toBeVisible();
+    await abrirGrupo(page, "Gestão");
+    await expect(page.getByRole("menuitem", { name: "Documentos do curso" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
     await expect(navegacao.getByRole("link", { name: "Usuários" })).toHaveCount(0);
 
     await page.goto("/admin/usuarios");
@@ -87,7 +103,12 @@ test.describe("login e logout", () => {
 
     const navegacao = page.getByRole("navigation", { name: "Navegação principal" });
 
-    await expect(navegacao.getByRole("link", { name: "Frequência e avaliação" })).toBeVisible();
+    await abrirGrupo(page, "Gestão");
+    await expect(page.getByRole("menuitem", { name: "Frequência e avaliação" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(navegacao.getByRole("link", { name: "Frequência e avaliação" })).toHaveCount(0);
+
     await page.goto("/coordenacao/frequencia");
     await expect(page.getByRole("heading", { name: "Frequência e avaliação" })).toBeVisible();
   });
@@ -112,8 +133,8 @@ test.describe("login e logout", () => {
 
   test("recusa senha errada sem sair do login", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("E-mail").fill("maria.souza@aluno.ifrj.edu.br");
-    await page.getByLabel("Senha").fill("senha-errada");
+    await page.getByLabel("E-mail", { exact: true }).fill("maria.souza@aluno.ifrj.edu.br");
+    await page.getByLabel("Senha", { exact: true }).fill("senha-errada");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await expect(page.getByText("E-mail ou senha inválidos.")).toBeVisible();
@@ -127,15 +148,15 @@ test.describe("login e logout", () => {
   test("usa a mesma mensagem para e-mail inexistente e senha incorreta", async ({ page }) => {
     await page.goto("/login");
 
-    await page.getByLabel("E-mail").fill("maria.souza@aluno.ifrj.edu.br");
-    await page.getByLabel("Senha").fill("senha-errada");
+    await page.getByLabel("E-mail", { exact: true }).fill("maria.souza@aluno.ifrj.edu.br");
+    await page.getByLabel("Senha", { exact: true }).fill("senha-errada");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     const aviso = page.getByRole("alert").filter({ hasText: "Não foi possível entrar" });
     const mensagemSenha = await aviso.textContent();
 
-    await page.getByLabel("E-mail").fill("conta.inexistente@aluno.ifrj.edu.br");
-    await page.getByLabel("Senha").fill("selic123");
+    await page.getByLabel("E-mail", { exact: true }).fill("conta.inexistente@aluno.ifrj.edu.br");
+    await page.getByLabel("Senha", { exact: true }).fill("selic123");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     const mensagemInexistente = await aviso.textContent();

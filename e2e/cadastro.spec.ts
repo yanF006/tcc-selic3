@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Cadastro público em duas etapas (5.2 a 5.5): confirmação de senha, unicidade
- * de e-mail sem revelar a conta, matrícula fora do SIGAA gerando pendência e
- * selects dependentes de curso, turma e período.
+ * Cadastro público em duas etapas (5.2 a 5.5, 14.1): confirmação de senha,
+ * matrícula fora do formato do SIGAA, unicidade de e-mail sem revelar a conta,
+ * matrícula não registrada gerando pendência e selects dependentes de curso,
+ * turma e período.
  */
 
 const SUFIXO = Date.now().toString(36);
@@ -17,7 +18,7 @@ async function preencherEtapaUm(
   page: import("@playwright/test").Page,
   dados: { matricula: string; email: string; senha: string; confirmacao: string },
 ) {
-  await page.getByLabel("Matrícula (SIGAA)").fill(dados.matricula);
+  await page.getByLabel("Matrícula", { exact: true }).fill(dados.matricula);
   await page.getByLabel("E-mail", { exact: true }).fill(dados.email);
   await page.getByLabel("Senha", { exact: true }).fill(dados.senha);
   await page.getByLabel("Confirmar senha").fill(dados.confirmacao);
@@ -54,6 +55,21 @@ test.describe("cadastro público", () => {
     await expect(page.getByLabel("Nome completo")).toHaveCount(0);
   });
 
+  test("recusa matrícula fora do formato do SIGAA na primeira etapa", async ({ page }) => {
+    await preencherEtapaUm(page, {
+      matricula: "20A3100457",
+      email: email("formato"),
+      senha: SENHA,
+      confirmacao: SENHA,
+    });
+
+    // A mensagem aparece junto ao campo e no resumo do formulário.
+    await expect(page.locator("#cadastro-matricula-mensagem")).toHaveText(
+      "Informe a matrícula do SIGAA.",
+    );
+    await expect(page.getByLabel("Nome completo")).toHaveCount(0);
+  });
+
   test("recusa e-mail já cadastrado sem revelar a conta", async ({ page }) => {
     await preencherEtapaUm(page, {
       matricula: "2023100457",
@@ -76,7 +92,7 @@ test.describe("cadastro público", () => {
     });
 
     await expect(page.getByText("Etapa 1 conferida")).toBeVisible();
-    await expect(page.getByText(/confirmada nos registros importados/)).toBeVisible();
+    await expect(page.getByText(/Matrícula registrada no sistema/)).toBeVisible();
     await expect(page.getByLabel("Nome completo")).toHaveValue("João Pedro Lima");
 
     await preencherEtapaDois(page);
@@ -94,7 +110,7 @@ test.describe("cadastro público", () => {
     await expect(page.getByText("Acesso liberado")).toBeVisible();
   });
 
-  test("mantém cadastro pendente quando a matrícula não consta no SIGAA", async ({ page }) => {
+  test("mantém cadastro pendente quando a matrícula não está registrada", async ({ page }) => {
     await preencherEtapaUm(page, {
       matricula: "2023444555",
       email: email("pendente"),
@@ -102,7 +118,7 @@ test.describe("cadastro público", () => {
       confirmacao: SENHA,
     });
 
-    await expect(page.getByText(/não consta nos registros importados/)).toBeVisible();
+    await expect(page.getByText(/não está registrada no sistema/)).toBeVisible();
 
     await preencherEtapaDois(page);
 

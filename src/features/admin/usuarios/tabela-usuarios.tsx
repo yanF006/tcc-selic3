@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { CampoTexto, LegendaObrigatorios, RotuloCampo } from "@/components/formularios/campo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,10 +38,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircleIcon, MoreVerticalIcon, UserPlusIcon } from "lucide-react";
+import { AlertCircleIcon, EyeIcon, MoreVerticalIcon, UserPlusIcon } from "lucide-react";
 
 import { metadadoUsuario, rotuloPapel, varianteSituacaoUsuario } from "@/lib/domain/status";
+import { cursoDoUsuario } from "@/lib/domain/usuario";
 import type { Papel, Usuario } from "@/lib/domain/types";
+
+import { PerfilUsuario } from "@/features/admin/usuarios/perfil-usuario";
 
 import {
   cadastrarUsuarioAction,
@@ -51,15 +55,18 @@ import {
 } from "@/app/(admin)/admin/usuarios/acoes";
 
 /**
- * Lista de usuários (8.2, 8.3): filtro por papel e por situação, busca por nome
- * ou e-mail, total de resultados e as mutações de criar, editar, inativar e
- * excluir. Toda escrita passa por Server Action com guarda de papel.
+ * Lista de usuários (8.2, 8.3): filtro por papel, situação e curso, busca por
+ * nome, e-mail ou matrícula, total de resultados, perfil completo e as mutações
+ * de criar, editar, inativar e excluir. Toda escrita passa por Server Action com
+ * guarda de papel.
  */
 
 interface Props {
   usuarios: Usuario[];
   total: number;
   cursos: { id: string; nome: string }[];
+  turmas: { id: string; nome: string }[];
+  periodos: { id: string; rotulo: string }[];
   situacoes: { situacao: Usuario["situacao"]; total: number }[];
 }
 
@@ -78,14 +85,16 @@ const SITUACOES_FILTRO: { valor: string; rotulo: string }[] = [
   { valor: "inativo", rotulo: "Inativo" },
 ];
 
-export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
+export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situacoes }: Props) {
   const [busca, setBusca] = React.useState("");
   const [consulta, setConsulta] = React.useState("");
   const [papel, setPapel] = React.useState("todos");
   const [situacao, setSituacao] = React.useState("todas");
+  const [curso, setCurso] = React.useState("todos");
   const [pagina, setPagina] = React.useState(1);
   const [formularioAberto, setFormularioAberto] = React.useState(false);
   const [editando, setEditando] = React.useState<Usuario | null>(null);
+  const [perfil, setPerfil] = React.useState<Usuario | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
 
@@ -96,6 +105,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
     return usuarios.filter((usuario) => {
       if (papel !== "todos" && !usuario.papeis.includes(papel as Papel)) return false;
       if (situacao !== "todas" && usuario.situacao !== situacao) return false;
+      if (curso !== "todos" && cursoDoUsuario(usuario) !== curso) return false;
       if (!alvo) return true;
 
       return (
@@ -104,7 +114,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
         (usuario.matricula ?? "").includes(alvo)
       );
     });
-  }, [consulta, papel, situacao, usuarios]);
+  }, [consulta, curso, papel, situacao, usuarios]);
 
   const paginaAtual = Math.min(pagina, Math.max(1, Math.ceil(filtrados.length / tamanho)));
   const visiveis = filtrados.slice((paginaAtual - 1) * tamanho, paginaAtual * tamanho);
@@ -120,6 +130,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
     setConsulta("");
     setPapel("todos");
     setSituacao("todas");
+    setCurso("todos");
     setPagina(1);
   }
 
@@ -186,6 +197,29 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
               {SITUACOES_FILTRO.map((opcao) => (
                 <SelectItem key={opcao.valor} value={opcao.valor}>
                   {opcao.rotulo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="filtro-curso">Curso</Label>
+          <Select
+            value={curso}
+            onValueChange={(valor) => {
+              setCurso(valor);
+              setPagina(1);
+            }}
+          >
+            <SelectTrigger id="filtro-curso" className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os cursos</SelectItem>
+              {cursos.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.nome}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -265,7 +299,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {cursos.find((curso) => curso.id === usuario.cursoId)?.nome ?? "—"}
+                  {cursos.find((item) => item.id === cursoDoUsuario(usuario))?.nome ?? "—"}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -275,6 +309,10 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setPerfil(usuario)}>
+                        <EyeIcon className="size-4 shrink-0" aria-hidden="true" />
+                        Ver perfil completo
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() => {
                           setEditando(usuario);
@@ -368,6 +406,15 @@ export function TabelaUsuarios({ usuarios, total, cursos, situacoes }: Props) {
         usuario={editando}
         cursos={cursos}
       />
+
+      <PerfilUsuario
+        usuario={perfil}
+        aberto={Boolean(perfil)}
+        aoFechar={() => setPerfil(null)}
+        cursos={cursos}
+        turmas={turmas}
+        periodos={periodos}
+      />
     </div>
   );
 }
@@ -389,7 +436,6 @@ function FormularioUsuario({
   const [matricula, setMatricula] = React.useState(usuario?.matricula ?? "");
   const [papel, setPapel] = React.useState<Papel | "">(usuario?.papeis[0] ?? "");
   const [cursoId, setCursoId] = React.useState(usuario?.cursoId ?? "");
-  const [autorizada, setAutorizada] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
 
@@ -411,7 +457,6 @@ function FormularioUsuario({
       matricula: matricula || undefined,
       papeis: [papel] as Papel[],
       cursoId: papel === "coordenador_curso" ? cursoId || undefined : undefined,
-      matriculaNaoRegistrada: papel === "aluno" ? autorizada : undefined,
     };
 
     const resultado =
@@ -442,29 +487,31 @@ function FormularioUsuario({
         </DialogHeader>
 
         <form className="flex flex-col gap-4" onSubmit={confirmar}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="usuario-nome">Nome</Label>
-            <Input
-              id="usuario-nome"
-              value={nome}
-              onChange={(evento) => setNome(evento.target.value)}
-              required
-            />
-          </div>
+          <LegendaObrigatorios />
+
+          <CampoTexto
+            id="usuario-nome"
+            rotulo="Nome"
+            obrigatorio
+            autoComplete="off"
+            valor={nome}
+            aoMudar={setNome}
+          />
+
+          <CampoTexto
+            id="usuario-email"
+            rotulo="E-mail"
+            obrigatorio
+            tipo="email"
+            autoComplete="off"
+            valor={email}
+            aoMudar={setEmail}
+          />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="usuario-email">E-mail</Label>
-            <Input
-              id="usuario-email"
-              type="email"
-              value={email}
-              onChange={(evento) => setEmail(evento.target.value)}
-              required
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="usuario-papel">Papel</Label>
+            <RotuloCampo htmlFor="usuario-papel" obrigatorio>
+              Papel
+            </RotuloCampo>
             {/*
               Sem `required` no Radix Select: dentro de `<form>` ele renderiza um
               `<select>` nativo oculto e o navegador bloquearia o envio sem
@@ -485,36 +532,24 @@ function FormularioUsuario({
           </div>
 
           {papel === "aluno" ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="usuario-matricula">Matrícula (SIGAA)</Label>
-                <Input
-                  id="usuario-matricula"
-                  value={matricula}
-                  onChange={(evento) => setMatricula(evento.target.value)}
-                  disabled={editando}
-                  required
-                />
-              </div>
-
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-1 size-4"
-                  checked={autorizada}
-                  onChange={(evento) => setAutorizada(evento.target.checked)}
-                />
-                <span>
-                  Autorizo o cadastro com matrícula ainda não registrada no SIGAA. A autorização
-                  fica registrada no cadastro.
-                </span>
-              </label>
-            </>
+            <CampoTexto
+              id="usuario-matricula"
+              rotulo="Matrícula"
+              obrigatorio
+              inputMode="numeric"
+              maxLength={10}
+              descricao="Ao salvar, a matrícula é registrada automaticamente se ainda não existir."
+              valor={matricula}
+              aoMudar={setMatricula}
+              disabled={editando}
+            />
           ) : null}
 
           {papel === "coordenador_curso" ? (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="usuario-curso">Curso</Label>
+              <RotuloCampo htmlFor="usuario-curso" obrigatorio>
+                Curso
+              </RotuloCampo>
               <Select value={cursoId} onValueChange={setCursoId}>
                 <SelectTrigger id="usuario-curso">
                   <SelectValue placeholder="Selecione o curso" />

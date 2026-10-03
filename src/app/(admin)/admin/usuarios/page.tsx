@@ -4,7 +4,7 @@ import { PaginaArea } from "@/components/layout/pagina-area";
 import { TabelaUsuarios } from "@/features/admin/usuarios/tabela-usuarios";
 import { exigirPapeis } from "@/lib/auth/guard";
 import { contarUsuariosPorSituacao, listarUsuarios } from "@/lib/services/administracao";
-import { listarCursos } from "@/lib/services/catalogo";
+import { listarCursos, listarPeriodos, listarTurmas } from "@/lib/services/catalogo";
 
 export const metadata: Metadata = {
   title: "Usuários",
@@ -18,9 +18,11 @@ export const metadata: Metadata = {
 export default async function PaginaUsuarios() {
   await exigirPapeis(["administrador"], "/admin/usuarios");
 
-  const [pagina, cursos, contagem] = await Promise.all([
+  const [pagina, cursos, turmas, periodos, contagem] = await Promise.all([
     listarUsuarios({ tamanho: 50 }),
     listarCursos(),
+    listarTurmas(),
+    listarPeriodos(),
     contarUsuariosPorSituacao(),
   ]);
 
@@ -32,12 +34,14 @@ export default async function PaginaUsuarios() {
   return (
     <PaginaArea
       titulo="Usuários"
-      descricao="Cadastre, edite e inative usuários. Inativar bloqueia o acesso e preserva os registros criados pela pessoa."
+      descricao="Cadastre, edite e inative usuários, filtre por papel, situação e curso e abra o perfil completo de cada cadastro. Inativar bloqueia o acesso e preserva os registros criados pela pessoa."
     >
       <TabelaUsuarios
         usuarios={pagina.itens}
         total={pagina.total}
         cursos={cursos.map((curso) => ({ id: curso.id, nome: curso.nome }))}
+        turmas={turmas.map((turma) => ({ id: turma.id, nome: turma.nome }))}
+        periodos={periodos.map((periodo) => ({ id: periodo.id, rotulo: periodo.rotulo }))}
         situacoes={situacoes}
       />
     </PaginaArea>

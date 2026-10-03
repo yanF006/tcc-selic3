@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Campus } from "@/lib/domain/types";
+import { cursoDoUsuario } from "@/lib/domain/usuario";
 
 import {
   cadastrarUsuario,
@@ -13,7 +14,7 @@ import {
   listarMatriculas,
   listarSolicitacoes,
   listarUsuarios,
-  matricularAlunoImportado,
+  registrarMatricula,
   reativarUsuario,
   usuarioPorId,
 } from "./administracao";
@@ -56,30 +57,74 @@ describe("usuários", () => {
     expect(segunda.itens[0].id).not.toBe(primeira.itens[0].id);
   });
 
-  it("cadastra aluno exigindo matrícula e autorização fora do SIGAA", async () => {
+  it("registra a matrícula no cadastro do aluno e libera o acesso", async () => {
     await entrarComoAdministrador();
-
-    const semAutorizacao = cadastrarUsuario({
-      nome: "Novo Aluno",
-      email: "novo.aluno@aluno.ifrj.edu.br",
-      papeis: ["aluno"],
-      matricula: "2026009999",
-    });
-
-    await expect(semAutorizacao).rejects.toThrow(/não consta no SIGAA/);
 
     const aluno = await cadastrarUsuario({
       nome: "Novo Aluno",
       email: "novo.aluno@aluno.ifrj.edu.br",
       papeis: ["aluno"],
       matricula: "2026009999",
-      matriculaNaoRegistrada: true,
     });
 
-    expect(aluno.situacao).toBe("pendente");
-    expect(aluno.matriculaAutorizadaForaDoSigaa).toBe(true);
+    // Matrícula recem-registrada significa acesso liberado: nada de pendência.
+    expect(aluno.situacao).toBe("ativo");
     expect(aluno.campus).toBe("Pinheiral");
     expect(await usuarioPorId(aluno.id)).toMatchObject({ nome: "Novo Aluno" });
+
+    const matriculas = await listarMatriculas({ busca: "2026009999" });
+    expect(matriculas.itens).toHaveLength(1);
+    expect(matriculas.itens[0]).toMatchObject({
+      matricula: "2026009999",
+      nome: "Novo Aluno",
+      origem: "cadastro_administrador",
+    });
+  });
+
+  it("mantém a matrícula já registrada sem duplicar no cadastro do aluno", async () => {
+    await entrarComoAdministrador();
+
+    await registrarMatricula({
+      matricula: "2026008888",
+      nome: "Aluno Do Lançamento Manual",
+      curso: "Informática",
+    });
+
+    await cadastrarUsuario({
+      nome: "Aluno Do Lançamento Manual",
+      email: "manual@aluno.ifrj.edu.br",
+      papeis: ["aluno"],
+      matricula: "2026008888",
+    });
+
+    const matriculas = await listarMatriculas({ busca: "2026008888" });
+    expect(matriculas.itens).toHaveLength(1);
+  });
+
+  it("recusa a matrícula fora do formato de dez dígitos", async () => {
+    await entrarComoAdministrador();
+
+    await expect(
+      cadastrarUsuario({
+        nome: "Aluno Sem Formato",
+        email: "formato@aluno.ifrj.edu.br",
+        papeis: ["aluno"],
+        matricula: "123",
+      }),
+    ).rejects.toThrow(/10 dígitos/);
+  });
+
+  it("filtra usuários por curso, do aluno e do coordenador", async () => {
+    const doCurso = await listarUsuarios({ cursoId: "curso-ads" });
+
+    expect(doCurso.total).toBeGreaterThan(0);
+    expect(doCurso.itens.every((usuario) => cursoDoUsuario(usuario) === "curso-ads")).toBe(true);
+
+    const daEletricidade = await listarUsuarios({ cursoId: "curso-eletro" });
+
+    expect(
+      daEletricidade.itens.every((usuario) => cursoDoUsuario(usuario) === "curso-eletro"),
+    ).toBe(true);
   });
 
   it("recusa cadastro sem papel, e-mail repetido e campus fora de Pinheiral", async () => {
@@ -164,6 +209,15 @@ describe("solicitações de acesso", () => {
     const usuario = await listarUsuarios({ busca: solicitacao.email });
 
     expect(usuario.itens[0].situacao).toBe("ativo");
+
+    // Autorizar também registra a matrícula, que passa a valer no sistema.
+    const matriculas = await listarMatriculas({ busca: solicitacao.matricula });
+
+    expect(matriculas.itens[0]).toMatchObject({
+      matricula: solicitacao.matricula,
+      nome: solicitacao.nome,
+      origem: "cadastro_administrador",
+    });
     await expect(decidirSolicitacao(solicitacao.id, "recusado", administrador.id)).rejects.toThrow(
       /já autorizado/,
     );
@@ -206,22 +260,36 @@ describe("importação manual de matrículas", () => {
     expect(importadas.itens.every((matricula) => matricula.matricula.length === 10)).toBe(true);
   });
 
-  it("libera o acesso do aluno cuja matrícula foi importada", async () => {
+  it("registra matrícula válida por lançamento manual e recusa duplicidade", async () => {
     await entrarComoAdministrador();
 
-    const matricula = (await listarMatriculas()).itens[0];
-    const pendente = await cadastrarUsuario({
-      nome: matricula.nome,
-      email: `${matricula.matricula}@aluno.ifrj.edu.br`,
-      papeis: ["aluno"],
-      matricula: matricula.matricula,
-      matriculaNaoRegistrada: true,
+    const registro = await registrarMatricula({
+      matricula: "2026444888",
+      nome: "Aluno Lançado",
+      curso: "Informática",
     });
 
-    await matricularAlunoImportado(matricula.matricula, pendente.id);
+    expect(registro).toMatchObject({
+      matricula: "2026444888",
+      origem: "cadastro_administrador",
+    });
 
-    expect((await usuarioPorId(pendente.id))?.situacao).toBe("ativo");
-    await expect(matricularAlunoImportado("9999999", pendente.id)).rejects.toThrow(/não pertence/);
+    // A matrícula recém-registrada já libera o cadastro do aluno.
+    const aluno = await cadastrarUsuario({
+      nome: "Aluno Lançado",
+      email: "aluno.lancado@aluno.ifrj.edu.br",
+      papeis: ["aluno"],
+      matricula: "2026444888",
+    });
+
+    expect(aluno.situacao).toBe("ativo");
+
+    await expect(
+      registrarMatricula({ matricula: "2026444888", nome: "Outro", curso: "Informática" }),
+    ).rejects.toThrow(/já está registrada/);
+    await expect(
+      registrarMatricula({ matricula: "123", nome: "Matrícula curta", curso: "Informática" }),
+    ).rejects.toThrow(/10 dígitos/);
   });
 });
 

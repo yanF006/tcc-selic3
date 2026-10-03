@@ -16,8 +16,8 @@ test("troca a sessão entre as quatro áreas", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Entrar" })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  await page.getByLabel("E-mail").fill("maria.souza@aluno.ifrj.edu.br");
-  await page.getByLabel("Senha").fill("selic123");
+  await page.getByLabel("E-mail", { exact: true }).fill("maria.souza@aluno.ifrj.edu.br");
+  await page.getByLabel("Senha", { exact: true }).fill("selic123");
   await page.getByRole("button", { name: "Entrar" }).click();
 
   // O servidor de desenvolvimento compila a rota sob demanda na primeira visita.
@@ -26,9 +26,13 @@ test("troca a sessão entre as quatro áreas", async ({ page }) => {
   await trocarPara(page, "Aluno", "Coordenador de Estágio", /\/coordenacao\/estagios$/);
   await trocarPara(page, "Coordenador de Estágio", "Administrador", /\/admin\/usuarios$/);
 
-  const navegacao = page.getByRole("navigation", { name: "Navegação principal" });
+  // Convênios fica no menu do grupo Administração, então o menu precisa abrir.
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("button", { name: /^Administração/ })
+    .click();
 
-  await expect(navegacao.getByRole("link", { name: "Convênios" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Convênios" })).toBeVisible();
 });
 
 async function trocarPara(

@@ -1,4 +1,4 @@
-import { esquemaCpf, esquemaEmail, esquemaSenha } from "@/lib/domain/schemas";
+import { MATRICULA_SIGAA, esquemaCpf, esquemaEmail, esquemaSenha } from "@/lib/domain/schemas";
 import type { DadosPessoais, Endereco, SituacaoUsuario, Usuario } from "@/lib/domain/types";
 
 import { agora, obterEstado, novoId } from "./store";
@@ -14,8 +14,9 @@ import { agora, obterEstado, novoId } from "./store";
  *
  * - a confirmação de senha divergente bloqueia o avanço com erro no campo;
  * - e-mail já cadastrado é recusado sem revelar se a conta existe;
- * - matrícula fora dos registros importados gera cadastro pendente, com
- *   mensagem de aguardo de autorização;
+ * - matrícula não registrada gera cadastro pendente, com mensagem de aguardo
+ *   de autorização; a matrícula só passa a valer quando a coordenação confirma
+ *   ou quando o administrador a cadastra em Matrículas;
  * - trocar o curso limpa turma e período.
  */
 
@@ -44,7 +45,7 @@ export interface PreviaCadastro {
   matricula: string;
   email: string;
   nome: string;
-  /** true quando a matrícula não consta nos registros importados do SIGAA. */
+  /** true quando a matrícula ainda não está registrada no sistema. */
   matriculaNaoRegistrada: boolean;
   criadoEm: string;
 }
@@ -68,9 +69,6 @@ export type ResultadoConclusao =
 /** Prévia mantida em memória entre as duas etapas do cadastro. */
 const previas = new Map<string, PreviaCadastro & { senha: string }>();
 
-/** Matrícula do SIGAA: dez dígitos. */
-const esquemaMatricula = /^\d{10}$/;
-
 /** E-mail normalizado para comparação. */
 function normalizarEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -93,7 +91,7 @@ export async function validarEtapaUm(dados: EtapaUmCadastro): Promise<ResultadoC
   const matricula = dados.matricula.trim();
   const email = normalizarEmail(dados.email);
 
-  if (!esquemaMatricula.test(matricula)) {
+  if (!MATRICULA_SIGAA.test(matricula)) {
     return { ok: false, campo: "matricula", erro: "Informe a matrícula do SIGAA." };
   }
 
@@ -141,8 +139,8 @@ export async function validarEtapaUm(dados: EtapaUmCadastro): Promise<ResultadoC
       criadoEm: previa.criadoEm,
     },
     mensagem: previa.matriculaNaoRegistrada
-      ? "A matrícula não consta nos registros importados do SIGAA. O cadastro ficará pendente até a autorização da coordenação."
-      : "Matrícula confirmada nos registros importados do SIGAA. Continue com seus dados pessoais.",
+      ? "A matrícula não está registrada no sistema. O cadastro ficará pendente até a conferência da coordenação."
+      : "Matrícula registrada no sistema. Continue com seus dados pessoais.",
   };
 }
 
@@ -236,7 +234,7 @@ export async function concluirCadastro(
       matricula: previa.matricula,
       dadosPessoais,
       situacao: "pendente",
-      motivo: "Matrícula não consta nos registros importados do SIGAA.",
+      motivo: "Matrícula não está registrada no sistema.",
       criadoEm: agora(),
     });
   }

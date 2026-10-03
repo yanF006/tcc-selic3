@@ -1,9 +1,9 @@
-import { Navbar } from "@/components/layout/navbar";
+import { Navbar, type GrupoNavbar } from "@/components/layout/navbar";
 import { SeletorPapel } from "@/components/layout/seletor-papel";
 import { exigirArea } from "@/lib/auth/guard";
 import { ProvedorSessao } from "@/lib/auth/sessao-contexto";
 import type { Papel } from "@/lib/domain/types";
-import { itensPara } from "@/nav";
+import { gruposPara, ROTULOS_GRUPO } from "@/nav";
 import { AvisoCadastroPendente } from "@/features/cadastro/aviso-cadastro-pendente";
 import { contasDeDesenvolvimento } from "@/lib/services/sessao";
 
@@ -27,16 +27,24 @@ export async function ShellArea({
 }) {
   const usuario = await exigirArea({ papeisExigidos, destino, qualquerPapel });
   const cadastroPendente = usuario.situacao === "pendente";
-  const itens = cadastroPendente
+  const grupos: GrupoNavbar[] = cadastroPendente
     ? []
-    : itensPara(usuario).map((item) => ({ href: item.href, rotulo: item.rotulo }));
+    : gruposPara(usuario).map((secao) => ({
+        grupo: secao.grupo,
+        rotulo: ROTULOS_GRUPO[secao.grupo],
+        itens: secao.itens.map((item) => ({
+          href: item.href,
+          rotulo: item.rotulo,
+          icone: item.icone,
+        })),
+      }));
   const mostrarSeletor = process.env.NEXT_PUBLIC_SELIC_SELADOR_PAPEL === "true";
 
   return (
     <div className="flex min-h-full flex-col">
       <Navbar
         usuario={usuario}
-        itens={itens}
+        grupos={grupos}
         seletorDePapel={
           mostrarSeletor ? (
             <SeletorPapel

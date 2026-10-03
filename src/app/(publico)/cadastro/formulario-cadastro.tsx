@@ -2,11 +2,16 @@
 
 import * as React from "react";
 
+import {
+  CampoSenha,
+  CampoTexto,
+  LegendaObrigatorios,
+  MensagemCampo,
+  RotuloCampo,
+} from "@/components/formularios/campo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -28,6 +33,10 @@ import type { Curso, Periodo, Turma } from "@/lib/domain/types";
  * Cadastro público em duas etapas (5.2 a 5.5): matrícula, e-mail, senha e
  * confirmação; depois dados pessoais e curso, turma e período dependentes.
  * Trocar o curso limpa turma e período.
+ *
+ * Cada campo obrigatório é marcado com `*`, a senha pode ser exibida enquanto é
+ * digitada e o e-mail mostra se o formato está válido. Matrícula registrada
+ * libera o cadastro; matrícula desconhecida leva à espera pela autorização.
  */
 export function FormularioCadastro({
   cursos,
@@ -49,6 +58,7 @@ export function FormularioCadastro({
   const [email, setEmail] = React.useState("");
   const [senha, setSenha] = React.useState("");
   const [confirmacao, setConfirmacao] = React.useState("");
+  const [confirmacaoTocada, setConfirmacaoTocada] = React.useState(false);
 
   const [nomeCompleto, setNomeCompleto] = React.useState("");
   const [cpf, setCpf] = React.useState("");
@@ -66,6 +76,11 @@ export function FormularioCadastro({
   const [periodoId, setPeriodoId] = React.useState("");
 
   const turmasDoCurso = turmas.filter((turma) => turma.cursoId === cursoId);
+
+  /** Mensagem do servidor para o campo correspondente, quando houver. */
+  function erroDoCampo(campo: string): string | null {
+    return erro?.campo === campo ? erro.texto : null;
+  }
 
   function enviarPrimeiraEtapa(evento: React.FormEvent) {
     evento.preventDefault();
@@ -142,8 +157,8 @@ export function FormularioCadastro({
           </CardTitle>
           <CardDescription>
             {concluido.situacao === "pendente"
-              ? "Seu cadastro ficou pendente: a coordenação precisa autorizar a matrícula antes de liberar o acesso."
-              : "Sua matrícula foi confirmada nos registros importados e o acesso já está liberado."}
+              ? "Sua matrícula ainda não está registrada no sistema, então o cadastro ficou pendente até a conferência da coordenação."
+              : "Sua matrícula está registrada no sistema e o acesso já está liberado."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -171,7 +186,7 @@ export function FormularioCadastro({
         </CardTitle>
         <CardDescription>
           {etapa === 1
-            ? "Primeira etapa: matrícula do SIGAA, e-mail e senha."
+            ? "Primeira etapa: matrícula, e-mail e senha."
             : "Segunda etapa: seus dados e o vínculo com o curso."}
         </CardDescription>
       </CardHeader>
@@ -194,174 +209,163 @@ export function FormularioCadastro({
           </Alert>
         ) : null}
 
+        <LegendaObrigatorios />
+
         {etapa === 1 ? (
-          <form onSubmit={enviarPrimeiraEtapa} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cadastro-matricula">Matrícula (SIGAA)</Label>
-              <Input
-                id="cadastro-matricula"
-                inputMode="numeric"
-                value={matricula}
-                onChange={(evento) => setMatricula(evento.target.value)}
-                placeholder="2023100457"
-                required
-              />
-            </div>
+          <form onSubmit={enviarPrimeiraEtapa} className="mt-4 flex flex-col gap-4">
+            <CampoTexto
+              id="cadastro-matricula"
+              rotulo="Matrícula"
+              obrigatorio
+              descricao="Os 10 dígitos da matrícula do SIGAA."
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="2023100457"
+              valor={matricula}
+              aoMudar={setMatricula}
+              erro={erroDoCampo("matricula")}
+            />
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cadastro-email">E-mail</Label>
-              <Input
-                id="cadastro-email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(evento) => setEmail(evento.target.value)}
-                placeholder="nome@aluno.ifrj.edu.br"
-                required
-              />
-            </div>
+            <CampoTexto
+              id="cadastro-email"
+              rotulo="E-mail"
+              obrigatorio
+              tipo="email"
+              autoComplete="email"
+              placeholder="nome@aluno.ifrj.edu.br"
+              valor={email}
+              aoMudar={setEmail}
+              erro={erroDoCampo("email")}
+            />
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cadastro-senha">Senha</Label>
-              <Input
-                id="cadastro-senha"
-                type="password"
-                autoComplete="new-password"
-                value={senha}
-                onChange={(evento) => setSenha(evento.target.value)}
-                aria-invalid={erro?.campo === "senha"}
-                required
-              />
-            </div>
+            <CampoSenha
+              id="cadastro-senha"
+              rotulo="Senha"
+              obrigatorio
+              autoComplete="new-password"
+              descricao="Mínimo de 8 caracteres."
+              conferirMinimo
+              valor={senha}
+              aoMudar={setSenha}
+              erro={erroDoCampo("senha")}
+            />
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cadastro-confirmacao">Confirmar senha</Label>
-              <Input
-                id="cadastro-confirmacao"
-                type="password"
-                autoComplete="new-password"
-                value={confirmacao}
-                onChange={(evento) => setConfirmacao(evento.target.value)}
-                aria-invalid={erro?.campo === "confirmacao"}
-                required
-              />
-            </div>
+            <CampoSenha
+              id="cadastro-confirmacao"
+              rotulo="Confirmar senha"
+              obrigatorio
+              nomeVisibilidade="a confirmação"
+              autoComplete="new-password"
+              valor={confirmacao}
+              aoMudar={(valor) => {
+                setConfirmacao(valor);
+                setConfirmacaoTocada(true);
+              }}
+              erro={
+                erroDoCampo("confirmacao") ??
+                (confirmacaoTocada && confirmacao.length > 0 && confirmacao !== senha
+                  ? "A confirmação não bate com a senha."
+                  : null)
+              }
+            />
 
             <Button type="submit" disabled={pendente}>
               Continuar
             </Button>
           </form>
         ) : (
-          <form onSubmit={enviarSegundaEtapa} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cadastro-nome">Nome completo</Label>
-              <Input
-                id="cadastro-nome"
-                value={nomeCompleto}
-                onChange={(evento) => setNomeCompleto(evento.target.value)}
-                required
-              />
-            </div>
+          <form onSubmit={enviarSegundaEtapa} className="mt-4 flex flex-col gap-4">
+            <CampoTexto
+              id="cadastro-nome"
+              rotulo="Nome completo"
+              obrigatorio
+              autoComplete="name"
+              valor={nomeCompleto}
+              aoMudar={setNomeCompleto}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-cpf">CPF</Label>
-                <Input
-                  id="cadastro-cpf"
-                  inputMode="numeric"
-                  value={cpf}
-                  onChange={(evento) => setCpf(evento.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-rg">RG</Label>
-                <Input id="cadastro-rg" value={rg} onChange={(e) => setRg(e.target.value)} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-nascimento">Data de nascimento</Label>
-                <Input
-                  id="cadastro-nascimento"
-                  type="date"
-                  value={dataNascimento}
-                  onChange={(e) => setDataNascimento(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-celular">Celular</Label>
-                <Input
-                  id="cadastro-celular"
-                  inputMode="tel"
-                  value={celular}
-                  onChange={(e) => setCelular(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-telefone">Telefone</Label>
-                <Input
-                  id="cadastro-telefone"
-                  inputMode="tel"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-cep">CEP</Label>
-                <Input
-                  id="cadastro-cep"
-                  inputMode="numeric"
-                  value={cep}
-                  onChange={(e) => setCep(e.target.value)}
-                />
-              </div>
+              <CampoTexto
+                id="cadastro-cpf"
+                rotulo="CPF"
+                obrigatorio
+                inputMode="numeric"
+                valor={cpf}
+                aoMudar={setCpf}
+              />
+              <CampoTexto id="cadastro-rg" rotulo="RG" valor={rg} aoMudar={setRg} />
+              <CampoTexto
+                id="cadastro-nascimento"
+                rotulo="Data de nascimento"
+                obrigatorio
+                tipo="date"
+                valor={dataNascimento}
+                aoMudar={setDataNascimento}
+              />
+              <CampoTexto
+                id="cadastro-celular"
+                rotulo="Celular"
+                inputMode="tel"
+                valor={celular}
+                aoMudar={setCelular}
+              />
+              <CampoTexto
+                id="cadastro-telefone"
+                rotulo="Telefone"
+                inputMode="tel"
+                valor={telefone}
+                aoMudar={setTelefone}
+              />
+              <CampoTexto
+                id="cadastro-cep"
+                rotulo="CEP"
+                inputMode="numeric"
+                valor={cep}
+                aoMudar={setCep}
+              />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="cadastro-logradouro">Endereço</Label>
-              <Input
-                id="cadastro-logradouro"
-                value={logradouro}
-                onChange={(e) => setLogradouro(e.target.value)}
-                required
+            <CampoTexto
+              id="cadastro-logradouro"
+              rotulo="Endereço"
+              obrigatorio
+              autoComplete="street-address"
+              valor={logradouro}
+              aoMudar={setLogradouro}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <CampoTexto
+                id="cadastro-bairro"
+                rotulo="Bairro"
+                obrigatorio
+                valor={bairro}
+                aoMudar={setBairro}
+              />
+              <CampoTexto
+                id="cadastro-cidade"
+                rotulo="Cidade"
+                obrigatorio
+                valor={cidade}
+                aoMudar={setCidade}
+              />
+              <CampoTexto
+                id="cadastro-uf"
+                rotulo="UF"
+                obrigatorio
+                maxLength={2}
+                valor={uf}
+                aoMudar={(valor) => setUf(valor.toUpperCase().slice(0, 2))}
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-bairro">Bairro</Label>
-                <Input
-                  id="cadastro-bairro"
-                  value={bairro}
-                  onChange={(e) => setBairro(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-cidade">Cidade</Label>
-                <Input
-                  id="cadastro-cidade"
-                  value={cidade}
-                  onChange={(e) => setCidade(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-uf">UF</Label>
-                <Input
-                  id="cadastro-uf"
-                  value={uf}
-                  onChange={(e) => setUf(e.target.value.toUpperCase().slice(0, 2))}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-curso">Curso</Label>
+                <RotuloCampo htmlFor="cadastro-curso" obrigatorio>
+                  Curso
+                </RotuloCampo>
                 <Select value={cursoId} onValueChange={trocarCurso}>
-                  <SelectTrigger id="cadastro-curso">
+                  <SelectTrigger id="cadastro-curso" aria-required="true">
                     <SelectValue placeholder="Selecione o curso" />
                   </SelectTrigger>
                   <SelectContent>
@@ -372,12 +376,19 @@ export function FormularioCadastro({
                     ))}
                   </SelectContent>
                 </Select>
+                {erroDoCampo("dados") ? (
+                  <MensagemCampo id="cadastro-curso-mensagem" tipo="erro">
+                    {erro?.texto}
+                  </MensagemCampo>
+                ) : null}
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-turma">Turma</Label>
+                <RotuloCampo htmlFor="cadastro-turma" obrigatorio>
+                  Turma
+                </RotuloCampo>
                 <Select value={turmaId} onValueChange={setTurmaId} disabled={!cursoId}>
-                  <SelectTrigger id="cadastro-turma">
+                  <SelectTrigger id="cadastro-turma" aria-required="true">
                     <SelectValue placeholder="Selecione a turma" />
                   </SelectTrigger>
                   <SelectContent>
@@ -391,9 +402,11 @@ export function FormularioCadastro({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="cadastro-periodo">Período</Label>
+                <RotuloCampo htmlFor="cadastro-periodo" obrigatorio>
+                  Período
+                </RotuloCampo>
                 <Select value={periodoId} onValueChange={setPeriodoId} disabled={!turmaId}>
-                  <SelectTrigger id="cadastro-periodo">
+                  <SelectTrigger id="cadastro-periodo" aria-required="true">
                     <SelectValue placeholder="Selecione o período" />
                   </SelectTrigger>
                   <SelectContent>

@@ -9,32 +9,38 @@ import { expect, test } from "@playwright/test";
  */
 
 const SUFIXO = Date.now().toString(36);
-/** Só dígitos: a matrícula do SIGAA tem dez dígitos. */
+/** Só dígitos: a matrícula tem dez dígitos. */
 const DIGITOS = Date.now().toString().slice(-6);
 const SENHA = "selic123";
 
 async function entrar(page: import("@playwright/test").Page, email: string): Promise<void> {
   await page.context().clearCookies();
   await page.goto("/login");
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(SENHA);
+  await page.getByLabel("E-mail", { exact: true }).fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(SENHA);
   await Promise.all([
     page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60_000 }),
     page.getByRole("button", { name: "Entrar" }).click(),
   ]);
 }
 
-/** Cria um cadastro pendente pelo fluxo público e devolve o nome da pessoa. */
+/**
+ * Cria um cadastro pendente pelo fluxo público e devolve o nome da pessoa e a
+ * matrícula pedida, para conferir o registro depois da autorização.
+ */
 let contador = 0;
 
-async function criarCadastroPendente(page: import("@playwright/test").Page): Promise<string> {
+async function criarCadastroPendente(
+  page: import("@playwright/test").Page,
+): Promise<{ nome: string; matricula: string }> {
   contador += 1;
 
   const nome = `Fila ${SUFIXO}-${contador}`;
-  const matricula = `2026${DIGITOS}${contador}`.slice(0, 10);
+  // Três + seis + um dígito de contador: dez dígitos, sem cortar o contador.
+  const matricula = `202${DIGITOS}${contador}`;
 
   await page.goto("/cadastro");
-  await page.getByLabel("Matrícula (SIGAA)").fill(matricula);
+  await page.getByLabel("Matrícula", { exact: true }).fill(matricula);
   await page
     .getByLabel("E-mail", { exact: true })
     .fill(`pendente.${SUFIXO}.${contador}@aluno.ifrj.edu.br`);
@@ -42,7 +48,7 @@ async function criarCadastroPendente(page: import("@playwright/test").Page): Pro
   await page.getByLabel("Confirmar senha").fill(SENHA);
   await page.getByRole("button", { name: "Continuar" }).click();
 
-  await expect(page.getByText(/não consta nos registros importados/)).toBeVisible();
+  await expect(page.getByText(/não está registrada no sistema/)).toBeVisible();
 
   await page.getByLabel("Nome completo").fill(nome);
   await page.getByLabel("CPF").fill("123.456.789-09");
@@ -60,7 +66,7 @@ async function criarCadastroPendente(page: import("@playwright/test").Page): Pro
 
   await expect(page.getByRole("heading", { name: "Cadastro enviado" })).toBeVisible();
 
-  return nome;
+  return { nome, matricula };
 }
 
 /** Entra como um cargo de gestão e abre a fila de cadastros pendentes. */
@@ -71,8 +77,8 @@ async function abrirFila(page: import("@playwright/test").Page, email: string): 
 }
 
 test.describe("fila de cadastros pendentes", () => {
-  test("coordenação autoriza o cadastro pendente e o aluno passa a entrar", async ({ page }) => {
-    const nome = await criarCadastroPendente(page);
+  test("coordenação autoriza o cadastro pendente e a matrícula passa a valer", async ({ page }) => {
+    const { nome, matricula } = await criarCadastroPendente(page);
 
     await abrirFila(page, "ana.correia@ifrj.edu.br");
 
@@ -96,10 +102,23 @@ test.describe("fila de cadastros pendentes", () => {
     await expect(aprovada).toHaveCount(1);
     await expect(aprovada.getByText("Autorizado", { exact: true })).toBeVisible();
     await expect(aprovada).toContainText("Matrícula conferida com a secretaria.");
+
+    // Autorizar registra a matrícula como válida: o administrador passa a
+    // enxergá-la na tela de Matrículas.
+    await abrirFila(page, "felipe.andrade@ifrj.edu.br");
+    await page.goto("/admin/matriculas");
+    await page.getByLabel("Buscar por nome, matrícula ou curso").fill(matricula);
+    await page.getByRole("button", { name: "Filtrar" }).click();
+
+    const linhaMatricula = page.locator("[data-matricula]").filter({ hasText: matricula });
+
+    await expect(linhaMatricula).toHaveCount(1);
+    await expect(linhaMatricula.getByText(nome)).toBeVisible();
+    await expect(linhaMatricula.getByText("Lançamento do administrador")).toBeVisible();
   });
 
   test("recusa com motivo e mantém o cadastro fora do acesso", async ({ page }) => {
-    const nome = await criarCadastroPendente(page);
+    const { nome } = await criarCadastroPendente(page);
 
     await abrirFila(page, "carla.menezes@ifrj.edu.br");
 

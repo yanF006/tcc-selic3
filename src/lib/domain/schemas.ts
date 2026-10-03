@@ -10,6 +10,9 @@ import { dataParaIso, diasEntre } from "@/lib/format";
 
 export const SOMENTE_DIGITOS = /^\d+$/;
 
+/** Matrícula do SIGAA: dez dígitos, usada no cadastro e no lançamento manual. */
+export const MATRICULA_SIGAA = /^\d{10}$/;
+
 /** Remove a máscara antes de validar. */
 export function aoValidar(formato?: "cpf" | "data" | "numero") {
   return (valor: string) => {

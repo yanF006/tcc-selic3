@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Administração de usuários (11.1, 11.2, 11.3) e mutações em memória (3.4):
- * cadastrar aluno com e sem autorização de matrícula, cadastrar coordenador de
- * curso vinculado ao curso, recusar cadastro sem papel, editar, inativar sem
- * excluir e confirmar que a inativação bloqueia o acesso.
+ * cadastrar aluno registrando a matrícula ausente, cadastrar aluno com matrícula
+ * já registrada sem duplicar, recusar matrícula fora do formato, cadastrar
+ * coordenador de curso vinculado ao curso, recusar cadastro sem papel, editar,
+ * inativar sem excluir, abrir o perfil completo e filtrar por curso.
  */
 
 const SENHA = "selic123";
@@ -12,9 +13,9 @@ const SENHA = "selic123";
 /**
  * O estado do simulador vive em memória no processo do servidor, então cada
  * execução usa identificadores novos para não colidir com cadastros de rodadas
- * anteriores.
+ * anteriores. O sufixo é só de dígitos porque a matrícula tem dez.
  */
-const SUFIXO = Date.now().toString(36);
+const SUFIXO = Date.now().toString().slice(-6);
 
 async function entrarComoAdministrador(page: import("@playwright/test").Page) {
   await page.goto("/login");
@@ -27,6 +28,23 @@ async function entrarComoAdministrador(page: import("@playwright/test").Page) {
     page.waitForURL((url) => url.pathname === "/admin/usuarios", { timeout: 60_000 }),
     page.getByRole("button", { name: "Entrar" }).click(),
   ]);
+}
+
+/** Registra uma matrícula válida na tela de Matrículas. */
+async function registrarMatricula(
+  page: import("@playwright/test").Page,
+  matricula: string,
+  nome: string,
+) {
+  await page.goto("/admin/matriculas");
+  await page.getByLabel("Matrícula", { exact: true }).fill(matricula);
+  await page.getByLabel("Nome do aluno").fill(nome);
+  await page.getByLabel("Curso", { exact: true }).click();
+  await page.getByRole("option", { name: /Informática/ }).click();
+  await page.getByRole("button", { name: "Registrar matrícula" }).click();
+
+  await expect(page.getByRole("status").filter({ hasText: "Matrícula registrada" })).toBeVisible();
+  await page.goto("/admin/usuarios");
 }
 
 /** Filtra a lista por um termo para o registro ficar na primeira página. */
@@ -43,20 +61,23 @@ async function abrirFormulario(page: import("@playwright/test").Page) {
 }
 
 test.describe("cadastro pela administração", () => {
-  test("cadastra aluno com autorização de matrícula fora do SIGAA", async ({ page }) => {
+  test("cadastra aluno com matrícula registrada", async ({ page }) => {
     await entrarComoAdministrador(page);
 
-    const nome = `Aluno Autorizado ${SUFIXO}`;
+    const nome = `Aluno Matriculado ${SUFIXO}`;
+    const matricula = `2026${SUFIXO}`;
+
+    await registrarMatricula(page, matricula, nome);
+
     const dialogo = await abrirFormulario(page);
 
     await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
     await dialogo
       .getByLabel("E-mail", { exact: true })
-      .fill(`aluno.autorizado${SUFIXO}@aluno.ifrj.edu.br`);
+      .fill(`aluno.matriculado${SUFIXO}@aluno.ifrj.edu.br`);
     await dialogo.getByLabel("Papel", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
-    await dialogo.getByLabel("Matrícula (SIGAA)").fill("2026555001");
-    await dialogo.getByRole("checkbox").check();
+    await dialogo.getByLabel("Matrícula", { exact: true }).fill(matricula);
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "Cadastro recusado" })).toHaveCount(0);
@@ -65,25 +86,91 @@ test.describe("cadastro pela administração", () => {
 
     const linha = page.getByRole("row").filter({ hasText: nome });
 
-    // Matrícula autorizada entra como pendente, aguardando a liberação.
-    await expect(linha.getByText("Pendente")).toBeVisible();
+    // Matrícula registrada significa acesso liberado, sem fila de autorização.
+    await expect(linha.getByText("Ativo")).toBeVisible();
   });
 
-  test("recusa matrícula fora do SIGAA sem autorização explícita", async ({ page }) => {
+  test("cadastra aluno registrando a matrícula ausente", async ({ page }) => {
+    await entrarComoAdministrador(page);
+
+    const nome = `Aluno Sem Matrícula ${SUFIXO}`;
+    const matricula = `2027${SUFIXO}`;
+
+    const dialogo = await abrirFormulario(page);
+
+    await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
+    await dialogo
+      .getByLabel("E-mail", { exact: true })
+      .fill(`sem.matricula${SUFIXO}@aluno.ifrj.edu.br`);
+    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await page.getByRole("option", { name: "Aluno", exact: true }).click();
+    await dialogo.getByLabel("Matrícula", { exact: true }).fill(matricula);
+    await dialogo.getByRole("button", { name: "Cadastrar" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "Cadastro recusado" })).toHaveCount(0);
+
+    await buscar(page, nome);
+
+    const linha = page.getByRole("row").filter({ hasText: nome });
+
+    // Matrícula agora registrada significa acesso liberado, sem fila de autorização.
+    await expect(linha.getByText("Ativo")).toBeVisible();
+
+    // A matrícula entra no registro com a origem do cadastro de administrador.
+    await page.goto("/admin/matriculas");
+    await page.getByLabel("Buscar por nome, matrícula ou curso").fill(matricula);
+    await page.getByRole("button", { name: "Filtrar" }).click();
+
+    await expect(page.getByTestId("total-matriculas")).toContainText("1");
+    await expect(page.getByRole("row").filter({ hasText: matricula })).toHaveCount(1);
+    await expect(
+      page.getByRole("row").filter({ hasText: matricula }).getByText("Lançamento do administrador"),
+    ).toBeVisible();
+  });
+
+  test("cadastra aluno com matrícula já registrada sem duplicar o registro", async ({ page }) => {
+    await entrarComoAdministrador(page);
+
+    const nome = `Aluno Já Registrado ${SUFIXO}`;
+    const matricula = `2028${SUFIXO}`;
+
+    await registrarMatricula(page, matricula, nome);
+
+    const dialogo = await abrirFormulario(page);
+
+    await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
+    await dialogo
+      .getByLabel("E-mail", { exact: true })
+      .fill(`ja.registrado${SUFIXO}@aluno.ifrj.edu.br`);
+    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await page.getByRole("option", { name: "Aluno", exact: true }).click();
+    await dialogo.getByLabel("Matrícula", { exact: true }).fill(matricula);
+    await dialogo.getByRole("button", { name: "Cadastrar" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "Cadastro recusado" })).toHaveCount(0);
+
+    // O registro pré-existente continua único depois do cadastro.
+    await page.goto("/admin/matriculas");
+    await page.getByLabel("Buscar por nome, matrícula ou curso").fill(matricula);
+    await page.getByRole("button", { name: "Filtrar" }).click();
+
+    await expect(page.getByTestId("total-matriculas")).toContainText("1");
+    await expect(page.getByRole("row").filter({ hasText: matricula })).toHaveCount(1);
+  });
+
+  test("recusa aluno com matrícula fora do formato", async ({ page }) => {
     await entrarComoAdministrador(page);
 
     const dialogo = await abrirFormulario(page);
 
-    await dialogo.getByLabel("Nome", { exact: true }).fill(`Aluno Sem Autorização ${SUFIXO}`);
-    await dialogo
-      .getByLabel("E-mail", { exact: true })
-      .fill(`sem.autorizacao${SUFIXO}@aluno.ifrj.edu.br`);
+    await dialogo.getByLabel("Nome", { exact: true }).fill(`Aluno Formato ${SUFIXO}`);
+    await dialogo.getByLabel("E-mail", { exact: true }).fill(`formato${SUFIXO}@aluno.ifrj.edu.br`);
     await dialogo.getByLabel("Papel", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
-    await dialogo.getByLabel("Matrícula (SIGAA)").fill("2026999888");
+    await dialogo.getByLabel("Matrícula", { exact: true }).fill("123");
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
 
-    await expect(page.getByRole("alert").filter({ hasText: "não consta no SIGAA" })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "10 dígitos" })).toBeVisible();
   });
 
   test("recusa cadastro sem papel definido", async ({ page }) => {
@@ -189,8 +276,8 @@ test.describe("edição, inativação e exclusão", () => {
   });
 });
 
-test.describe("filtros", () => {
-  test("filtra a lista por papel, situação e busca", async ({ page }) => {
+test.describe("filtros e perfil", () => {
+  test("filtra a lista por papel, situação, curso e busca", async ({ page }) => {
     await entrarComoAdministrador(page);
 
     // Busca por e-mail encontra exatamente o cadastro inativo.
@@ -224,6 +311,34 @@ test.describe("filtros", () => {
 
     await expect(linha).toHaveCount(1);
     await expect(page.getByTestId("total-usuarios")).toContainText("encontrado(s)");
+  });
+
+  test("filtra por curso e abre o perfil completo", async ({ page }) => {
+    await entrarComoAdministrador(page);
+
+    // Curso sem ninguém vinculado esvazia a lista.
+    await page.getByLabel("Curso", { exact: true }).click();
+    await page.getByRole("option", { name: /Eletricidade/ }).click();
+
+    await page.getByLabel("Buscar por nome, e-mail ou matrícula").fill("Joao");
+    await page.getByRole("button", { name: "Filtrar" }).click();
+
+    const linha = page.getByRole("row").filter({ hasText: "joao.lima@aluno.ifrj.edu.br" });
+
+    await expect(linha).toHaveCount(1);
+    await expect(linha.getByText("Eletricidade")).toBeVisible();
+
+    // Perfil completo: papel, matrícula e dados pessoais do aluno.
+    await page.getByRole("button", { name: "Ações de João Pedro Lima" }).click();
+    await page.getByRole("menuitem", { name: "Ver perfil completo" }).click();
+
+    const perfil = page.getByRole("dialog");
+
+    await expect(perfil.getByRole("heading", { name: /João Pedro Lima/ })).toBeVisible();
+    await expect(perfil.getByText("2023100788")).toBeVisible();
+    await expect(perfil.getByText("Aluno", { exact: true })).toBeVisible();
+    await expect(perfil.getByRole("heading", { name: "Acesso" })).toBeVisible();
+    await expect(perfil.getByRole("heading", { name: "Dados pessoais" })).toBeVisible();
   });
 });
 

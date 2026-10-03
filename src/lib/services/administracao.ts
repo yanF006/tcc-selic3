@@ -1,4 +1,6 @@
 import { metadadoUsuario } from "@/lib/domain/status";
+import { MATRICULA_SIGAA } from "@/lib/domain/schemas";
+import { cursoDoUsuario } from "@/lib/domain/usuario";
 import type {
   Campus,
   MatriculaImportada,
@@ -12,19 +14,26 @@ import type {
 
 import { agora, obterEstado, novoId } from "./store";
 import { filtrarPorTexto, paginar } from "./paginacao";
-import { notificar } from "./sessao";
 
 import { ErroDeRegra } from "./erros";
 
 /**
  * Administração do sistema (bloco 8): usuários, solicitações de acesso e
- * importação manual de matrículas do SIGAA. Toda mutação acontece em memória e
- * vale enquanto a aba do navegador estiver aberta (D4).
+ * matrículas registradas. Toda mutação acontece em memória e vale enquanto a aba
+ * do navegador estiver aberta (D4).
+ *
+ * Regra de matrícula: uma matrícula vale quando está **registrada no sistema**,
+ * seja por importação, seja por lançamento manual do administrador, seja quando a
+ * coordenação autoriza um cadastro pendente, seja quando o cadastro do aluno pelo
+ * administrador registra a matrícula que ainda não existia. Não existe autorização
+ * avulsa no cadastro de aluno.
  */
 
 export interface ConsultaUsuarios {
   papel?: Papel;
   situacao?: SituacaoUsuario;
+  /** Filtra pelo curso vinculado ao aluno ou ao coordenador de curso. */
+  cursoId?: string;
   busca?: string;
   pagina?: number;
   tamanho?: number;
@@ -44,8 +53,6 @@ export interface CadastroUsuario {
   campus?: Campus;
   matricula?: string;
   cursoId?: string;
-  /** Autorização do administrador para matrícula ainda não registrada no SIGAA. */
-  matriculaNaoRegistrada?: boolean;
   /** Marca o cadastro como membro da Comissão de Estágio. */
   membroComissaoEstagio?: boolean;
 }
@@ -61,6 +68,16 @@ function porNome<T extends { nome: string }>(a: T, b: T): number {
   return a.nome.localeCompare(b.nome, "pt-BR");
 }
 
+/** true quando a matrícula já vale no sistema, venha de onde vier. */
+export function matriculaRegistrada(matricula: string): boolean {
+  return obterEstado().matriculas.some((registro) => registro.matricula === matricula.trim());
+}
+
+/** Nome do curso de uma matrícula, para o registro feito a partir do cadastro. */
+function nomeDoCurso(cursoId: string): string {
+  return obterEstado().cursos.find((curso) => curso.id === cursoId)?.nome ?? "Não informado";
+}
+
 export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<Pagina<Usuario>> {
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.usuarios, consulta.busca ?? "", (usuario) => [
@@ -72,6 +89,7 @@ export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<P
   const filtrados = busca
     .filter((usuario) => !consulta.papel || usuario.papeis.includes(consulta.papel))
     .filter((usuario) => !consulta.situacao || usuario.situacao === consulta.situacao)
+    .filter((usuario) => !consulta.cursoId || cursoDoUsuario(usuario) === consulta.cursoId)
     .sort(porNome);
 
   return paginar(filtrados, consulta);
@@ -127,11 +145,26 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
   if (cadastro.papeis.includes("aluno")) {
     if (!matricula)
       throw new ErroDeRegra("Informe a matrícula do aluno.", "informe_a_matricula_do_aluno");
-    if (!cadastro.matriculaNaoRegistrada) {
+
+    if (!MATRICULA_SIGAA.test(matricula)) {
       throw new ErroDeRegra(
-        "A matrícula não consta no SIGAA. Marque a autorização do administrador para prosseguir.",
-        "matricula_fora_do_sigaa",
+        "Informe a matrícula com 10 dígitos.",
+        "informe_a_matricula_com_dez_digitos",
       );
+    }
+
+    // O cadastro do aluno registra a matrícula que ainda não consta, com a origem
+    // do cadastro de administrador, e libera o acesso na mesma operação. Quem já
+    // está registrado mantém o registro existente, sem duplicar.
+    if (!matriculaRegistrada(matricula)) {
+      estado.matriculas.push({
+        id: novoId("mat"),
+        matricula,
+        nome: cadastro.nome.trim(),
+        curso: cadastro.cursoId ? nomeDoCurso(cadastro.cursoId) : "Não informado",
+        origem: "cadastro_administrador",
+        importadaEm: agora(),
+      });
     }
   }
 
@@ -140,11 +173,10 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     nome: cadastro.nome.trim(),
     email,
     papeis: [...cadastro.papeis],
-    situacao: cadastro.papeis.includes("aluno") ? "pendente" : "ativo",
+    situacao: "ativo",
     campus,
     matricula,
     cursoId: cadastro.cursoId,
-    matriculaAutorizadaForaDoSigaa: matricula ? cadastro.matriculaNaoRegistrada : undefined,
     membroComissaoEstagio: false,
     criadoEm: agora(),
   };
@@ -276,6 +308,20 @@ export async function decidirSolicitacao(
   solicitacao.motivo = motivo?.trim() || solicitacao.motivo;
 
   if (decisao === "autorizado") {
+    // A matrícula conferida passa a valer no sistema: o cadastro do aluno deixa
+    // de depender de autorização avulsa e a matrícula fica registrada para os
+    // próximos cadastros.
+    if (!estado.matriculas.some((registro) => registro.matricula === solicitacao.matricula)) {
+      estado.matriculas.push({
+        id: novoId("mat"),
+        matricula: solicitacao.matricula,
+        nome: solicitacao.nome,
+        curso: nomeDoCurso(solicitacao.dadosPessoais.cursoId),
+        origem: "cadastro_administrador",
+        importadaEm: agora(),
+      });
+    }
+
     const existente = estado.usuarios.find(
       (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
     );
@@ -391,19 +437,44 @@ export async function totalMatriculasImportadas(): Promise<number> {
   return obterEstado().matriculas.length;
 }
 
-export async function matricularAlunoImportado(matricula: string, alunoId: string): Promise<void> {
+/**
+ * Lançamento manual de uma matrícula válida pelo administrador. Enquanto não
+ * houver integração com o SIGAA, é este registro que autoriza o cadastro do
+ * aluno correspondente.
+ */
+export async function registrarMatricula(linha: LinhaImportacao): Promise<MatriculaImportada> {
   const estado = obterEstado();
-  const usuario = estado.usuarios.find((registro) => registro.id === alunoId);
+  const matricula = linha.matricula.trim();
+  const nome = linha.nome.trim();
+  const curso = linha.curso.trim();
 
-  if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
-  if (usuario.matricula !== matricula) {
+  if (!MATRICULA_SIGAA.test(matricula)) {
     throw new ErroDeRegra(
-      `A matrícula ${matricula} não pertence a ${usuario.nome}.`,
-      "matricula_divergente",
+      "Informe a matrícula com 10 dígitos.",
+      "informe_a_matricula_com_dez_digitos",
     );
   }
 
-  usuario.situacao = "ativo";
+  if (!nome) throw new ErroDeRegra("Informe o nome do aluno.", "informe_o_nome_do_aluno");
+  if (!curso) throw new ErroDeRegra("Informe o curso do aluno.", "informe_o_curso_do_aluno");
 
-  await notificar(alunoId, "Acesso liberado", "Sua matrícula foi validada e o acesso está ativo.");
+  if (matriculaRegistrada(matricula)) {
+    throw new ErroDeRegra(
+      `A matrícula ${matricula} já está registrada.`,
+      "matricula_ja_registrada",
+    );
+  }
+
+  const registro: MatriculaImportada = {
+    id: novoId("mat"),
+    matricula,
+    nome,
+    curso,
+    origem: "cadastro_administrador",
+    importadaEm: agora(),
+  };
+
+  estado.matriculas.push(registro);
+
+  return registro;
 }
