@@ -40,7 +40,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -110,7 +117,7 @@ export default function PaginaLaboratorio() {
             <div className="flex flex-col gap-2">
               <Label htmlFor="lab-erro">CPF</Label>
               <Input id="lab-erro" aria-invalid defaultValue="123" />
-              <p className="text-sm font-medium text-destructive">CPF inválido.</p>
+              <p className="text-destructive text-sm font-medium">CPF inválido.</p>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="lab-obs">Observações</Label>
@@ -155,7 +162,9 @@ export default function PaginaLaboratorio() {
             </Alert>
             <Alert variant="destructive">
               <AlertTitle>Falha no envio</AlertTitle>
-              <AlertDescription>O e-mail do responsável externo está indisponível.</AlertDescription>
+              <AlertDescription>
+                O e-mail do responsável externo está indisponível.
+              </AlertDescription>
             </Alert>
             <div className="flex flex-wrap gap-2">
               <Dialog open={aberto} onOpenChange={setAberto}>
@@ -234,7 +243,7 @@ export default function PaginaLaboratorio() {
             </TableBody>
           </Table>
           <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground">Aproveitamento de horas: 80%</p>
+            <p className="text-muted-foreground text-sm">Aproveitamento de horas: 80%</p>
             <Progress value={80} />
           </div>
           <Separator />

@@ -13,7 +13,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:seletor": "NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true playwright test e2e/seletor-papel.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
