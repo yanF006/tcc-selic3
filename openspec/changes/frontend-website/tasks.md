@@ -11,9 +11,9 @@
 ## 2. Tokens, temas e identidade visual
 
 - [x] 2.1 Criar arquivo único de tokens com a rampa de verde como cor principal e as variáveis semânticas de fundo, texto, borda, foco e estado, nos dois temas — verificação: os componentes base renderizam com o verde aplicado e contraste de texto sobre fundo medido em 4,5:1 ou mais nos dois temas
-- [ ] 2.2 Instalar next-themes com atributo por classe e injetar o script antiflash no layout raiz — verificação: com tema escuro salvo, a primeira renderização da página já sai escura, sem piscar o tema claro
+- [x] 2.2 Instalar next-themes com atributo por classe e injetar o script antiflash no layout raiz — verificação: com tema escuro salvo, a primeira renderização da página já sai escura, sem piscar o tema claro
 - [x] 2.3 Criar o controle de alternância de tema com as opções claro, escuro e sistema — verificação: alternar o tema muda todas as telas sem recarregar a página
-- [ ] 2.4 Implementar a preferência de tema com persistência entre sessões e acompanhamento da preferência do sistema — verificação: teste unitário da preferência e teste E2E de persistência após logout e novo login
+- [x] 2.4 Implementar a preferência de tema com persistência entre sessões e acompanhamento da preferência do sistema — verificação: teste unitário da preferência e teste E2E de persistência após logout e novo login
 - [ ] 2.5 Isolar o preview de documento em um escopo de tokens de impressão com fundo claro e texto escuro — verificação: preview aberto em tema escuro continua claro e a impressão sai sem áreas escuras de fundo
 - [ ] 2.6 Criar o item de logotipo do SELic com variante por tema e o ícone do navegador, e implementar a navegação recolhida em tela estreita — verificação: logotipo legível nos dois temas e navegação acessível por botão abaixo de 640 px
 - [x] 2.7 Centralizar em `lib/domain/status` os rótulos, variantes de cor e ícones de cada situação de documento e de estágio, sempre com rótulo textual — verificação: teste unitário garantindo que toda situação tem rótulo, cor e ícone
@@ -45,13 +45,13 @@
 - [x] 5.1 Criar a tela de login com validação de e-mail e senha e mensagem de erro genérica — verificação: e-mail inexistente e senha incorreta exibem exatamente a mesma mensagem
 - [x] 5.2 Criar a primeira etapa do cadastro com matrícula, e-mail, senha e confirmação — verificação: confirmação divergente bloqueia o avanço com erro no campo
 - [x] 5.3 Validar unicidade de e-mail no cadastro sem revelar dados da conta existente — verificação: teste E2E de recusa com e-mail já cadastrado
-- [x] 5.4 Verificar a matrícula contra os registros importados e sinalizar cadastro pendente — verificação: matrícula inexistente gera estado pendente e mensagem de aguardo de autorização
+- [x] 5.4 Verificar a matrícula contra as matrículas registradas e sinalizar cadastro pendente — verificação: matrícula inexistente gera estado pendente e mensagem de aguardo de autorização
 - [x] 5.5 Criar a segunda etapa do cadastro com os dados pessoais e selects dependentes de curso, turma e período — verificação: trocar o curso limpa turma e período e exige nova seleção
 - [x] 5.6 Criar a fila de autorização de cadastro pendente para coordenadores e administrador, com decisão e motivo — verificação: teste E2E de autorização liberando o acesso e de recusa mantendo o cadastro inativo
 - [x] 5.7 Bloquear o acesso de cadastro pendente a áreas autenticadas — verificação: teste E2E de aluno pendente em `/documentos` vendo aviso e nenhum dado do sistema
 - [ ] 5.8 Implementar a recuperação de senha com pedido, confirmação genérica e link de uso único — verificação: e-mail inexistente recebe a mesma confirmação e o link reutilizado é recusado
 - [ ] 5.9 Implementar a troca de senha autenticada exigindo a senha atual — verificação: teste E2E de senha atual incorreta mantendo a senha anterior
-- [ ] 5.10 Adaptar login e cadastro ao celular com navegação recolhida e sem perder o preenchimento ao redimensionar — verificação: teste E2E de viewport móvel e de resize com formulário preenchido
+- [x] 5.10 Adaptar login e cadastro ao celular com navegação recolhida, sem rolagem horizontal e sem perder o preenchimento ao redimensionar — verificação: teste E2E de viewport móvel, de ausência de rolagem horizontal e de resize com formulário preenchido
 
 ## 6. Dados pessoais do aluno
 
@@ -133,15 +133,16 @@
 
 ## 11. Administração do sistema
 
-- [x] 11.1 Cadastrar, editar e excluir alunos pela administração, com autorização explícita de matrícula não registrada — verificação: testes E2E de cadastro com e sem autorização
+- [x] 11.1 Cadastrar, editar e excluir alunos pela administração, registrando automaticamente a matrícula informada quando ela ainda não consta e liberando o acesso — verificação: testes E2E de cadastro com matrícula nova e com matrícula já registrada, sem duplicar o registro
 - [x] 11.2 Cadastrar coordenadores de estágio, coordenadores de curso e administradores com papel obrigatório e curso vinculado — verificação: testes E2E do CRUD e da recusa sem papel
-- [x] 11.3 Listar usuários com filtro por papel e situação, busca e inativação sem exclusão — verificação: teste E2E do filtro e da inativação bloqueando o acesso
+- [x] 11.3 Listar usuários com filtro por papel, situação e curso, busca, perfil completo e inativação sem exclusão — verificação: teste E2E dos filtros, do perfil completo e da inativação bloqueando o acesso
 - [ ] 11.4 Gerenciar templates com cadastro de nova versão, campos de preenchimento e histórico de versões — verificação: teste E2E do versioning com a versão vigente indicada
 - [ ] 11.5 Recusar arquivo de template fora do formato docx e inativar template preservando os documentos gerados — verificação: testes E2E da recusa e da inativação
 - [ ] 11.6 Manter a versão usada por documentos já preenchidos sem reaplicar os campos da nova versão — verificação: teste E2E de reabertura de documento com versão anterior
-- [ ] 11.7 Importar matrículas por arquivo informando válidas, rejeitadas e ignoradas com o motivo — verificação: teste E2E do relatório de importação com matrícula duplicada
-- [ ] 11.8 Avisar que a importação é manual enquanto não houver acesso oficial ao SIGAA — verificação: inspeção visual do aviso na tela de importação
-- [ ] 11.9 Listar as matrículas registradas com a origem e o total importado — verificação: teste E2E da listagem
+- [x] 11.7 Lançar matrícula válida pela tela de Matrículas, com dez dígitos, nome e curso, recusando duplicatas — verificação: teste E2E do lançamento e da recusa de matrícula duplicada
+- [ ] 11.10 Exibir a importação de matrículas por arquivo com as válidas, as rejeitadas e as ignoradas com o motivo — verificação: teste E2E do relatório de importação com matrícula duplicada
+- [x] 11.8 Avisar que o registro é manual enquanto não houver acesso oficial ao SIGAA — verificação: inspeção visual do aviso na tela de Matrículas
+- [x] 11.9 Listar as matrículas registradas com busca por nome, matrícula ou curso, filtro por origem e o total — verificação: teste E2E da listagem
 
 ## 12. Estatísticas
 
@@ -167,7 +168,7 @@
 
 ## 14. Testes de fluxo
 
-- [ ] 14.1 Escrever o teste E2E do cadastro em duas etapas para matrícula válida e inválida — verificação: `npm run test:e2e` passa
+- [x] 14.1 Escrever o teste E2E do cadastro em duas etapas para matrícula válida e inválida — verificação: `npm run test:e2e` passa
 - [ ] 14.2 Escrever o teste E2E do ciclo de estágio com seleção de documentos e limite de horas — verificação: `npm run test:e2e` passa
 - [ ] 14.3 Escrever o teste E2E do ciclo de parecer, da submissão à decisão e à notificação — verificação: `npm run test:e2e` passa
 - [ ] 14.4 Ampliar a suíte unitária para cobrir máscaras, esquemas Zod, descritores, situações e limites de horas — verificação: `npm run test:unit` passa cobrindo todas as regras de domínio

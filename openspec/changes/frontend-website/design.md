@@ -4,7 +4,7 @@ Estado atual e restrições que moldam a abordagem. A motivação está em `prop
 
 - Nenhuma linha de código existe no repositório. Não há inicialização de Git, e o repositório ainda não é versionado.
 - O projeto será implantado na Vercel, com MySQL no Aiven, Prisma, Better Auth, Nodemailer e docxtemplater previstos no `Contexto/visaoGeral.md` (§15, §17), mas a ordem definida em `Contexto/desenvolvimento.md` é telas primeiro, banco e backend depois.
-- Os 9 arquivos de `specs/` somam 86 requisitos e 217 cenários. Esta mudança entrega todos eles no frontend.
+- Os 9 arquivos de `specs/` somam 87 requisitos e 226 cenários. Esta mudança entrega todos eles no frontend.
 - Os 12 documentos do Kit de Estágio estão em `Contexto/kit-estagio`: 2 PDFs de download, 8 `.docx` e 2 arquivos `.doc` legados (Convênio e Termo de Compromisso), que precisam ser convertidos fora do sistema antes do cadastro (§7.4).
 - O único insumo visual disponível é a regra "verde como cor principal" (§16): não há logo, favicon, tipografia nem valor de cor definidos.
 - A camada de persistência será substituída depois, mas as telas não podem depender de nada específico do simulador.
@@ -40,7 +40,12 @@ As telas ficam em route groups do App Router por domínio de acesso (`(publico)`
 
 ### D2. Registro único de navegação alimentado por permissões
 
-Um `nav.ts` declara os itens com `requiredRoles`, e o layout filtra a lista por papel. Os requisitos de navegação por papel (`autenticacao-acesso`) e de interface (`interface-visual`) passam a ter uma única fonte, sem menu duplicado por layout.
+Um `nav.ts` declara os itens com `requiredRoles`, `icone` e `grupo`, e o layout filtra a lista por papel. Os requisitos de navegação por papel (`autenticacao-acesso`) e de interface (`interface-visual`) passam a ter uma única fonte, sem menu duplicado por layout.
+
+A navbar mostra até quatro itens na linha principal e agrupa os demais em um menu por área (Gestão, Administração), com o rótulo da área como gatilho. O agrupamento é decisão de apresentação, não de permissão: o item continua no mesmo registro de `nav.ts`, então a guarda de papel e a contagem de permissões não mudam. No celular, a linha principal e os menus dão lugar a um painel acionado por botão.
+
+- **Alternativa:** menu com todos os itens para todos os papéis. Rejeitada porque alonga a linha principal e esconde o que muda entre papéis.
+- **Alternativa:** itens sem ícone. Rejeitada porque a lista de áreas é longa e o ícone dá varredura visual sem custos de tradução.
 
 - **Alternativa:** menus escritos à mão em cada layout. Rejeitada porque divergem entre si e ninguém detecta a divergência.
 
@@ -54,11 +59,12 @@ Sem autenticação, é preciso navegar as quatro áreas para validar com a clien
 
 ### D4. Camada de serviço tipada sobre fixtures, sem biblioteca de dados
 
-Cada agregado tem um módulo em `src/lib/services` com funções assíncronas e os tipos de domínio. A implementação atual lê fixtures e mantém mutações em memória durante a sessão do navegador. Telas importam apenas o serviço, nunca as fixtures. Sem React Query e sem MSW: ainda não há rede para cachear nem servidor para simular.
+Cada agregado tem um módulo em `src/lib/services` com funções assíncronas e os tipos de domínio. A implementação atual lê fixtures e mantém as mutações em memória no processo do servidor. Telas importam apenas o serviço, nunca as fixtures. Sem React Query e sem MSW: ainda não há rede para cachear nem servidor para simular.
 
 - **Alternativa:** Prisma agora. Rejeitada porque contraria a ordem do projeto e a configuração do Aiven ainda é informação de conexão, não esquema.
 - **Alternativa:** MSW para simular HTTP desde já. Rejeitada porque resolve um problema que só existe quando houver servidor.
 - **Efeito colateral:** os tipos viram o contrato a ser reproduzido pelo `schema.prisma`; a mudança de backend troca implementação, não assinatura.
+- **Consequência:** como o estado mora na memória do processo, o Preview da Vercel não é confiável para verificar escrita — cada instância tem a sua cópia e o que foi lançado em uma instância não aparece na seguinte. O Preview serve para revisão visual e de navegação; o teste de escrita acontece em `npm run test:e2e`, que roda contra um servidor único.
 
 ### D5. Formulários de documento dirigidos por descritor de template
 
@@ -123,6 +129,10 @@ Heranças do `Contexto/visaoGeral.md` onde ele é omissivo, escolhendo o comport
 | Carga horária do estágio | O total de horas vem dos lançamentos, e o campo de duração em horas do Termo de Compromisso é preenchido com esse total e permanece ajustável pelo aluno. |
 | Formulário de Liberação e Plano de Atividades | Decidido com a cliente: viram dois arquivos `.docx` independentes, porque §7.4 exige que sejam templates separados. |
 | Genericidade dos templates | Decidido com a cliente: todos os templates são genéricos, inclusive a Proposta de Atuação Pedagógica, cuja menção ao curso Licenciatura em Computação é removida do cabeçalho. |
+| Matrícula do cadastro público | Só libera o acesso se já estiver registrada no sistema; matrícula sem registro gera cadastro pendente, como nas §7.4 do `Contexto/visaoGeral.md`. |
+| Autorização de cadastro pendente | Autorizar também registra a matrícula como válida, porque é a conferência que o gestor acabou de fazer; não existe segunda etapa de registro. |
+| Matrícula fora do registro | O cadastro do aluno pelo administrador registra a matrícula informada quando ela ainda não consta, com origem `cadastro_administrador`, e libera o acesso na mesma operação. A tela de Matrículas continua existindo para registrar antes; a autorização avulsa por checkbox foi descartada. |
+| Registro de matrícula sem SIGAA | Enquanto não houver integração, o registro é manual (lançamento por matrícula), com a importação por arquivo mantida como caminho previsto e não entregue nesta fatia. |
 | Abrangência do convênio | Decidido com a cliente: o convênio vale apenas para o Campus Pinheiral, então o cadastro não oferece escolha de campus, apesar da cláusula do template mencionar todos os campi do IFRJ. |
 
 ## Risks / Trade-offs

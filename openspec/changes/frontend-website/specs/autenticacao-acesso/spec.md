@@ -63,7 +63,7 @@ O sistema SHALL permitir que um coordenador de estágio, o coordenador do curso 
 #### Scenario: Autorização concedida
 
 - **WHEN** um Coordenador de Estágio, o Coordenador de Curso do aluno ou um Administrador autoriza um cadastro pendente
-- **THEN** o sistema SHALL liberar o acesso do aluno e notificar o resultado
+- **THEN** o sistema SHALL registrar a matrícula do aluno como válida quando ela ainda não estiver registrada, liberar o acesso e notificar o resultado
 
 #### Scenario: Autorização recusada
 
@@ -164,4 +164,9 @@ O sistema SHALL exibir na navegação apenas as áreas permitidas ao papel do us
 
 - **WHEN** o usuário visualiza a navegação
 - **THEN** o sistema SHALL omitir os itens que não pertencem ao seu papel
+
+#### Scenario: Acessos agrupados em menus
+
+- **WHEN** os acessos de um papel não cabem na linha principal da navegação
+- **THEN** o sistema SHALL agrupá-los em menus por área, mantendo cada acesso permitido alcançável a partir da navegação
 

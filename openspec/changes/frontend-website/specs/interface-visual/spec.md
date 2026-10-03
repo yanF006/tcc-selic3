@@ -131,6 +131,30 @@ O sistema SHALL adaptar a interface a celulares e a computadores, mantendo a nav
 - **WHEN** o usuário redimensiona a janela entre largura de celular e de computador
 - **THEN** o sistema SHALL reorganizar o layout sem perder o conteúdo preenchido em formulários e a posição na lista exibida
 
+### Requirement: Feedback de campo nos formulários
+
+O sistema SHALL marcar os campos obrigatórios de forma visível sem alterar o nome acessível do campo, SHALL apresentar a mensagem de erro ou de conferência no próprio campo, sem depender apenas da cor, e SHALL permitir exibir a senha digitada.
+
+#### Scenario: Obrigatoriedade visível
+
+- **WHEN** o usuário abre um formulário com campos obrigatórios
+- **THEN** o sistema SHALL indicar a obrigatoriedade ao lado do rótulo, anunciar a obrigatoriedade no campo e explicar o marcador uma única vez por formulário
+
+#### Scenario: Erro apresentado no campo
+
+- **WHEN** um campo é recusado por validação
+- **THEN** o sistema SHALL exibir a mensagem junto ao campo, com ícone e texto, e associá-la ao campo para quem usa leitor de tela
+
+#### Scenario: Conferência do formato do e-mail
+
+- **WHEN** o usuário digita um e-mail e sai do campo
+- **THEN** o sistema SHALL informar se o formato preenchido é válido ou inválido, antes do envio
+
+#### Scenario: Exibição da senha
+
+- **WHEN** o usuário preenche um campo de senha
+- **THEN** o sistema SHALL oferecer o controle para exibir e ocultar a senha digitada, sem limpar o valor
+
 ### Requirement: Navegação por teclado
 
 O sistema SHALL permitir que todos os elementos interativos sejam alcançados e acionados pelo teclado e SHALL rotular os campos de formulário de forma associada ao respectivo campo.

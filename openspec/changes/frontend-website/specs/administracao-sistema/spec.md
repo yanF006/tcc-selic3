@@ -20,17 +20,22 @@ O sistema SHALL conceder ao Administrador acesso a todas as áreas do sistema, i
 
 ### Requirement: Cadastro de alunos pelo administrador
 
-O sistema SHALL permitir ao administrador cadastrar, editar e excluir alunos, informando os mesmos dados do cadastro do próprio aluno.
+O sistema SHALL permitir ao administrador cadastrar, editar e excluir alunos, informando os mesmos dados do cadastro do próprio aluno, e SHALL registrar automaticamente a matrícula informada no cadastro quando ela ainda não constar do registro, liberando o acesso do aluno na mesma operação.
 
 #### Scenario: Cadastro de aluno pelo administrador
 
 - **WHEN** o administrador cadastra um aluno com matrícula, e-mail e dados pessoais válidos
 - **THEN** o sistema SHALL gravar o cadastro e disponibilizar o acesso ao aluno
 
-#### Scenario: Autorização de matrícula não registrada
+#### Scenario: Matrícula registrada no cadastro do aluno
 
-- **WHEN** o administrador cadastra um aluno cuja matrícula não está registrada no sistema
-- **THEN** o sistema SHALL permitir o cadastro mediante autorização explícita do administrador e registrar essa autorização
+- **WHEN** o administrador cadastra um aluno cuja matrícula ainda não está registrada
+- **THEN** o sistema SHALL registrar a matrícula com a origem do cadastro de administrador e liberar o acesso do aluno
+
+#### Scenario: Matrícula já registrada
+
+- **WHEN** o administrador cadastra um aluno com matrícula já existente
+- **THEN** o sistema SHALL manter o registro existente sem duplicá-lo e liberar o acesso do aluno
 
 #### Scenario: E-mail já utilizado
 
@@ -63,12 +68,22 @@ O sistema SHALL permitir ao administrador cadastrar, editar e excluir coordenado
 
 ### Requirement: Gestão de usuários por situação
 
-O sistema SHALL permitir ao administrador listar usuários por papel e por situação, buscá-los por nome ou e-mail e inativar um cadastro sem excluí-lo.
+O sistema SHALL permitir ao administrador listar usuários por papel, por situação e por curso, buscá-los por nome, e-mail ou matrícula, abrir o perfil completo de um cadastro e inativá-lo sem excluí-lo.
 
 #### Scenario: Lista por papel
 
 - **WHEN** o administrador abre a gestão de usuários
-- **THEN** o sistema SHALL listar os usuários e permitir filtrar por papel e por situação, exibindo o total de resultados
+- **THEN** o sistema SHALL listar os usuários e permitir filtrar por papel, por situação e por curso, exibindo o total de resultados
+
+#### Scenario: Filtro por curso
+
+- **WHEN** o administrador filtra a lista por um curso
+- **THEN** o sistema SHALL mostrar somente os cadastros cujo curso efetivo corresponde ao filtro, contando o vínculo do aluno e o do coordenador de curso
+
+#### Scenario: Perfil completo do cadastro
+
+- **WHEN** o administrador abre o perfil completo de um cadastro
+- **THEN** o sistema SHALL exibir situação, papéis, matrícula, curso, turma, período, contato e endereço registrados
 
 #### Scenario: Inativação de cadastro
 
@@ -113,15 +128,20 @@ O sistema SHALL permitir ao administrador importar matrículas de aluno, enquant
 - **WHEN** o administrador envia um arquivo com matrículas e o sistema processa a importação
 - **THEN** o sistema SHALL gravar as matrículas válidas, informar quantas foram importadas e listar as rejeitadas com o motivo
 
+#### Scenario: Lançamento manual de matrícula
+
+- **WHEN** o administrador lança uma matrícula com dez dígitos, nome e curso
+- **THEN** o sistema SHALL gravar a matrícula como válida, recusar duplicatas e registrar a origem do lançamento
+
 #### Scenario: Matrícula duplicada
 
-- **WHEN** a importação contém uma matrícula já registrada
+- **WHEN** a importação ou o lançamento manual contém uma matrícula já registrada
 - **THEN** o sistema SHALL não duplicar o registro e informar a matrícula como ignorada
 
-#### Scenario: Importação sem integração com o SIGAA
+#### Scenario: Registro de matrícula sem integração com o SIGAA
 
-- **WHEN** o administrador importa matrículas
-- **THEN** o sistema SHALL informar que a importação é manual e temporária, pois não há acesso oficial ao SIGAA
+- **WHEN** o administrador importa ou lança matrículas
+- **THEN** o sistema SHALL informar que o registro é manual e temporário, pois não há acesso oficial ao SIGAA, e SHALL informar que a matrícula registrada é a que libera o cadastro do aluno
 
 #### Scenario: Consulta de matrículas importadas
 
