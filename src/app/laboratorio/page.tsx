@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { DocumentPreview } from "@/components/documentos/document-preview";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -61,7 +62,11 @@ export default function PaginaLaboratorio() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 p-6">
       <header className="flex items-center justify-between">
-        <Logo tamanho="grande" />
+        <div className="flex flex-wrap items-center gap-6">
+          <Logo tamanho="grande" />
+          <Logo tamanho="medio" />
+          <Logo tamanho="pequeno" />
+        </div>
         <ThemeToggle />
       </header>
 
@@ -250,6 +255,72 @@ export default function PaginaLaboratorio() {
           <Skeleton className="h-8 w-full" />
         </CardContent>
       </Card>
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Preview de documento</h2>
+          <p className="text-muted-foreground text-sm">
+            A folha abaixo fica em fundo claro nos dois temas. Use o botão para imprimir: a barra de
+            ações sai e o documento sai branco com texto preto.
+          </p>
+        </div>
+
+        <div className="sem-impressao flex justify-end">
+          <Button variant="outline" onClick={() => window.print()}>
+            Imprimir documento
+          </Button>
+        </div>
+
+        <DocumentPreview
+          titulo="Termo de Compromisso de Estágio"
+          className="bg-muted/40 rounded-md"
+        >
+          <header className="flex flex-col gap-1 border-b pb-4">
+            <p className="text-center text-sm font-semibold uppercase">
+              Sistema de Gestão de Estágio — SELic
+            </p>
+            <h3 className="text-center text-base font-semibold">Termo de Compromisso de Estágio</h3>
+          </header>
+          <div className="flex flex-col gap-3 pt-4">
+            <p>
+              Eu, <span className="font-medium">Maria de Souza</span>, matriculado no curso de
+              Análise e Desenvolvimento de Sistemas, turma 2024.1, declaro que firmo este termo com
+              a instituição <span className="font-medium">Instituto Federal do Rio de Janeiro</span>
+              .
+            </p>
+            <div className="flex flex-col gap-1">
+              <p>
+                Duração prevista: <span className="font-medium">120 horas</span>.
+              </p>
+              <p>
+                Período: <span className="font-medium">01/03/2026 a 30/11/2026</span>.
+              </p>
+            </div>
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1 text-left">Supervisor</th>
+                  <th className="border px-2 py-1 text-left">Orientador</th>
+                  <th className="border px-2 py-1 text-left">Situação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border px-2 py-1">João Batista</td>
+                  <td className="border px-2 py-1">Ana Paula Moreira</td>
+                  <td className="border px-2 py-1">
+                    <Badge variant="info">Em análise</Badge>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="text-xs">
+              Documento de demonstração do escopo de impressão: o conteúdo acima é preenchido pelo
+              descritor do template.
+            </p>
+          </div>
+        </DocumentPreview>
+      </section>
     </main>
   );
 }

@@ -14,8 +14,8 @@
 - [x] 2.2 Instalar next-themes com atributo por classe e injetar o script antiflash no layout raiz — verificação: com tema escuro salvo, a primeira renderização da página já sai escura, sem piscar o tema claro
 - [x] 2.3 Criar o controle de alternância de tema com as opções claro, escuro e sistema — verificação: alternar o tema muda todas as telas sem recarregar a página
 - [x] 2.4 Implementar a preferência de tema com persistência entre sessões e acompanhamento da preferência do sistema — verificação: teste unitário da preferência e teste E2E de persistência após logout e novo login
-- [ ] 2.5 Isolar o preview de documento em um escopo de tokens de impressão com fundo claro e texto escuro — verificação: preview aberto em tema escuro continua claro e a impressão sai sem áreas escuras de fundo
-- [ ] 2.6 Criar o item de logotipo do SELic com variante por tema e o ícone do navegador, e implementar a navegação recolhida em tela estreita — verificação: logotipo legível nos dois temas e navegação acessível por botão abaixo de 640 px
+- [x] 2.5 Isolar o preview de documento em um escopo de tokens de impressão com fundo claro e texto escuro — verificação: preview aberto em tema escuro continua claro e a impressão sai sem áreas escuras de fundo
+- [x] 2.6 Criar o item de logotipo do SELic com variante por tema e o ícone do navegador, e implementar a navegação recolhida em tela estreita — verificação: logotipo legível nos dois temas e navegação acessível por botão abaixo de 640 px
 - [x] 2.7 Centralizar em `lib/domain/status` os rótulos, variantes de cor e ícones de cada situação de documento e de estágio, sempre com rótulo textual — verificação: teste unitário garantindo que toda situação tem rótulo, cor e ícone
 
 ## 3. Domínio e camada de dados simulada
@@ -92,7 +92,7 @@
 - [ ] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada
 - [ ] 8.11 Aplicar as permissões de preenchimento por perfil vindas do descritor — verificação: teste E2E de aluno recusado na Ficha de Frequência e no Convênio
 - [ ] 8.12 Criar o registro da Ficha de Frequência já assinada, com lançamento de horas e das avaliações — verificação: teste E2E do registro associado ao estágio
-- [ ] 8.13 Montar o preview em página de impressão com fundo claro independente do tema — verificação: inspeção visual nos dois temas e impressão sem áreas escuras
+- [ ] 8.13 Montar a página de impressão do preview, com a folha isolada em tokens de impressão e sem a interface ao redor — verificação: inspeção visual nos dois temas com a cliente e impressão sem áreas escuras (o isolamento em si é o 2.5)
 - [ ] 8.14 Implementar o download em docx e pdf devolvendo arquivo de demonstração nesta entrega — verificação: teste E2E do download concluído
 - [ ] 8.15 Recusar o download quando houver campo obrigatório pendente — verificação: teste E2E da recusa com a lista de pendências
 - [ ] 8.16 Implementar o limite de palavras por seção com contador visível durante a digitação — verificação: teste E2E bloqueando a gravação acima do limite

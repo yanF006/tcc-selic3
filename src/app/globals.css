@@ -42,6 +42,10 @@
   --chart-3: #0e6ba8;
   --chart-4: #a15c07;
   --chart-5: #6b7a72;
+
+  /* Nome do logotipo (2.6): a marca oficial tem cor fixa e serve nos dois
+     temas; só o nome acompanha a variante do tema. */
+  --logo-texto: #101a14;
 }
 
 .dark {
@@ -75,6 +79,8 @@
   --chart-3: #6bb8e8;
   --chart-4: #e8a33d;
   --chart-5: #93a49a;
+
+  --logo-texto: #e7efe9;
 }
 
 /* Escopo de impressão: o preview de documento é sempre em fundo claro,
@@ -105,6 +111,8 @@
   --border: #cfcfcf;
   --input: #8f9490;
   --ring: #1a6b45;
+
+  --logo-texto: #111111;
 }
 
 .impressao,
@@ -145,6 +153,8 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  --color-logo-texto: var(--logo-texto);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -172,13 +182,30 @@
   }
 }
 
+/* A impressão do sistema é a folha do documento (D8), então a margem da página
+   já nasce com o recuo de um documento A4. */
+@page {
+  margin: 12mm;
+}
+
 @media print {
   .sem-impressao {
     display: none !important;
   }
 
+  /* A folha sai branca com texto preto mesmo com a interface no tema escuro:
+     nenhuma área escura de fundo pode chegar ao papel. As regras deste bloco
+     não estão em camada, então vencem as utilidades do Tailwind sem `!important`
+     nas classes; o `!important` cobre quem declara cores por estilo inline. */
+  html,
+  html.dark,
   body {
-    background: #ffffff;
-    color: #000000;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 }

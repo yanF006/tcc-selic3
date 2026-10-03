@@ -6,7 +6,7 @@ Estado atual e restrições que moldam a abordagem. A motivação está em `prop
 - O projeto será implantado na Vercel, com MySQL no Aiven, Prisma, Better Auth, Nodemailer e docxtemplater previstos no `Contexto/visaoGeral.md` (§15, §17), mas a ordem definida em `Contexto/desenvolvimento.md` é telas primeiro, banco e backend depois.
 - Os 9 arquivos de `specs/` somam 87 requisitos e 226 cenários. Esta mudança entrega todos eles no frontend.
 - Os 12 documentos do Kit de Estágio estão em `Contexto/kit-estagio`: 2 PDFs de download, 8 `.docx` e 2 arquivos `.doc` legados (Convênio e Termo de Compromisso), que precisam ser convertidos fora do sistema antes do cadastro (§7.4).
-- O único insumo visual disponível é a regra "verde como cor principal" (§16): não há logo, favicon, tipografia nem valor de cor definidos.
+- O único insumo visual inicial era a regra "verde como cor principal" (§16). A marca oficial chegou depois, em `Assets/selic-logo.svg`; continuam sem definição o valor oficial do verde, a tipografia e o ícone do navegador.
 - A camada de persistência será substituída depois, mas as telas não podem depender de nada específico do simulador.
 
 ## Goals / Non-Goals
@@ -77,7 +77,7 @@ Cada template é um descritor: identidade do documento, se é preenchível ou s�
 
 ### D6. Preview como componente com contrato estável, renderização simulada nesta entrega
 
-`DocumentPreview` recebe o descritor e os valores e desenha a página do documento em fundo claro, com os tokens de impressão forçados. Nesta entrega ele é renderizado a partir do descritor; a troca por renderização client-side do docx feito com docxtemplater acontece na mudança de backend e não altera a assinatura do componente nem das rotas.
+`DocumentPreview` desenha a folha do documento em fundo claro, com os tokens de impressão forçados, e recebe o conteúdo já pronto como `children`. O isolamento é entregue por 2.5; quem desenha o conteúdo é o preenchimento dirigido pelo descritor (8.5), na página de impressão dedicada (8.13). A troca por renderização client-side do docx feito com docxtemplater acontece na mudança de backend e não altera a assinatura do componente nem das rotas.
 
 - **Alternativa:** integrar docxtemplater agora. Rejeitada porque anteciparia um requisito de geração que o `proposal.md` tirou do escopo, e porque dois dos doze documentos ainda precisam de conversão externa para existirem como `.docx`.
 - **Consequência:** o download de docx/pdf responde pela mesma interface de serviço e, nesta entrega, devolve um arquivo de demonstração. A interface é a definitiva; só a implementação é provisória.
@@ -91,7 +91,7 @@ Máscaras são funções puras tipadas em `lib/masks` (CPF, RG, celular, telefon
 
 ### D8. Temas por variáveis CSS com `next-themes` e estratégia por classe
 
-A paleta sai de variáveis CSS semânticas já usadas pelo shadcn/ui, com uma rampa de verde em `--primary`. `next-themes` aplica a classe `dark` no `<html>` e entrega as três opções do requisito de preferência (claro, escuro, sistema), com persistência e sem piscada na abertura. A área de preview de documento recebe um escopo de tokens de impressão para ficar sempre em fundo claro com texto escuro.
+A paleta sai de variáveis CSS semânticas já usadas pelo shadcn/ui, com uma rampa de verde em `--primary`. `next-themes` aplica a classe `dark` no `<html>` e entrega as três opções do requisito de preferência (claro, escuro, sistema), com persistência e sem piscada na abertura. A área de preview de documento recebe um escopo de tokens de impressão para ficar sempre em fundo claro com texto escuro; ao imprimir, a interface é ocultada por `.sem-impressao` e a folha sai com a margem de um A4, porque a impressão do sistema é apenas o documento.
 
 - **Alternativa:** só `prefers-color-scheme`. Rejeitada porque não oferece a escolha manual exigida pelo requisito de preferência.
 - **Alternativa:** `localStorage` manual. Rejeitada porque perde o acompanhamento do sistema e exige trabalho extra para evitar a piscada.
@@ -163,7 +163,7 @@ Não há sistema em produção, então "migração" aqui é a sequência de entr
 
 Itens que não mudam a abordagem nem as specs e podem ser respondidos depois:
 
-- **Valor oficial do verde, tipografia e arquivos de logo e favicon do IFRJ** → tokens centralizados; troca em um arquivo. Enquanto isso, os requisitos de identidade visual e de contraste seguem atendidos com a rampa provisória e com o logo provisório.
+- **Valor oficial do verde, tipografia e ícone do navegador do IFRJ** → tokens centralizados; troca em um arquivo. A marca oficial já chegou (`Assets/selic-logo.svg`) e é a mesma nos dois temas, então o que falta é derivar dela o ícone do navegador. Enquanto isso, os requisitos de identidade visual e de contraste seguem atendidos com a rampa provisória e com o ícone provisório.
 - **Se um mesmo usuário pode acumular papéis** (por exemplo, coordenador de estágio e de curso) → o modelo já é um conjunto de papéis, então a resposta afirmativa é aditiva e não altera requisito.
 - **Se o sistema deve ter página pública institucional** → nenhuma spec cobre isso; adicionar é uma capability nova, sem impacto no que foi entregue.
 - **Nível de acessibilidade a declarar (ex.: WCAG AA)** → os requisitos já pedem teclado, foco visível e contraste; declarar o nível é um registro, não uma mudança de código.

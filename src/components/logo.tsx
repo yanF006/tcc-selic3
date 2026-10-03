@@ -1,41 +1,42 @@
+import Image from "next/image";
+
 import { cn } from "@/lib/utils";
 
 /**
- * Logotipo provisório do SELic: o arquivo oficial do IFRJ ainda não foi
- * fornecido. A variante `invertida` é usada sobre fundo escuro (rodapé,
- * impressão) e a variante padrão sobre fundo claro.
+ * Logotipo do SELic. A marca é o arquivo oficial (`Assets/selic-logo.svg`,
+ * servido de `public/`) e tem cor fixa, funcionando nos dois temas; o nome ao
+ * lado é o que acompanha o tema, pelo token `--logo-texto`.
+ *
+ * O tamanho vai na marca, nunca na linha inteira: fixar a largura da linha
+ * deixava o nome estourar a caixa e cobrir os itens da navegação.
  */
 export function Logo({
   className,
-  variante = "padrao",
   tamanho = "medio",
 }: {
   className?: string;
-  variante?: "padrao" | "invertida";
   tamanho?: "pequeno" | "medio" | "grande";
 }) {
   const dimensoes = {
-    pequeno: "size-6 text-sm",
-    medio: "size-8 text-lg",
-    grande: "size-10 text-2xl",
+    pequeno: { marca: "h-6", nome: "text-sm" },
+    medio: { marca: "h-8", nome: "text-lg" },
+    grande: { marca: "h-12", nome: "text-3xl" },
   }[tamanho];
 
   return (
     <span
-      className={cn("flex items-center gap-2 font-semibold tracking-tight", dimensoes, className)}
+      data-parte-logo="marca"
+      className={cn("flex shrink-0 items-center gap-2 font-semibold tracking-tight", className)}
     >
-      <span
+      <Image
+        src="/selic-logo.svg"
+        alt=""
         aria-hidden="true"
-        className={cn(
-          "text-primary-foreground grid size-full place-items-center rounded-lg",
-          variante === "invertida" ? "bg-primary" : "bg-primary",
-        )}
-      >
-        <span className="text-[0.6em] leading-none font-bold">SE</span>
-      </span>
-      <span
-        className={cn(variante === "invertida" ? "text-primary-foreground" : "text-foreground")}
-      >
+        width={375}
+        height={480}
+        className={cn("w-auto", dimensoes.marca)}
+      />
+      <span data-parte-logo="nome" className={cn("text-logo-texto", dimensoes.nome)}>
         SELic
       </span>
     </span>
