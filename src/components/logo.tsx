@@ -21,17 +21,21 @@ export function Logo({
   }[tamanho];
 
   return (
-    <span className={cn("flex items-center gap-2 font-semibold tracking-tight", dimensoes, className)}>
+    <span
+      className={cn("flex items-center gap-2 font-semibold tracking-tight", dimensoes, className)}
+    >
       <span
         aria-hidden="true"
         className={cn(
-          "grid size-full place-items-center rounded-lg text-primary-foreground",
+          "text-primary-foreground grid size-full place-items-center rounded-lg",
           variante === "invertida" ? "bg-primary" : "bg-primary",
         )}
       >
-        <span className="text-[0.6em] font-bold leading-none">SE</span>
+        <span className="text-[0.6em] leading-none font-bold">SE</span>
       </span>
-      <span className={cn(variante === "invertida" ? "text-primary-foreground" : "text-foreground")}>
+      <span
+        className={cn(variante === "invertida" ? "text-primary-foreground" : "text-foreground")}
+      >
         SELic
       </span>
     </span>

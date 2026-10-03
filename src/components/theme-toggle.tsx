@@ -56,7 +56,7 @@ export function ThemeToggle() {
               {rotulo}
             </span>
             {montado && resolvedTheme === valor ? (
-              <span aria-hidden="true" className="text-xs text-muted-foreground">
+              <span aria-hidden="true" className="text-muted-foreground text-xs">
                 ativo
               </span>
             ) : null}
