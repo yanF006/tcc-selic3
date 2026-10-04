@@ -66,14 +66,14 @@
 
 ## 7. Estágios do aluno
 
-- [ ] 7.1 Criar o formulário de cadastro de estágio com instituição a partir de convênios ativos, supervisor, orientador, datas e situação — verificação: teste E2E de cadastro válido abrindo a seleção de documentos
-- [ ] 7.2 Impedir a escolha de convênio expirado e avisar quando não há convênio ativo — verificação: teste E2E da mensagem de indisponibilidade
-- [ ] 7.3 Validar o período do estágio e a coerência entre situação e data de fim — verificação: testes unitários de data final anterior à inicial e de concluído com data futura
-- [ ] 7.4 Montar o histórico de estágios com busca, filtro por situação e total de resultados — verificação: teste E2E filtrando e conferindo o total
-- [ ] 7.5 Criar o estado vazio do histórico com ação de cadastrar estágio — verificação: aluno sem estágios vê a mensagem e a ação
-- [ ] 7.6 Montar a tela de detalhes com dados do estágio, documentos com situação e total de horas — verificação: teste E2E conferindo os três blocos
-- [ ] 7.7 Criar o estado vazio de detalhes orientando iniciar a seleção de documentos — verificação: estágio sem documentos exibe a orientação
-- [ ] 7.8 Implementar a seleção de documentos por estágio com persistência — verificação: teste E2E adicionando documentos e reabrindo a seleção
+- [x] 7.1 Criar o formulário de cadastro de estágio com instituição a partir de convênios ativos, supervisor, orientador, datas e situação — verificação: teste E2E de cadastro válido abrindo a seleção de documentos
+- [x] 7.2 Impedir a escolha de convênio expirado e avisar quando não há convênio ativo — verificação: teste E2E da mensagem de indisponibilidade
+- [x] 7.3 Validar o período do estágio e a coerência entre situação e data de fim — verificação: testes unitários de data final anterior à inicial e de concluído com data futura
+- [x] 7.4 Montar o histórico de estágios com busca, filtro por situação e total de resultados — verificação: teste E2E filtrando e conferindo o total
+- [x] 7.5 Criar o estado vazio do histórico com ação de cadastrar estágio — verificação: aluno sem estágios vê a mensagem e a ação
+- [x] 7.6 Montar a tela de detalhes com dados do estágio, documentos com situação e total de horas — verificação: teste E2E conferindo os três blocos
+- [x] 7.7 Criar o estado vazio de detalhes orientando iniciar a seleção de documentos — verificação: estágio sem documentos exibe a orientação
+- [x] 7.8 Implementar a seleção de documentos por estágio com persistência — verificação: teste E2E adicionando documentos e reabrindo a seleção
 - [ ] 7.9 Exigir confirmação para remover documento preenchido e inativá-lo sem apagar — verificação: teste E2E do documento sumindo da seleção e continuando visível ao coordenador
 - [ ] 7.10 Implementar a edição de estágio e o pedido de exclusão com autorização de cargo superior — verificação: teste E2E da exclusão registrada como aguardando autorização
 - [ ] 7.11 Restringir a gestão de estágios do coordenador de curso aos alunos do seu curso e registrar a autoria da edição — verificação: teste E2E sem estágios de outro curso e com autoria exibida
