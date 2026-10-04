@@ -1,7 +1,7 @@
 "use server";
 
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
-import { criarEstagio, selecionarDocumentos, type NovoEstagio } from "@/lib/services/estagios";
+import { criarEstagio, selecionarDocumentos, removerDocumentoEstagio, type NovoEstagio } from "@/lib/services/estagios";
 import { ErroDeRegra } from "@/lib/services/erros";
 
 export async function criarEstagioAction(dados: NovoEstagio) {
@@ -26,5 +26,17 @@ export async function selecionarDocumentosAction(estagioId: string, templateIds:
       return { ok: false, erro: erro.message };
     }
     return { ok: false, erro: "Erro ao selecionar documentos." };
+  }
+}
+
+export async function removerDocumentoEstagioAction(estagioId: string, templateId: string) {
+  try {
+    await removerDocumentoEstagio(estagioId, templateId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof ErroDeRegra) {
+      return { ok: false, erro: erro.message };
+    }
+    return { ok: false, erro: "Erro ao remover documento." };
   }
 }

@@ -8,7 +8,11 @@ import type {
   TipoParecer,
   Usuario,
 } from "@/lib/domain/types";
-import { camposDoTemplate, descritorPorTemplate } from "@/lib/templates/descriptors";
+import {
+  camposDoTemplate,
+  classificacaoDoCampo,
+  descritorPorTemplate,
+} from "@/lib/templates/descriptors";
 
 import { cursoPorId, pessoaPorId, convenioPorId } from "./catalogo";
 import { estagioPorId } from "./estagios";
@@ -97,6 +101,10 @@ export function validarValores(
   const campos = camposDoTemplate(templateId);
 
   for (const campo of campos) {
+    // Trechos de texto do template não são valores: `fixo` entra no documento
+    // final e `instrucao` é descartada pelo gerador.
+    if (classificacaoDoCampo(campo) !== "campo") continue;
+
     if (campo.somenteLeitura) continue;
 
     const valor = valores[campo.id];
@@ -219,12 +227,17 @@ export async function valoresAutomaticos(
       ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.bairro}`
       : undefined,
     cepAluno: dados?.endereco.cep,
+    bairro: dados?.endereco.bairro,
+    cidade: dados?.endereco.cidade,
+    cep: dados?.endereco.cep,
     telefoneAluno: dados?.telefone,
     celularAluno: dados?.celular,
     emailAluno: dados?.email ?? aluno.email,
     curso: curso?.nome,
     turma: dados?.turmaId,
+    ano: dados?.periodoId,
     anoSemestre: dados?.periodoId,
+    semestre: dados?.periodoId,
     campus: aluno.campus,
     aluno: aluno.nome,
     matricula: aluno.matricula,
@@ -245,7 +258,6 @@ export async function valoresAutomaticos(
       orientador: orientador?.nome,
       dataInicio: estagio.dataInicio,
       dataFim: estagio.dataFim,
-      periodoEstagio: `${estagio.dataInicio} a ${estagio.dataFim}`,
     });
   }
 

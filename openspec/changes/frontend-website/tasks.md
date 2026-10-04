@@ -74,13 +74,13 @@
 - [x] 7.6 Montar a tela de detalhes com dados do estágio, documentos com situação e total de horas — verificação: teste E2E conferindo os três blocos
 - [x] 7.7 Criar o estado vazio de detalhes orientando iniciar a seleção de documentos — verificação: estágio sem documentos exibe a orientação
 - [x] 7.8 Implementar a seleção de documentos por estágio com persistência — verificação: teste E2E adicionando documentos e reabrindo a seleção
-- [ ] 7.9 Exigir confirmação para remover documento preenchido e inativá-lo sem apagar — verificação: teste E2E do documento sumindo da seleção e continuando visível ao coordenador
-- [ ] 7.10 Implementar a edição de estágio e o pedido de exclusão com autorização de cargo superior — verificação: teste E2E da exclusão registrada como aguardando autorização
-- [ ] 7.11 Restringir a gestão de estágios do coordenador de curso aos alunos do seu curso e registrar a autoria da edição — verificação: teste E2E sem estágios de outro curso e com autoria exibida
+- [x] 7.9 Exigir confirmação para remover documento preenchido e inativá-lo sem apagar — verificação: teste E2E do documento sumindo da seleção e continuando visível ao coordenador
+- [x] 7.10 Implementar a edição de estágio e o pedido de exclusão com autorização de cargo superior — verificação: teste E2E da exclusão registrada como aguardando autorização
+- [x] 7.11 Restringir a gestão de estágios do coordenador de curso aos alunos do seu curso e registrar a autoria da edição — verificação: teste E2E sem estágios de outro curso e com autoria exibida
 
 ## 8. Documentos, template, preview e horas
 
-- [ ] 8.1 Tipar o descritor de template e o descritor de campo com origem, máscara, validação, parecer, assinaturas e classificação de trecho como campo, fixo ou instrução — verificação: `npm run typecheck` passa
+- [x] 8.1 Tipar o descritor de template e o descritor de campo com origem, máscara, validação, parecer, assinaturas e classificação de trecho como campo, fixo ou instrução — verificação: `npm run typecheck` passa
 - [ ] 8.2 Escrever os doze descritores a partir dos arquivos de `Contexto/kit-estagio`, incluindo a grade de 80 linhas da Ficha de Acompanhamento, a tabela mensal da Ficha de Frequência e os limites de palavras da Proposta de Atuação Pedagógica — verificação: revisão documento a documento contra cada arquivo do Kit com a cliente
 - [ ] 8.3 Montar o catálogo indicando documento preenchível e documento apenas para download — verificação: teste E2E da distinção no catálogo
 - [ ] 8.4 Implementar o download da Lei de Estágio e do Regulamento sem abrir formulário — verificação: teste E2E confirmando o download e a ausência de formulário

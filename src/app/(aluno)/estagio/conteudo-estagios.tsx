@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { PlusIcon, SearchIcon, AlertCircleIcon, FileTextIcon, ClockIcon } from "lucide-react";
 
-import { criarEstagioAction, selecionarDocumentosAction } from "./acoes";
+import { criarEstagioAction, selecionarDocumentosAction, removerDocumentoEstagioAction } from "./acoes";
 import type { Convenio, Estagio, Pessoa, TemplateDocumento } from "@/lib/domain/types";
 import { rotuloSituacaoEstagio, varianteSituacaoEstagio } from "@/lib/domain/status";
 
@@ -96,6 +96,22 @@ export function ConteudoEstagios({
     );
   }
 
+  function lidarComRemocaoDoc(templateId: string) {
+    if (!estagioAtual) return;
+    if (!window.confirm("Deseja realmente remover e inativar este documento preenchido?")) {
+      return;
+    }
+    iniciar(async () => {
+      const res = await removerDocumentoEstagioAction(estagioAtual.id, templateId);
+      if (!res.ok) {
+        setErro(res.erro ?? "Erro ao remover documento.");
+        return;
+      }
+      setSucesso("Documento removido da seleção e inativado com sucesso.");
+      window.location.reload();
+    });
+  }
+
   if (estagiandoDetalhe(estagioAtual)) {
     return (
       <div className="flex flex-col gap-6">
@@ -148,7 +164,17 @@ export function ConteudoEstagios({
                     return (
                       <div key={docId} className="flex items-center justify-between border rounded p-3">
                         <span className="text-sm font-medium">{tmpl?.nome ?? docId}</span>
-                        <Badge variant="outline">Selecionado</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Selecionado</Badge>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={pendente}
+                            onClick={() => lidarComRemocaoDoc(docId)}
+                          >
+                            Remover
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}

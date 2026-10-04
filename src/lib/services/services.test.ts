@@ -14,6 +14,7 @@ import {
 } from "./catalogo";
 import {
   criarRascunho,
+  documentoPorId,
   documentosParaParecer,
   iniciarAnalise,
   registrarParecer,
@@ -25,9 +26,13 @@ import {
 import {
   concluirEstagio,
   criarEstagio,
+  editarEstagio,
   estagioComContexto,
   estagiosDoAluno,
+  estagiosDoCurso,
   lancamentosDoEstagio,
+  removerDocumentoEstagio,
+  solicitarExclusaoEstagio,
 } from "./estagios";
 import { corrigirLancamento, horasDaSemana, lancarHoras, resumoDaSemana } from "./lancamentos";
 import { entrar, membroComissaoEstagio, sair, temPapel, usuarioAtual } from "./sessao";
@@ -523,7 +528,17 @@ describe("documentos", () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
     const documento = await criarRascunho(aluno, "tpl-termo-compromisso", "est-maria-tecnoweb");
 
-    await salvarRascunho(documento.id, { cargaHorariaSemanal: 30, horario: "09:00 às 16:00" });
+    await salvarRascunho(documento.id, {
+      cnpj: "11222333000181",
+      responsavel: "Marina Duarte",
+      nomeDiretor: "Heider Alves Franco",
+      endereco: "Rua das Acácias, 120",
+      seguradora: "Porto Seguro",
+      numeroApolice: "APOL-2026-4471",
+      cargaHorariaTotal: 480,
+      cargaHorariaSemanal: 30,
+      horario: "09:00 às 16:00",
+    });
     await submeter(documento.id);
 
     const fila = await documentosParaParecer("externo", aluno);
@@ -576,5 +591,74 @@ describe("documentos", () => {
     const estagios = await estagiosDoAluno("usr-maria");
 
     expect(estagios.map((e) => e.id)).toEqual(["est-maria-tecnoweb", "est-maria-hospital"]);
+  });
+
+  it("remove documento da seleção do estágio e inativa o documento preenchido sem apagá-lo", async () => {
+    const aluno = await login("maria.souza@aluno.ifrj.edu.br");
+    const estagio = await criarEstagio(aluno, {
+      convenioId: "conv-ti-pinheiral",
+      supervisorId: "sup-ricardo",
+      orientadorId: "ori-carla",
+      dataInicio: "2026-09-01",
+      dataFim: "2027-02-28",
+      documentosSelecionados: ["tpl-termo-compromisso"],
+    });
+
+    const doc = await criarRascunho(aluno, "tpl-termo-compromisso", estagio.id);
+
+    expect(estagio.documentosSelecionados).toContain("tpl-termo-compromisso");
+    expect(doc.situacao).toBe("rascunho");
+
+    await removerDocumentoEstagio(estagio.id, "tpl-termo-compromisso");
+
+    expect(estagio.documentosSelecionados).not.toContain("tpl-termo-compromisso");
+    expect((await documentoPorId(doc.id))?.situacao).toBe("inativo");
+  });
+
+  it("edita estágio registrando autoria", async () => {
+    const aluno = await login("maria.souza@aluno.ifrj.edu.br");
+    const estagio = await criarEstagio(aluno, {
+      convenioId: "conv-ti-pinheiral",
+      supervisorId: "sup-ricardo",
+      orientadorId: "ori-carla",
+      dataInicio: "2026-09-01",
+      dataFim: "2027-02-28",
+    });
+
+    const editado = await editarEstagio(
+      estagio.id,
+      { dataFim: "2027-03-01" },
+      "usr-coordenador-curso",
+    );
+
+    expect(editado.dataFim).toBe("2027-03-01");
+    expect(editado.editadoPorId).toBe("usr-coordenador-curso");
+  });
+
+  it("registra pedido de exclusão de estágio como pendente", async () => {
+    const aluno = await login("maria.souza@aluno.ifrj.edu.br");
+    const estagio = await criarEstagio(aluno, {
+      convenioId: "conv-ti-pinheiral",
+      supervisorId: "sup-ricardo",
+      orientadorId: "ori-carla",
+      dataInicio: "2026-09-01",
+      dataFim: "2027-02-28",
+    });
+
+    const solicitacao = await solicitarExclusaoEstagio(estagio.id, aluno.id, "Mudança de empresa");
+
+    expect(solicitacao.situacao).toBe("pendente");
+    expect(solicitacao.motivo).toBe("Mudança de empresa");
+    expect(obterEstado().exclusoes).toContain(solicitacao);
+  });
+
+  it("restringe estágios ao curso do aluno", async () => {
+    const doAds = await estagiosDoCurso("curso-ads");
+
+    expect(doAds.length).toBeGreaterThan(0);
+    for (const est of doAds) {
+      const usuario = obterEstado().usuarios.find((u) => u.id === est.alunoId);
+      expect(usuario?.dadosPessoais?.cursoId).toBe("curso-ads");
+    }
   });
 });

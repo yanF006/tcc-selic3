@@ -6,6 +6,7 @@ import type {
   Pagina,
   Papel,
   Pessoa,
+  SolicitacaoExclusaoEstagio,
   Usuario,
 } from "@/lib/domain/types";
 
@@ -213,6 +214,36 @@ export async function selecionarDocumentos(
   return estagio;
 }
 
+export async function removerDocumentoEstagio(
+  estagioId: string,
+  templateId: string,
+): Promise<Estagio> {
+  const estagio = await estagioPorId(estagioId);
+
+  if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
+
+  if (estagio.situacao !== "em_andamento") {
+    throw new ErroDeRegra(
+      "Estágio concluído não permite alteração de documentos.",
+      "estagio_concluido",
+    );
+  }
+
+  estagio.documentosSelecionados = estagio.documentosSelecionados.filter((id) => id !== templateId);
+
+  const documento = obterEstado().documentos.find(
+    (d) => d.estagioId === estagioId && d.templateId === templateId && d.situacao !== "inativo",
+  );
+
+  if (documento) {
+    documento.situacao = "inativo";
+    documento.inativadoEm = agora();
+    documento.atualizadoEm = agora();
+  }
+
+  return estagio;
+}
+
 export async function concluirEstagio(estagioId: string, editorId?: string): Promise<Estagio> {
   const estagio = await estagioPorId(estagioId);
 
@@ -240,4 +271,60 @@ export async function reabrirEstagio(estagioId: string, editorId?: string): Prom
   estagio.editadoEm = agora();
 
   return estagio;
+}
+
+export async function editarEstagio(
+  estagioId: string,
+  dados: Partial<NovoEstagio>,
+  editorId?: string,
+): Promise<Estagio> {
+  const estagio = await estagioPorId(estagioId);
+
+  if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
+
+  if (dados.convenioId) estagio.convenioId = dados.convenioId;
+  if (dados.supervisorId) estagio.supervisorId = dados.supervisorId;
+  if (dados.orientadorId) estagio.orientadorId = dados.orientadorId;
+  if (dados.dataInicio) estagio.dataInicio = dados.dataInicio;
+  if (dados.dataFim) estagio.dataFim = dados.dataFim;
+  if (dados.situacao) estagio.situacao = dados.situacao;
+
+  estagio.editadoPorId = editorId;
+  estagio.editadoEm = agora();
+
+  return estagio;
+}
+
+export async function solicitarExclusaoEstagio(
+  estagioId: string,
+  solicitanteId: string,
+  motivo?: string,
+): Promise<SolicitacaoExclusaoEstagio> {
+  const estagio = await estagioPorId(estagioId);
+
+  if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
+
+  const solicitacao: SolicitacaoExclusaoEstagio = {
+    id: novoId("exc"),
+    estagioId,
+    solicitanteId,
+    situacao: "pendente",
+    motivo,
+    criadoEm: agora(),
+  };
+
+  obterEstado().exclusoes.push(solicitacao);
+
+  return solicitacao;
+}
+
+export async function estagiosDoCurso(cursoId: string): Promise<Estagio[]> {
+  const estado = obterEstado();
+  const alunosDoCurso = new Set(
+    estado.usuarios
+      .filter((u) => u.dadosPessoais?.cursoId === cursoId)
+      .map((u) => u.id),
+  );
+
+  return estado.estagios.filter((e) => alunosDoCurso.has(e.alunoId));
 }

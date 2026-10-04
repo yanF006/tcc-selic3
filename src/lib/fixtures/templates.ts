@@ -1,15 +1,21 @@
 import type { TemplateDocumento } from "@/lib/domain/types";
+import { descritorPorTemplate } from "@/lib/templates/descriptors";
 
 /**
  * Catálogo dos 12 documentos do Kit de Estágio (D6). Os identificadores seguem
  * `tpl-<slug>`; versões `vigente: false` são mantidas para histórico.
+ *
+ * Quem preenche, a fila de parecer e as assinaturas exigidas não são repetidos
+ * aqui: o descritor do documento é a única tabela desse metadado (D5), e o
+ * catálogo apenas aponta para ele.
  */
 
 const kit = "Contexto/kit-estagio";
 
-/** Documentos com `.doc` no Kit, aguardando conversão para `.docx`. */
-export const OBSERVACAO_CONVERSAO =
-  "Arquivo original em formato .doc no Kit de Estágio; dependende da conversão para .docx (tarefa 15.1).";
+/** Metadados de preenchimento declarados no descritor do documento. */
+function metadados(templateId: string): TemplateDocumento["metadados"] {
+  return descritorPorTemplate(templateId)?.metadados;
+}
 
 export const templates: TemplateDocumento[] = [
   {
@@ -44,16 +50,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-formulario-liberacao",
     nome: "Formulário de Liberação",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "coordenador_curso",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "coordenador_curso", rotulo: "Coordenador(a) de Área/Curso", tipo: "interna" },
-        { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/04 - Formulario de Liberacao Licenciatura.docx`,
-    },
+    metadados: metadados("tpl-formulario-liberacao"),
     versoes: [
       {
         versao: 1,
@@ -68,16 +65,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-plano-atividades",
     nome: "Plano de Atividades de Estágio",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "coordenador_curso",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
-        { papel: "externo", rotulo: "Supervisor(a) de Estágio", tipo: "externa" },
-      ],
-      arquivoOrigem: `${kit}/05 - Plano de atividades de estágio.docx`,
-    },
+    metadados: metadados("tpl-plano-atividades"),
     versoes: [
       {
         versao: 1,
@@ -92,17 +80,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-convenio-estagio",
     nome: "Convênio de Estágio",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["coordenador_estagio"],
-      tipoParecer: "externo",
-      exigeEstagio: false,
-      assinaturas: [
-        { papel: "coordenador_estagio", rotulo: "Coordenador(a) de Estágio", tipo: "interna" },
-        { papel: "externo", rotulo: "Representante da instituição", tipo: "externa" },
-      ],
-      arquivoOrigem: `${kit}/03 - Convenio de estagio - Campus Pinheiral.doc`,
-      observacao: OBSERVACAO_CONVERSAO,
-    },
+    metadados: metadados("tpl-convenio-estagio"),
     versoes: [
       {
         versao: 1,
@@ -123,18 +101,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-termo-compromisso",
     nome: "Termo de Compromisso",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "externo",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "aluno", rotulo: "Estagiário(a)", tipo: "interna" },
-        { papel: "externo", rotulo: "Supervisor(a) de Estágio", tipo: "externa" },
-        { papel: "orientador", rotulo: "Professor(a) Orientador(a)", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/06 - Termo de compromisso. Licenciatura.doc`,
-      observacao: OBSERVACAO_CONVERSAO,
-    },
+    metadados: metadados("tpl-termo-compromisso"),
     versoes: [
       {
         versao: 1,
@@ -155,16 +122,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-ficha-acompanhamento",
     nome: "Ficha de Acompanhamento de Estagiário",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "nenhum",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "aluno", rotulo: "Aluno(a) estagiário(a)", tipo: "interna" },
-        { papel: "externo", rotulo: "Supervisor(a) do local de estágio", tipo: "externa" },
-      ],
-      arquivoOrigem: `${kit}/07 - Ficha de Acompanhamento de Estagio.docx`,
-    },
+    metadados: metadados("tpl-ficha-acompanhamento"),
     versoes: [
       {
         versao: 1,
@@ -179,20 +137,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-ficha-frequencia",
     nome: "Ficha de Frequência e Avaliação do Estagiário",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["coordenador_estagio"],
-      tipoParecer: "externo",
-      exigeEstagio: true,
-      assinaturas: [
-        {
-          papel: "externo",
-          rotulo: "Responsável da concedente (RH ou chefe imediato)",
-          tipo: "externa",
-        },
-        { papel: "coordenador_estagio", rotulo: "Responsável da COIEE", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/08 - Ficha de Frequencia e Avaliacao do Estagiário.docx`,
-    },
+    metadados: metadados("tpl-ficha-frequencia"),
     versoes: [
       {
         versao: 1,
@@ -207,17 +152,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-relatorio-semestral",
     nome: "Relatório Semestral de Estágio",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "coordenador_curso",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
-        { papel: "orientador", rotulo: "Professor(a) Orientador(a)", tipo: "interna" },
-        { papel: "coordenador_curso", rotulo: "Coordenador(a) do Curso", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/09 - Relatorio Semestral de Estagio 2019.docx`,
-    },
+    metadados: metadados("tpl-relatorio-semestral"),
     versoes: [
       {
         versao: 1,
@@ -232,18 +167,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-requerimento-aproveitamento",
     nome: "Requerimento para Aproveitamento de Horas",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "comissao_estagio",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
-        { papel: "coordenador_curso", rotulo: "Coordenador(a) do Curso", tipo: "interna" },
-        { papel: "comissao_estagio", rotulo: "Coordenador(a) da COIEE", tipo: "interna" },
-        { papel: "diretor_ensino", rotulo: "Diretor(a) de Ensino", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/10 - EXTRA -  Requerimento para Aproveitamento de horas Licenciatura.docx`,
-    },
+    metadados: metadados("tpl-requerimento-aproveitamento"),
     versoes: [
       {
         versao: 1,
@@ -258,17 +182,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-termo-aditivo",
     nome: "Termo Aditivo",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "externo",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "externo", rotulo: "Concedente", tipo: "externa" },
-        { papel: "aluno", rotulo: "Estagiário(a)", tipo: "interna" },
-        { papel: "convenente", rotulo: "Convenente (IFRJ)", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/11 - EXTRA - Termo aditivo.docx`,
-    },
+    metadados: metadados("tpl-termo-aditivo"),
     versoes: [
       {
         versao: 1,
@@ -283,16 +197,7 @@ export const templates: TemplateDocumento[] = [
     id: "tpl-proposta-atuacao-pedagogica",
     nome: "Proposta de Atuação Pedagógica",
     tipo: "preenchivel",
-    metadados: {
-      papeisPreenchimento: ["aluno"],
-      tipoParecer: "coordenador_curso",
-      exigeEstagio: true,
-      assinaturas: [
-        { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
-        { papel: "orientador", rotulo: "Professor(a) Orientador(a) de Estágio", tipo: "interna" },
-      ],
-      arquivoOrigem: `${kit}/12 - Proposta de Atuação Pedagógica_note_ago24.docx`,
-    },
+    metadados: metadados("tpl-proposta-atuacao-pedagogica"),
     versoes: [
       {
         versao: 1,
