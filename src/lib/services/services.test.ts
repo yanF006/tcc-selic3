@@ -439,6 +439,24 @@ describe("documentos", () => {
     ).rejects.toThrow(/não disponível/);
   });
 
+  it("deixa o Coordenador de Estágio abrir o Convênio", async () => {
+    const coordenador = await login("ana.correia@ifrj.edu.br");
+
+    const convenio = await criarRascunho(coordenador, "tpl-convenio-estagio");
+
+    expect(convenio.templateId).toBe("tpl-convenio-estagio");
+    expect(convenio.situacao).toBe("rascunho");
+  });
+
+  it("preenche a duração do Termo de Compromisso com o total do estágio", async () => {
+    const aluno = await login("maria.souza@aluno.ifrj.edu.br");
+
+    const documento = await criarRascunho(aluno, "tpl-termo-compromisso", "est-maria-tecnoweb");
+
+    expect(typeof documento.valores.cargaHorariaTotal).toBe("number");
+    expect(documento.valores.cargaHorariaTotal as number).toBeGreaterThan(0);
+  });
+
   it("valida os limites de palavras do descritor", async () => {
     const problemas = validarValores("tpl-proposta-atuacao-pedagogica", {
       titulo: "Intervenção no ensino de lógica",

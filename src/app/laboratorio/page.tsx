@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { DocumentPreview } from "@/components/documentos/document-preview";
+import { LaboratorioFormulario } from "@/components/documentos/laboratorio-formulario";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -255,6 +256,21 @@ export default function PaginaLaboratorio() {
           <Skeleton className="h-8 w-full" />
         </CardContent>
       </Card>
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Formulário dirigido pelo descritor
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Um exemplo de cada tipo de campo do Kit (8.5): texto, texto com máscara, área de texto
+            com limite de palavras, número, data, hora, seleção, escolha única, marcação, grade
+            repetível, assinatura, campo automático, texto fixo e instrução.
+          </p>
+        </div>
+
+        <LaboratorioFormulario />
+      </section>
 
       <section className="flex flex-col gap-3">
         <div>

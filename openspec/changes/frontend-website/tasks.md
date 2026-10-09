@@ -84,18 +84,18 @@
 - [x] 8.2 Escrever os doze descritores a partir dos arquivos de `Contexto/kit-estagio`, incluindo a grade de 80 linhas da Ficha de Acompanhamento, a tabela mensal da Ficha de Frequência e os limites de palavras da Proposta de Atuação Pedagógica — verificação: revisão documento a documento contra cada arquivo do Kit com a cliente
 - [x] 8.3 Montar o catálogo indicando documento preenchível e documento apenas para download — verificação: teste E2E da distinção no catálogo
 - [x] 8.4 Implementar o download da Lei de Estágio e do Regulamento sem abrir formulário — verificação: teste E2E confirmando o download e a ausência de formulário
-- [ ] 8.5 Criar o renderizador de formulário dirigido pelo descritor cobrindo todos os tipos de campo observados no Kit — verificação: página de laboratório renderizando um formulário para cada tipo de campo
-- [ ] 8.6 Resolver o preenchimento automático de origem aluno e estágio em modo somente leitura — verificação: teste E2E dos campos automáticos não editáveis
+- [x] 8.5 Criar o renderizador de formulário dirigido pelo descritor cobrindo todos os tipos de campo observados no Kit — verificação: página de laboratório renderizando um formulário para cada tipo de campo
+- [x] 8.6 Resolver o preenchimento automático de origem aluno e estágio em modo somente leitura — verificação: teste E2E dos campos automáticos não editáveis
 - [ ] 8.7 Avisar pendência quando o dado de origem não existe no cadastro e orientar completar o cadastro — verificação: teste E2E de aluno sem endereço informado
-- [ ] 8.8 Preencher a duração em horas do Termo de Compromisso com o total do estágio mantendo o valor ajustável — verificação: teste E2E do campo calculado e editável
-- [ ] 8.9 Implementar gravação, reabertura e listagem dos documentos preenchidos por estágio — verificação: teste E2E de salvar, reabrir e localizar na lista
-- [ ] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada
-- [ ] 8.11 Aplicar as permissões de preenchimento por perfil vindas do descritor — verificação: teste E2E de aluno recusado na Ficha de Frequência e no Convênio
+- [x] 8.8 Preencher a duração em horas do Termo de Compromisso com o total do estágio mantendo o valor ajustável — verificação: teste E2E do campo calculado e editável
+- [x] 8.9 Implementar gravação, reabertura e listagem dos documentos preenchidos por estágio — verificação: teste E2E de salvar, reabrir e localizar na lista
+- [x] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada
+- [x] 8.11 Aplicar as permissões de preenchimento por perfil vindas do descritor — verificação: teste E2E de aluno recusado na Ficha de Frequência e no Convênio
 - [ ] 8.12 Criar o registro da Ficha de Frequência já assinada, com lançamento de horas e das avaliações — verificação: teste E2E do registro associado ao estágio
 - [ ] 8.13 Montar a página de impressão do preview, com a folha isolada em tokens de impressão e sem a interface ao redor — verificação: inspeção visual nos dois temas com a cliente e impressão sem áreas escuras (o isolamento em si é o 2.5)
-- [ ] 8.14 Implementar o download em docx e pdf devolvendo arquivo de demonstração nesta entrega — verificação: teste E2E do download concluído
-- [ ] 8.15 Recusar o download quando houver campo obrigatório pendente — verificação: teste E2E da recusa com a lista de pendências
-- [ ] 8.16 Implementar o limite de palavras por seção com contador visível durante a digitação — verificação: teste E2E bloqueando a gravação acima do limite
+- [x] 8.14 Implementar o download em docx e pdf devolvendo arquivo de demonstração nesta entrega — verificação: teste E2E do download concluído
+- [x] 8.15 Recusar o download quando houver campo obrigatório pendente — verificação: teste E2E da recusa com a lista de pendências
+- [x] 8.16 Implementar o limite de palavras por seção com contador visível durante a digitação — verificação: teste E2E bloqueando a gravação acima do limite
 - [ ] 8.17 Implementar a escala numérica de zero a dez com faixas e a escala qualitativa da autoavaliação, com conceito global — verificação: testes unitários do enquadramento de cada nota em sua faixa
 - [ ] 8.18 Listar os comprovantes do Requerimento para Aproveitamento de Horas e bloquear a submissão com item pendente — verificação: teste E2E da recusa indicando os itens pendentes
 - [ ] 8.19 Registrar horas aplicando os limites de seis horas por dia e trinta por semana, com desligamento do intervalo de almoço — verificação: testes unitários dos limites e teste E2E de lançamento excedente recusado

@@ -16,8 +16,10 @@ import {
   descritorPorTemplate,
 } from "@/lib/templates/descriptors";
 
+import { PAPEL_COM_TODAS_AS_PERMISSOES } from "@/lib/auth/permissions";
+
 import { cursoPorId, pessoaPorId, convenioPorId } from "./catalogo";
-import { estagioPorId } from "./estagios";
+import { estagioPorId, totalHorasDoEstagio } from "./estagios";
 import { filtrarPorTexto, paginar } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
 import { notificar } from "./sessao";
@@ -188,6 +190,18 @@ export function validarValores(
   return problemas;
 }
 
+/** Quem pode preencher o template (matriz de preenchimento do descritor). */
+export function podePreencher(
+  usuario: Usuario,
+  template: TemplateDocumento,
+): boolean {
+  const papeis = template.metadados?.papeisPreenchimento ?? [];
+
+  if (usuario.papeis.includes(PAPEL_COM_TODAS_AS_PERMISSOES)) return true;
+
+  return papeis.some((papel) => usuario.papeis.includes(papel));
+}
+
 export async function criarRascunho(
   aluno: Usuario,
   templateId: string,
@@ -200,8 +214,8 @@ export async function criarRascunho(
     throw new Error("Template preenchível não encontrado.");
   }
 
-  if (!template.metadados.papeisPreenchimento.includes("aluno")) {
-    throw new Error("Documento não disponível para o aluno.");
+  if (!podePreencher(aluno, template)) {
+    throw new Error("Documento não disponível para este perfil.");
   }
 
   if (template.metadados.exigeEstagio && !estagioId) {
@@ -224,6 +238,22 @@ export async function criarRascunho(
 
   const versaoVigente = template.versoes.find((versao) => versao.vigente);
   const momento = agora();
+  const valoresIniciais: Record<string, unknown> = {
+    ...(await valoresAutomaticos(templateId, aluno, estagioId)),
+    ...valores,
+  };
+
+  // 8.8: o Termo de Compromisso declara a duração em horas, que já vem do total
+  // do estágio e continua ajustável pelo aluno.
+  if (estagioId && !("cargaHorariaTotal" in valoresIniciais)) {
+    const temCargaHoraria = camposDoTemplate(templateId).some(
+      (campo) => campo.id === "cargaHorariaTotal",
+    );
+
+    if (temCargaHoraria) {
+      valoresIniciais.cargaHorariaTotal = await totalHorasDoEstagio(estagioId);
+    }
+  }
 
   const documento: DocumentoPreenchido = {
     id: novoId("doc"),
@@ -231,7 +261,7 @@ export async function criarRascunho(
     alunoId: aluno.id,
     estagioId,
     versaoTemplate: versaoVigente?.versao ?? 1,
-    valores: { ...(await valoresAutomaticos(templateId, aluno, estagioId)), ...valores },
+    valores: valoresIniciais,
     situacao: "rascunho",
     criadoEm: momento,
     atualizadoEm: momento,
