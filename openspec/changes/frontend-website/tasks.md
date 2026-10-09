@@ -86,7 +86,7 @@
 - [x] 8.4 Implementar o download da Lei de Estágio e do Regulamento sem abrir formulário — verificação: teste E2E confirmando o download e a ausência de formulário
 - [x] 8.5 Criar o renderizador de formulário dirigido pelo descritor cobrindo todos os tipos de campo observados no Kit — verificação: página de laboratório renderizando um formulário para cada tipo de campo
 - [x] 8.6 Resolver o preenchimento automático de origem aluno e estágio em modo somente leitura — verificação: teste E2E dos campos automáticos não editáveis
-- [ ] 8.7 Avisar pendência quando o dado de origem não existe no cadastro e orientar completar o cadastro — verificação: teste E2E de aluno sem endereço informado
+- [x] 8.7 Avisar pendência quando o dado de origem não existe no cadastro e orientar completar o cadastro — verificação: teste E2E de aluno sem endereço informado
 - [x] 8.8 Preencher a duração em horas do Termo de Compromisso com o total do estágio mantendo o valor ajustável — verificação: teste E2E do campo calculado e editável
 - [x] 8.9 Implementar gravação, reabertura e listagem dos documentos preenchidos por estágio — verificação: teste E2E de salvar, reabrir e localizar na lista
 - [x] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada

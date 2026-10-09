@@ -274,6 +274,36 @@ export default function PaginaLaboratorio() {
 
       <section className="flex flex-col gap-3">
         <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Campos automáticos com pendência
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Quando um campo automático obrigatório não existe no cadastro, o formulário exibe a
+            mensagem de pendência com o link para completar o cadastro (8.7).
+          </p>
+        </div>
+
+        <div className="border rounded-md p-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <Label>Campo automático (sem dado no cadastro)</Label>
+              <p className="border-input bg-muted/40 text-foreground flex min-h-9 w-full items-center rounded-md border px-3 py-2 text-sm">
+                <span className="text-muted-foreground">—</span>
+              </p>
+              <p className="text-warning flex items-start gap-1 text-xs">
+                <span>Pendência: este dado não consta no seu cadastro. </span>
+                <a className="underline underline-offset-4" href="/perfil">
+                  Complete o cadastro
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div>
           <h2 className="text-lg font-semibold tracking-tight">Preview de documento</h2>
           <p className="text-muted-foreground text-sm">
             A folha abaixo fica em fundo claro nos dois temas. Use o botão para imprimir: a barra de
