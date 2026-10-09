@@ -6,11 +6,13 @@ import type {
   SituacaoDocumento,
   TemplateDocumento,
   TipoParecer,
+  TipoTemplate,
   Usuario,
 } from "@/lib/domain/types";
 import {
   camposDoTemplate,
   classificacaoDoCampo,
+  DESCRITORES,
   descritorPorTemplate,
 } from "@/lib/templates/descriptors";
 
@@ -38,6 +40,45 @@ export async function listarTemplates(
 
 export async function templatePorId(id: string): Promise<TemplateDocumento | null> {
   return obterEstado().templates.find((template) => template.id === id) ?? null;
+}
+
+/** Item do catálogo (8.3): identidade do documento e a distinção de uso. */
+export interface ItemCatalogo {
+  id: string;
+  nome: string;
+  descricao: string;
+  /** `preenchivel` abre formulário; `download` apenas baixa o arquivo do Kit. */
+  tipo: TipoTemplate;
+  /** Quem pode abrir o formulário; vazio nos documentos só para download. */
+  papeisPreenchimento: Papel[];
+  /** O preenchimento depende de um estágio selecionado. */
+  exigeEstagio: boolean;
+  /** Número da versão vigente, ou null quando o documento não tem versão. */
+  versaoVigente: number | null;
+}
+
+/**
+ * Catálogo dos doze documentos do Kit (8.3). A distinção vem do descritor
+ * (D5): `preenchivel` abre o formulário, `download` nunca abre formulário.
+ */
+export async function catalogoDocumentos(): Promise<ItemCatalogo[]> {
+  const templates = await listarTemplates();
+
+  return DESCRITORES.map((descritor) => {
+    const template = templates.find((item) => item.id === descritor.templateId);
+    const preenchivel = descritor.preenchivel;
+
+    return {
+      id: descritor.templateId,
+      nome: template?.nome ?? descritor.titulo,
+      descricao: descritor.descricao,
+      tipo: preenchivel ? "preenchivel" : "download",
+      papeisPreenchimento: preenchivel ? (descritor.metadados?.papeisPreenchimento ?? []) : [],
+      exigeEstagio: preenchivel && descritor.metadados?.exigeEstagio === true,
+      versaoVigente:
+        template?.versoes.find((versao) => versao.vigente)?.versao ?? null,
+    };
+  });
 }
 
 /**

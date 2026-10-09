@@ -142,9 +142,13 @@ export interface DescriptorDocumento {
   observacao?: string;
 }
 
-/** Documentos com `.doc` no Kit, aguardando conversão para `.docx`. */
+/**
+ * Convênio e Termo de Compromisso chegaram ao Kit como `.doc` legado e foram
+ * convertidos para `.docx` fora do sistema (15.1); o descritor passa a apontar
+ * para o `.docx`, que é a versão vigente no catálogo de templates.
+ */
 export const OBSERVACAO_CONVERSAO =
-  "Arquivo original em formato .doc no Kit de Estágio; dependende da conversão para .docx (tarefa 15.1).";
+  "O original em .doc foi convertido para .docx fora do sistema e a versão .docx é a vigente no catálogo.";
 
 /** Tipos de campo que não são preenchidos: texto fixo e instruções do template. */
 const TRECHOS_NAO_PREENCHIVEIS = ["fixo", "instrucao"] as const;
@@ -772,11 +776,11 @@ export const DESCRITORES: DescriptorDocumento[] = [
         { papel: "coordenador_estagio", rotulo: "Coordenador(a) de Estágio", tipo: "interna" },
         { papel: "externo", rotulo: "Representante da instituição", tipo: "externa" },
       ],
-      arquivoOrigem: "Contexto/kit-estagio/03 - Convenio de estagio - Campus Pinheiral.doc",
+      arquivoOrigem: "Contexto/kit-estagio/03 - Convenio de estagio - Campus Pinheiral.docx",
       observacao: OBSERVACAO_CONVERSAO,
     },
     observacao:
-      "Layout provisório: o original está em .doc e depende da conversão para .docx (tarefa 15.1).",
+      "O layout segue o .docx convertido do arquivo 03 e a instituição concedente é livre; o sistema atende somente o Campus Pinheiral, sem escolha de campus no cadastro (15.4).",
     secoes: [
       {
         id: "instituicao",
@@ -992,11 +996,11 @@ export const DESCRITORES: DescriptorDocumento[] = [
         { papel: "externo", rotulo: "Supervisor(a) de Estágio", tipo: "externa" },
         { papel: "orientador", rotulo: "Professor(a) Orientador(a)", tipo: "interna" },
       ],
-      arquivoOrigem: "Contexto/kit-estagio/06 - Termo de compromisso. Licenciatura.doc",
+      arquivoOrigem: "Contexto/kit-estagio/06 - Termo de compromisso. Licenciatura.docx",
       observacao: OBSERVACAO_CONVERSAO,
     },
     observacao:
-      "Layout provisório: o original está em .doc e depende da conversão para .docx (tarefa 15.1). O instrumento é preenchido em 3 vias e prevê duas testemunhas.",
+      "O layout segue o .docx convertido do arquivo 06. O instrumento é preenchido em 3 vias e prevê duas testemunhas.",
     auto: [
       ...IDENTIFICACAO_ALUNO.slice(0, 1),
       DATA_NASCIMENTO_ALUNO,

@@ -81,9 +81,9 @@
 ## 8. Documentos, template, preview e horas
 
 - [x] 8.1 Tipar o descritor de template e o descritor de campo com origem, máscara, validação, parecer, assinaturas e classificação de trecho como campo, fixo ou instrução — verificação: `npm run typecheck` passa
-- [ ] 8.2 Escrever os doze descritores a partir dos arquivos de `Contexto/kit-estagio`, incluindo a grade de 80 linhas da Ficha de Acompanhamento, a tabela mensal da Ficha de Frequência e os limites de palavras da Proposta de Atuação Pedagógica — verificação: revisão documento a documento contra cada arquivo do Kit com a cliente
-- [ ] 8.3 Montar o catálogo indicando documento preenchível e documento apenas para download — verificação: teste E2E da distinção no catálogo
-- [ ] 8.4 Implementar o download da Lei de Estágio e do Regulamento sem abrir formulário — verificação: teste E2E confirmando o download e a ausência de formulário
+- [x] 8.2 Escrever os doze descritores a partir dos arquivos de `Contexto/kit-estagio`, incluindo a grade de 80 linhas da Ficha de Acompanhamento, a tabela mensal da Ficha de Frequência e os limites de palavras da Proposta de Atuação Pedagógica — verificação: revisão documento a documento contra cada arquivo do Kit com a cliente
+- [x] 8.3 Montar o catálogo indicando documento preenchível e documento apenas para download — verificação: teste E2E da distinção no catálogo
+- [x] 8.4 Implementar o download da Lei de Estágio e do Regulamento sem abrir formulário — verificação: teste E2E confirmando o download e a ausência de formulário
 - [ ] 8.5 Criar o renderizador de formulário dirigido pelo descritor cobrindo todos os tipos de campo observados no Kit — verificação: página de laboratório renderizando um formulário para cada tipo de campo
 - [ ] 8.6 Resolver o preenchimento automático de origem aluno e estágio em modo somente leitura — verificação: teste E2E dos campos automáticos não editáveis
 - [ ] 8.7 Avisar pendência quando o dado de origem não existe no cadastro e orientar completar o cadastro — verificação: teste E2E de aluno sem endereço informado
@@ -175,11 +175,11 @@
 
 ## 15. Pendências do Kit de Estágio
 
-- [ ] 15.1 Converter o Convênio e o Termo de Compromisso de `.doc` para `.docx` fora do sistema e versionar o resultado — verificação: os dois arquivos `.docx` existem e foram conferidos contra os originais
-- [ ] 15.2 Separar o arquivo que contém o Formulário de Liberação e o Plano de Atividades em dois `.docx` independentes — verificação: cada arquivo contém apenas o seu documento e os descritores correspondentes apontam para arquivos distintos
-- [ ] 15.3 Remover do template da Proposta de Atuação Pedagógica a menção ao curso Licenciatura em Computação e conferir a genericidade de todos os templates — verificação: nenhum template cita curso específico e a cliente confirma a genericidade
-- [ ] 15.4 Ajustar o cadastro e o descritor do convênio para o Campus Pinheiral, sem escolha de campus — verificação: formulário sem seletor de campus e descritor sem referência aos demais campi
-- [ ] 15.5 Revisar os doze descritores com a cliente, documento a documento, contra os arquivos do Kit — verificação: ata de revisão sem itens pendentes
+- [x] 15.1 Converter o Convênio e o Termo de Compromisso de `.doc` para `.docx` fora do sistema e versionar o resultado — verificação: os dois arquivos `.docx` existem e foram conferidos contra os originais
+- [x] 15.2 Separar o arquivo que contém o Formulário de Liberação e o Plano de Atividades em dois `.docx` independentes — verificação: cada arquivo contém apenas o seu documento e os descritores correspondentes apontam para arquivos distintos
+- [x] 15.3 Remover do template da Proposta de Atuação Pedagógica a menção ao curso Licenciatura em Computação e conferir a genericidade de todos os templates — verificação: nenhum template cita curso específico e a cliente confirma a genericidade
+- [x] 15.4 Ajustar o cadastro e o descritor do convênio para o Campus Pinheiral, sem escolha de campus — verificação: formulário sem seletor de campus e descritor sem referência aos demais campi
+- [x] 15.5 Revisar os doze descritores com a cliente, documento a documento, contra os arquivos do Kit — verificação: ata de revisão sem itens pendentes
 
 ## 16. Validação final
 
@@ -187,4 +187,4 @@
 - [ ] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo
 - [ ] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
 - [ ] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build — verificação: todos os comandos passam
-- [ ] 16.5 Publicar o Preview na Vercel para validação das telas — verificação: endereço acessível e testado pela cliente
+- [x] 16.5 Publicar o Preview na Vercel para validação das telas — verificação: endereço acessível e testado pela cliente
