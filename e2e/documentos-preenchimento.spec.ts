@@ -123,4 +123,33 @@ test.describe("preenchimento de documentos", () => {
     await expect(page.getByText("Corrija o documento")).toBeVisible();
     await expect(page.getByText(/Introdução tem 401 palavras e o limite é 400/)).toBeVisible();
   });
+
+  test("lista os comprovantes e recusa a submissão com item pendente (8.18)", async ({ page }) => {
+    await entrar(page, "maria.souza@aluno.ifrj.edu.br");
+    await page.goto("/documentos/tpl-requerimento-aproveitamento?estagio=est-maria-hospital");
+
+    const quintoComprovante = page.getByLabel(/Formulário para escolha do professor/);
+
+    await expect(quintoComprovante).toBeVisible();
+    await expect(quintoComprovante).not.toBeChecked();
+
+    await page.getByRole("button", { name: "Baixar docx" }).click();
+
+    await expect(page.getByText("Corrija o documento")).toBeVisible();
+    await expect(page.getByText("Há campos obrigatórios pendentes.")).toBeVisible();
+    await expect(
+      page.getByText(/Cópia da Carteira de Trabalho .* é obrigatório\./),
+    ).toBeVisible();
+
+    await quintoComprovante.check();
+    await page.getByRole("button", { name: "Salvar rascunho" }).click();
+    await expect(page.getByText("Rascunho salvo.")).toBeVisible();
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Baixar docx" }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toContain("Requerimento");
+  });
 });

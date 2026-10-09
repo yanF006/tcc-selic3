@@ -2,11 +2,12 @@
 
 import * as React from "react";
 
+import type { VariantProps } from "class-variance-authority";
 import { AlertCircleIcon, PenLineIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { CampoMascarado } from "@/components/formularios/campo-mascarado";
 import { RotuloCampo } from "@/components/formularios/campo";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 import { calcularHorasDia } from "@/lib/domain/schemas";
+import { faixaDaNota, type FaixaAvaliacao } from "@/lib/domain/avaliacao";
 import { MASCARAS } from "@/lib/mask";
 import type {
   CampoDescriptor,
@@ -365,6 +367,9 @@ function CampoNumeroDescritor({
   const idMensagem = `${campo.id}-mensagem`;
   const automatico = campo.somenteLeitura;
   const exibido = valor === undefined || valor === null || valor === "" ? "" : String(valor);
+  const nota = Number(exibido);
+  const notaValida = campo.faixa && exibido !== "" && !Number.isNaN(nota) && nota >= (campo.min ?? 0) && nota <= (campo.max ?? 10);
+  const faixa = notaValida ? faixaDaNota(nota) : null;
 
   return (
     <LarguraCampo largura={campo.largura}>
@@ -395,9 +400,32 @@ function CampoNumeroDescritor({
         aria-describedby={erro ? idMensagem : undefined}
       />
 
+      {faixa ? (
+        <div className="flex items-center gap-1.5">
+          <Badge variant={varianteDaFaixa(faixa.faixa)} data-testid={`faixa-${campo.id}`}>
+            {faixa.faixa} — {faixa.rotulo} ({faixa.de} a {faixa.ate})
+          </Badge>
+        </div>
+      ) : null}
+
       <MensagemDoCampo id={idMensagem} erro={erro} />
     </LarguraCampo>
   );
+}
+
+type VarianteBadge = VariantProps<typeof badgeVariants>["variant"];
+
+function varianteDaFaixa(faixa: FaixaAvaliacao): VarianteBadge {
+  switch (faixa) {
+    case "E":
+      return "success";
+    case "B":
+      return "info";
+    case "R":
+      return "warning";
+    case "I":
+      return "destructive";
+  }
 }
 
 function opcoesDe(campo: CampoDescriptor): OpcaoDescriptor[] {

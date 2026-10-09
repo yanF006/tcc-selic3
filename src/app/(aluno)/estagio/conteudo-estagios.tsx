@@ -19,9 +19,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { PlusIcon, SearchIcon, AlertCircleIcon, FileTextIcon, ClockIcon } from "lucide-react";
 
-import { criarEstagioAction, selecionarDocumentosAction, removerDocumentoEstagioAction } from "./acoes";
-import type { Convenio, Estagio, Pessoa, TemplateDocumento } from "@/lib/domain/types";
+import { criarEstagioAction, selecionarDocumentosAction, removerDocumentoEstagioAction, lancarHorasAction, corrigirLancamentoAction } from "./acoes";
+import type { Convenio, Estagio, LancamentoHoras, Pessoa, TemplateDocumento } from "@/lib/domain/types";
 import { rotuloSituacaoEstagio, varianteSituacaoEstagio } from "@/lib/domain/status";
+import { LIMITE_HORAS_DIA, calcularHorasDia } from "@/lib/domain/schemas";
+import { formatarData, formatarHoras } from "@/lib/format";
 
 export function ConteudoEstagios({
   alunoId,
@@ -30,6 +32,7 @@ export function ConteudoEstagios({
   orientadores,
   supervisores,
   templates,
+  resumosHoras,
 }: {
   alunoId: string;
   estagiosIniciais: Estagio[];
@@ -37,6 +40,7 @@ export function ConteudoEstagios({
   orientadores: Pessoa[];
   supervisores: Pessoa[];
   templates: TemplateDocumento[];
+  resumosHoras: Record<string, { total: number; lancamentos: LancamentoHoras[] }>;
 }) {
   const [estagios, setEstagios] = React.useState<Estagio[]>(estagiosIniciais);
   const [busca, setBusca] = React.useState("");
@@ -55,6 +59,16 @@ export function ConteudoEstagios({
   const [dataInicio, setDataInicio] = React.useState("");
   const [dataFim, setDataFim] = React.useState("");
   const [documentosSelecionados, setDocumentosSelecionados] = React.useState<string[]>([]);
+  const [novaData, setNovaData] = React.useState("");
+  const [novaEntrada, setNovaEntrada] = React.useState("");
+  const [novaSaida, setNovaSaida] = React.useState("");
+  const [novoAlmocoDesligado, setNovoAlmocoDesligado] = React.useState(false);
+  const [erroLancamento, setErroLancamento] = React.useState<string | null>(null);
+  const [corrigindoId, setCorrigindoId] = React.useState<string | null>(null);
+  const [correcaoEntrada, setCorrecaoEntrada] = React.useState("");
+  const [correcaoSaida, setCorrecaoSaida] = React.useState("");
+  const [correcaoAlmocoDesligado, setCorrecaoAlmocoDesligado] = React.useState(false);
+  const [erroCorrecao, setErroCorrecao] = React.useState<string | null>(null);
 
   const estagioAtual = estagios.find((e) => e.id === estagioSelecionadoId);
 
@@ -112,6 +126,63 @@ export function ConteudoEstagios({
     });
   }
 
+  function lidarComLancamento(e: React.FormEvent) {
+    e.preventDefault();
+    if (!estagioAtual) return;
+    setErroLancamento(null);
+
+    iniciar(async () => {
+      const res = await lancarHorasAction({
+        estagioId: estagioAtual.id,
+        data: novaData,
+        entrada: novaEntrada,
+        saida: novaSaida,
+        almocoDesligado: novoAlmocoDesligado,
+      });
+
+      if (!res.ok) {
+        setErroLancamento(res.erro ?? "Não foi possível lançar as horas.");
+        return;
+      }
+
+      window.location.reload();
+    });
+  }
+
+  function abrirCorrecao(lancamento: LancamentoHoras) {
+    setCorrigindoId(lancamento.id);
+    setCorrecaoEntrada(lancamento.entrada);
+    setCorrecaoSaida(lancamento.saida);
+    setCorrecaoAlmocoDesligado(lancamento.almocoDesligado);
+    setErroCorrecao(null);
+  }
+
+  function fecharCorrecao() {
+    setCorrigindoId(null);
+    setErroCorrecao(null);
+  }
+
+  function lidarComCorrecao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!corrigindoId) return;
+    setErroCorrecao(null);
+
+    iniciar(async () => {
+      const res = await corrigirLancamentoAction(corrigindoId, {
+        entrada: correcaoEntrada,
+        saida: correcaoSaida,
+        almocoDesligado: correcaoAlmocoDesligado,
+      });
+
+      if (!res.ok) {
+        setErroCorrecao(res.erro ?? "Não foi possível corrigir o lançamento.");
+        return;
+      }
+
+      window.location.reload();
+    });
+  }
+
   if (estagiandoDetalhe(estagioAtual)) {
     return (
       <div className="flex flex-col gap-6">
@@ -146,6 +217,224 @@ export function ConteudoEstagios({
                 <p className="text-sm font-semibold">{rotuloSituacaoEstagio(estagioAtual.situacao)}</p>
               </div>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Lançamentos de horas</CardTitle>
+                <CardDescription>
+                  Registre as horas por dia, dentro do período do estágio. A jornada não passa de{" "}
+                  {LIMITE_HORAS_DIA} horas, excluído o intervalo de almoço, nem de 30 horas por
+                  semana.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-6">
+                <div>
+                  <p className="text-muted-foreground text-xs font-medium">Total acumulado</p>
+                  <p className="text-2xl font-semibold" data-testid="total-horas">
+                    {formatarHoras(resumosHoras[estagioAtual.id]?.total ?? 0)}
+                  </p>
+                </div>
+
+                {estagioAtual.situacao === "em_andamento" ? (
+                  <form
+                    onSubmit={lidarComLancamento}
+                    className="border rounded p-4 flex flex-col gap-4"
+                  >
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="novaData">Data</Label>
+                        <Input
+                          id="novaData"
+                          type="date"
+                          value={novaData}
+                          onChange={(e) => setNovaData(e.target.value)}
+                          aria-invalid={erroLancamento ? true : undefined}
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="novaEntrada">Entrada</Label>
+                        <Input
+                          id="novaEntrada"
+                          type="time"
+                          value={novaEntrada}
+                          onChange={(e) => setNovaEntrada(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="novaSaida">Saída</Label>
+                        <Input
+                          id="novaSaida"
+                          type="time"
+                          value={novaSaida}
+                          onChange={(e) => setNovaSaida(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Label className="flex items-center gap-2 text-sm font-normal">
+                          <Checkbox
+                            checked={novoAlmocoDesligado}
+                            onCheckedChange={(estado) => setNovoAlmocoDesligado(estado === true)}
+                          />
+                          Desligar intervalo de almoço (1 h)
+                        </Label>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4">
+                      <Button type="submit" disabled={pendente}>
+                        Lançar horas
+                      </Button>
+                      {novaEntrada && novaSaida ? (
+                        <span className="text-sm text-muted-foreground" data-testid="previa-horas">
+                          {calcularHorasDia(novaEntrada, novaSaida, novoAlmocoDesligado) > 0
+                            ? `Horas a registrar: ${formatarHoras(
+                                calcularHorasDia(novaEntrada, novaSaida, novoAlmocoDesligado),
+                              )}`
+                            : "Horário inválido."}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {erroLancamento ? (
+                      <Alert variant="destructive">
+                        <AlertCircleIcon aria-hidden="true" />
+                        <AlertTitle>Lançamento recusado</AlertTitle>
+                        <AlertDescription>{erroLancamento}</AlertDescription>
+                      </Alert>
+                    ) : null}
+                  </form>
+                ) : null}
+
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold">Histórico de lançamentos</h3>
+                  {(resumosHoras[estagioAtual.id]?.lancamentos ?? []).length === 0 ? (
+                    <Alert>
+                      <AlertCircleIcon aria-hidden="true" />
+                      <AlertTitle>Nenhum lançamento</AlertTitle>
+                      <AlertDescription>
+                        {estagioAtual.situacao === "em_andamento"
+                          ? "Registre o primeiro dia com o formulário acima."
+                          : "Este estágio ainda não possui lançamentos de horas."}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <ul className="flex flex-col gap-2" data-testid="historico-lancamentos">
+                      {(resumosHoras[estagioAtual.id]?.lancamentos ?? []).map((lancamento) => (
+                        <li
+                          key={lancamento.id}
+                          className="border rounded p-3 flex flex-col gap-3"
+                          data-testid={`lancamento-${lancamento.id}`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium">
+                                  {formatarData(lancamento.data)}
+                                </span>
+                                <Badge
+                                  variant={lancamento.tipo === "correcao" ? "info" : "outline"}
+                                  data-testid={`tipo-${lancamento.id}`}
+                                >
+                                  {lancamento.tipo === "correcao"
+                                    ? `Correção de ${lancamento.corrigeId ?? ""}`
+                                    : "Lançamento original"}
+                                </Badge>
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {lancamento.entrada}–{lancamento.saida} ·{" "}
+                                {formatarHoras(lancamento.horas)}
+                                {lancamento.almocoDesligado ? " · sem almoço" : ""}
+                              </span>
+                            </div>
+
+                            {lancamento.tipo === "lancamento" &&
+                            estagioAtual.situacao === "em_andamento" ? (
+                              corrigindoId === lancamento.id ? (
+                                <form
+                                  onSubmit={lidarComCorrecao}
+                                  className="w-full border-t pt-3 flex flex-col gap-3"
+                                >
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="flex flex-col gap-2">
+                                      <Label htmlFor={`correcaoEntrada-${lancamento.id}`}>
+                                        Nova entrada
+                                      </Label>
+                                      <Input
+                                        id={`correcaoEntrada-${lancamento.id}`}
+                                        type="time"
+                                        value={correcaoEntrada}
+                                        onChange={(e) => setCorrecaoEntrada(e.target.value)}
+                                        required
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                      <Label htmlFor={`correcaoSaida-${lancamento.id}`}>
+                                        Nova saída
+                                      </Label>
+                                      <Input
+                                        id={`correcaoSaida-${lancamento.id}`}
+                                        type="time"
+                                        value={correcaoSaida}
+                                        onChange={(e) => setCorrecaoSaida(e.target.value)}
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-4">
+                                    <Label
+                                      htmlFor={`correcaoAlmoco-${lancamento.id}`}
+                                      className="flex items-center gap-2 text-sm font-normal"
+                                    >
+                                      <Checkbox
+                                        id={`correcaoAlmoco-${lancamento.id}`}
+                                        checked={correcaoAlmocoDesligado}
+                                        onCheckedChange={(estado) =>
+                                          setCorrecaoAlmocoDesligado(estado === true)
+                                        }
+                                      />
+                                      Desligar intervalo de almoço (1 h)
+                                    </Label>
+                                    <Button type="submit" size="sm" disabled={pendente}>
+                                      Registrar correção
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={fecharCorrecao}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                  {erroCorrecao ? (
+                                    <Alert variant="destructive">
+                                      <AlertCircleIcon aria-hidden="true" />
+                                      <AlertTitle>Correção recusada</AlertTitle>
+                                      <AlertDescription>{erroCorrecao}</AlertDescription>
+                                    </Alert>
+                                  ) : null}
+                                </form>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => abrirCorrecao(lancamento)}
+                                >
+                                  Corrigir
+                                </Button>
+                              )
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <div>
               <h3 className="mb-3 text-sm font-semibold">Documentos do Estágio (Seleção)</h3>

@@ -120,6 +120,8 @@ export interface CampoDescriptor {
   totalAutomatico?: boolean;
   /** Valor vem do estágio selecionado e não pode ser editado. */
   somenteLeitura?: boolean;
+  /** Campo numérico de avaliação: exibe a faixa E/B/R/I junto à nota. */
+  faixa?: boolean;
 }
 
 export interface SecaoDescriptor {
@@ -460,6 +462,7 @@ const PESAGEM_FREQUENCIA = CRITERIOS_FICHA_FREQUENCIA.map((criterio, indice) => 
   passo: 0.1,
   largura: "meia" as const,
   validacao: ["numero"] as RegraValidacao[],
+  faixa: true,
   ajuda: "Conceito de 0,0 a 10,0. Ver faixas de avaliação.",
 }));
 
@@ -1561,6 +1564,7 @@ export const DESCRITORES: DescriptorDocumento[] = [
             max: 10,
             passo: 0.1,
             largura: "meia",
+            faixa: true,
           },
           {
             id: "observacoesFinais",

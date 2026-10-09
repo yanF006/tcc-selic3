@@ -79,7 +79,12 @@ export async function horasEfetivasDoDia(
     (lancamento) => lancamento.tipo === "lancamento" && !corrigidos.has(lancamento.id),
   );
   const correcao = lancamentos
-    .filter((lancamento) => lancamento.tipo === "correcao" && lancamento.id !== ignorarId)
+    .filter(
+      (lancamento) =>
+        lancamento.tipo === "correcao" &&
+        lancamento.id !== ignorarId &&
+        lancamento.corrigeId !== ignorarId,
+    )
     .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
     .pop();
   const efetivo = correcao ?? original;

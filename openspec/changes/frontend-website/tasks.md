@@ -96,11 +96,11 @@
 - [x] 8.14 Implementar o download em docx e pdf devolvendo arquivo de demonstração nesta entrega — verificação: teste E2E do download concluído
 - [x] 8.15 Recusar o download quando houver campo obrigatório pendente — verificação: teste E2E da recusa com a lista de pendências
 - [x] 8.16 Implementar o limite de palavras por seção com contador visível durante a digitação — verificação: teste E2E bloqueando a gravação acima do limite
-- [ ] 8.17 Implementar a escala numérica de zero a dez com faixas e a escala qualitativa da autoavaliação, com conceito global — verificação: testes unitários do enquadramento de cada nota em sua faixa
-- [ ] 8.18 Listar os comprovantes do Requerimento para Aproveitamento de Horas e bloquear a submissão com item pendente — verificação: teste E2E da recusa indicando os itens pendentes
-- [ ] 8.19 Registrar horas aplicando os limites de seis horas por dia e trinta por semana, com desligamento do intervalo de almoço — verificação: testes unitários dos limites e teste E2E de lançamento excedente recusado
-- [ ] 8.20 Manter o lançamento imutável e corrigir por lançamento de correção sem apagar o original — verificação: teste E2E do histórico com original e correção identificados
-- [ ] 8.21 Exibir o total acumulado e a lista de lançamentos do estágio — verificação: teste E2E do total após correções
+- [x] 8.17 Implementar a escala numérica de zero a dez com faixas e a escala qualitativa da autoavaliação, com conceito global — verificação: testes unitários do enquadramento de cada nota em sua faixa
+- [x] 8.18 Listar os comprovantes do Requerimento para Aproveitamento de Horas e bloquear a submissão com item pendente — verificação: teste E2E da recusa indicando os itens pendentes
+- [x] 8.19 Registrar horas aplicando os limites de seis horas por dia e trinta por semana, com desligamento do intervalo de almoço — verificação: testes unitários dos limites e teste E2E de lançamento excedente recusado
+- [x] 8.20 Manter o lançamento imutável e corrigir por lançamento de correção sem apagar o original — verificação: teste E2E do histórico com original e correção identificados
+- [x] 8.21 Exibir o total acumulado e a lista de lançamentos do estágio — verificação: teste E2E do total após correções
 
 ## 9. Parecer e notificações
 

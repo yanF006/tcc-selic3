@@ -151,7 +151,11 @@ export function validarValores(
     if (campo.somenteLeitura) continue;
 
     const valor = valores[campo.id];
-    const vazio = valor === undefined || valor === null || String(valor).trim() === "";
+    const vazio =
+      valor === undefined ||
+      valor === null ||
+      valor === false ||
+      String(valor).trim() === "";
 
     if (campo.obrigatorio && vazio) {
       problemas.push({ campo: campo.id, mensagem: `${campo.rotulo} é obrigatório.` });

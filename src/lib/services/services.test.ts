@@ -472,6 +472,32 @@ describe("documentos", () => {
     expect(problemas.map((problema) => problema.campo)).toContain("fundamentacao");
   });
 
+  it("recusa o comprovante do aproveitamento enquanto não estiver marcado", async () => {
+    const comItensPendentes = validarValores("tpl-requerimento-aproveitamento", {
+      cargaHorariaTotal: 120,
+      comprovante_1: true,
+      comprovante_2: true,
+      comprovante_3: true,
+      comprovante_4: true,
+      comprovante_5: false,
+    });
+
+    expect(comItensPendentes.filter((problema) => problema.campo === "comprovante_5")).toHaveLength(
+      1,
+    );
+
+    const completo = validarValores("tpl-requerimento-aproveitamento", {
+      cargaHorariaTotal: 120,
+      comprovante_1: true,
+      comprovante_2: true,
+      comprovante_3: true,
+      comprovante_4: true,
+      comprovante_5: true,
+    });
+
+    expect(completo).toEqual([]);
+  });
+
   it("exige os campos obrigatórios na submissão", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
     const documento = await criarRascunho(aluno, "tpl-plano-atividades", "est-maria-tecnoweb");
