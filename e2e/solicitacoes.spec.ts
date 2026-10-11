@@ -52,14 +52,21 @@ async function criarCadastroPendente(
 
   await page.getByLabel("Nome completo").fill(nome);
   await page.getByLabel("CPF").fill("123.456.789-09");
-  await page.getByLabel("Data de nascimento").fill("2005-03-14");
+  await page.getByLabel("Data de nascimento").fill("14/03/2005");
+  await page.getByLabel("Celular", { exact: true }).fill("21998761234");
+  await page.getByLabel("CEP", { exact: true }).fill("23940000");
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await expect(page.getByLabel("Cidade", { exact: true })).toHaveValue("Pinheiral");
+  await page.getByLabel("Número", { exact: true }).fill("215");
   await page.getByLabel("Endereço").fill("Rua das Acácias");
   await page.getByLabel("Bairro").fill("Centro");
   await page.getByLabel("Cidade").fill("Pinheiral");
   await page.getByLabel("Curso", { exact: true }).click();
-  await page.getByRole("option", { name: "Informática" }).click();
+  await page
+    .getByRole("option", { name: "Análise e Desenvolvimento de Sistemas", exact: true })
+    .click();
   await page.getByLabel("Turma", { exact: true }).click();
-  await page.getByRole("option", { name: "INF 2026.1 — 1º período" }).click();
+  await page.getByRole("option", { name: "ADS 2026.1 — 1º período", exact: true }).click();
   await page.getByLabel("Período", { exact: true }).click();
   await page.getByRole("option", { name: "2026.1", exact: true }).click();
   await page.getByRole("button", { name: "Concluir cadastro" }).click();

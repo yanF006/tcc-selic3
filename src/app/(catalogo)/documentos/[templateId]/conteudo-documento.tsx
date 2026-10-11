@@ -4,21 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { CheckCircle2Icon, DownloadIcon, ListChecksIcon, SaveIcon } from "lucide-react";
 
-import { salvarDocumentoAction, baixarDocumentoAction } from "@/app/(catalogo)/documentos/acoes";
+import {
+  salvarDocumentoAction,
+  baixarDocumentoAction,
+  submeterDocumentoAction,
+} from "@/app/(catalogo)/documentos/acoes";
 import { FormularioDocumento } from "@/components/documentos/formulario-documento";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DocumentoPreenchido, SituacaoDocumento } from "@/lib/domain/types";
-import {
-  rotuloSituacaoDocumento,
-  varianteSituacaoDocumento,
-} from "@/lib/domain/status";
-import {
-  descritorPorTemplate,
-  type DescriptorDocumento,
-} from "@/lib/templates/descriptors";
+import { conceitoGlobalDasNotas } from "@/lib/domain/avaliacao";
+import { rotuloSituacaoDocumento, varianteSituacaoDocumento } from "@/lib/domain/status";
+import { descritorPorTemplate, type DescriptorDocumento } from "@/lib/templates/descriptors";
 
 interface DocumentoResumo {
   id: string;
@@ -31,22 +30,39 @@ export function ConteudoDocumento({
   documento,
   preenchidos,
   estagioId,
+  consultaApenas = false,
 }: {
   descriptor: DescriptorDocumento;
   documento: DocumentoPreenchido;
   preenchidos: DocumentoResumo[];
   estagioId?: string;
+  consultaApenas?: boolean;
 }) {
   const [valores, setValores] = React.useState<Record<string, unknown>>(documento.valores);
   const [erros, setErros] = React.useState<Record<string, string>>({});
-  const [mensagem, setMensagem] = React.useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(
-    null,
-  );
+  const [mensagem, setMensagem] = React.useState<{
+    tipo: "sucesso" | "erro";
+    texto: string;
+  } | null>(null);
   const [salvando, iniciar] = React.useTransition();
-  const editavel = documento.situacao === "rascunho";
+  const [situacao, setSituacao] = React.useState(documento.situacao);
+  const editavel = situacao === "rascunho" && !consultaApenas;
 
   function aoMudar(campoId: string, valor: unknown) {
-    setValores((atual) => ({ ...atual, [campoId]: valor }));
+    setValores((atual) => {
+      const proximo = { ...atual, [campoId]: valor };
+      if (descriptor.templateId === "tpl-ficha-frequencia" && /^criterio_\d+$/.test(campoId)) {
+        const notas = Object.entries(proximo)
+          .filter(([id]) => /^criterio_\d+$/.test(id))
+          .map(([, nota]) => nota)
+          .filter(
+            (nota): nota is number =>
+              typeof nota === "number" && Number.isFinite(nota) && nota >= 0 && nota <= 10,
+          );
+        proximo.conceitoGlobal = notas.length ? conceitoGlobalDasNotas(notas) : "";
+      }
+      return proximo;
+    });
     setErros((atual) => {
       if (!atual[campoId]) return atual;
 
@@ -74,6 +90,7 @@ export function ConteudoDocumento({
         return;
       }
 
+      if (resultado.valores) setValores(resultado.valores);
       setMensagem({ tipo: "sucesso", texto: "Rascunho salvo." });
     });
   }
@@ -113,15 +130,40 @@ export function ConteudoDocumento({
     URL.revokeObjectURL(endereco);
   }
 
+  function enviarParecer() {
+    setMensagem(null);
+    setErros({});
+    iniciar(async () => {
+      const resultado = await submeterDocumentoAction(documento.id, valores);
+      if (!resultado.ok) {
+        setErros(
+          Object.fromEntries(
+            (resultado.problemas ?? []).map((problema) => [problema.campo, problema.mensagem]),
+          ),
+        );
+        setMensagem({ tipo: "erro", texto: resultado.erro ?? "Não foi possível submeter." });
+        return;
+      }
+      if (resultado.valores) setValores(resultado.valores);
+      setSituacao("submetido");
+      setMensagem({ tipo: "sucesso", texto: "Documento submetido a parecer." });
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {!editavel ? (
         <Alert variant="info">
           <ListChecksIcon aria-hidden="true" />
-          <AlertTitle>Documento {rotuloSituacaoDocumento(documento.situacao)}</AlertTitle>
+          <AlertTitle>
+            {consultaApenas
+              ? "Documento apenas para consulta"
+              : `Documento ${rotuloSituacaoDocumento(situacao)}`}
+          </AlertTitle>
           <AlertDescription>
-            Um documento fora de rascunho não pode mais ser editado; o conteúdo fica disponível para
-            consulta e download.
+            {consultaApenas
+              ? "O cadastro de origem está inativo; o preenchimento histórico foi preservado para consulta e download."
+              : "Um documento fora de rascunho não pode mais ser editado; o conteúdo fica disponível para consulta e download."}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -133,14 +175,16 @@ export function ConteudoDocumento({
           ) : (
             <ListChecksIcon aria-hidden="true" />
           )}
-          <AlertTitle>{mensagem.tipo === "sucesso" ? "Tudo certo" : "Corrija o documento"}</AlertTitle>
+          <AlertTitle>
+            {mensagem.tipo === "sucesso" ? "Tudo certo" : "Corrija o documento"}
+          </AlertTitle>
           <AlertDescription>{mensagem.texto}</AlertDescription>
         </Alert>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={varianteSituacaoDocumento(documento.situacao)}>
-          {rotuloSituacaoDocumento(documento.situacao)}
+        <Badge variant={varianteSituacaoDocumento(situacao)}>
+          {rotuloSituacaoDocumento(situacao)}
         </Badge>
         <span className="text-muted-foreground text-xs">Versão {documento.versaoTemplate}</span>
       </div>
@@ -154,6 +198,12 @@ export function ConteudoDocumento({
       />
 
       <div className="sem-impressao flex flex-wrap items-center gap-2">
+        {descriptor.metadados?.tipoParecer !== "nenhum" &&
+        descriptor.metadados?.papeisPreenchimento.includes("aluno") ? (
+          <Button type="button" onClick={enviarParecer} disabled={!editavel || salvando}>
+            Submeter a parecer
+          </Button>
+        ) : null}
         <Button type="button" onClick={salvar} disabled={!editavel || salvando}>
           <SaveIcon aria-hidden="true" className="size-4" />
           {salvando ? "Salvando…" : "Salvar rascunho"}

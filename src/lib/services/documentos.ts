@@ -1,4 +1,14 @@
 import { transicaoDocumentoPermitida } from "@/lib/domain/status";
+import { conceitoGlobalDasNotas } from "@/lib/domain/avaliacao";
+import {
+  esquemaCpf,
+  esquemaRg,
+  esquemaEmail,
+  esquemaTelefone,
+  esquemaCelular,
+  esquemaCep,
+  esquemaData,
+} from "@/lib/domain/schemas";
 import type {
   DocumentoPreenchido,
   Pagina,
@@ -18,8 +28,13 @@ import {
 
 import { PAPEL_COM_TODAS_AS_PERMISSOES } from "@/lib/auth/permissions";
 
-import { cursoPorId, pessoaPorId, convenioPorId } from "./catalogo";
-import { estagioPorId, totalHorasDoEstagio } from "./estagios";
+import { cursoPorId, turmaPorId, periodoPorId, pessoaPorId, convenioPorId } from "./catalogo";
+import {
+  exigirAcessoEstagio,
+  podeConsultarEstagio,
+  estagioPorId,
+  totalHorasDoEstagio,
+} from "./estagios";
 import { filtrarPorTexto, paginar } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
 import { notificar } from "./sessao";
@@ -77,8 +92,7 @@ export async function catalogoDocumentos(): Promise<ItemCatalogo[]> {
       tipo: preenchivel ? "preenchivel" : "download",
       papeisPreenchimento: preenchivel ? (descritor.metadados?.papeisPreenchimento ?? []) : [],
       exigeEstagio: preenchivel && descritor.metadados?.exigeEstagio === true,
-      versaoVigente:
-        template?.versoes.find((versao) => versao.vigente)?.versao ?? null,
+      versaoVigente: template?.versoes.find((versao) => versao.vigente)?.versao ?? null,
     };
   });
 }
@@ -148,14 +162,13 @@ export function validarValores(
     // final e `instrucao` é descartada pelo gerador.
     if (classificacaoDoCampo(campo) !== "campo") continue;
 
-    if (campo.somenteLeitura) continue;
-
     const valor = valores[campo.id];
     const vazio =
       valor === undefined ||
       valor === null ||
       valor === false ||
-      String(valor).trim() === "";
+      String(valor).trim() === "" ||
+      (Array.isArray(valor) && valor.length === 0);
 
     if (campo.obrigatorio && vazio) {
       problemas.push({ campo: campo.id, mensagem: `${campo.rotulo} é obrigatório.` });
@@ -164,6 +177,41 @@ export function validarValores(
     }
 
     if (vazio) continue;
+
+    if (campo.tipo === "checkbox" && campo.obrigatorio && valor !== true) {
+      problemas.push({ campo: campo.id, mensagem: `${campo.rotulo} deve ser marcado.` });
+    }
+    if (campo.tipo === "numero" && (typeof valor !== "number" || !Number.isFinite(valor))) {
+      problemas.push({ campo: campo.id, mensagem: `${campo.rotulo} deve ser um número válido.` });
+      continue;
+    }
+    if (campo.opcoes && !campo.opcoes.some((opcao) => opcao.valor === valor)) {
+      problemas.push({
+        campo: campo.id,
+        mensagem: `Selecione uma opção válida para ${campo.rotulo}.`,
+      });
+    }
+    const esquemas = {
+      cpf: esquemaCpf,
+      rg: esquemaRg,
+      email: esquemaEmail,
+      telefone: esquemaTelefone,
+      celular: esquemaCelular,
+      cep: esquemaCep,
+      data: esquemaData,
+    };
+    for (const regra of campo.validacao ?? []) {
+      if (regra in esquemas) {
+        const esquema = esquemas[regra as keyof typeof esquemas];
+        const resultado = esquema.safeParse(valor);
+        if (!resultado.success) {
+          problemas.push({
+            campo: campo.id,
+            mensagem: `${campo.rotulo}: ${resultado.error.issues[0].message}`,
+          });
+        }
+      }
+    }
 
     if (campo.maximoPalavras && typeof valor === "string") {
       const palavras = valor.trim().split(/\s+/).filter(Boolean).length;
@@ -176,14 +224,14 @@ export function validarValores(
       }
     }
 
-    if (campo.max && typeof valor === "number" && valor > campo.max) {
+    if (campo.max !== undefined && typeof valor === "number" && valor > campo.max) {
       problemas.push({
         campo: campo.id,
         mensagem: `${campo.rotulo} deve ser no máximo ${campo.max}.`,
       });
     }
 
-    if (campo.min && typeof valor === "number" && valor < campo.min) {
+    if (campo.min !== undefined && typeof valor === "number" && valor < campo.min) {
       problemas.push({
         campo: campo.id,
         mensagem: `${campo.rotulo} deve ser no mínimo ${campo.min}.`,
@@ -195,15 +243,29 @@ export function validarValores(
 }
 
 /** Quem pode preencher o template (matriz de preenchimento do descritor). */
-export function podePreencher(
-  usuario: Usuario,
-  template: TemplateDocumento,
-): boolean {
+export function podePreencher(usuario: Usuario, template: TemplateDocumento): boolean {
+  if (usuario.situacao !== "ativo" || template.situacao !== "ativo") return false;
   const papeis = template.metadados?.papeisPreenchimento ?? [];
 
   if (usuario.papeis.includes(PAPEL_COM_TODAS_AS_PERMISSOES)) return true;
 
   return papeis.some((papel) => usuario.papeis.includes(papel));
+}
+
+export async function podeConsultarDocumento(
+  usuario: Usuario,
+  documento: DocumentoPreenchido,
+): Promise<boolean> {
+  if (usuario.situacao !== "ativo") return false;
+  if (documento.estagioId) {
+    const estagio = await estagioPorId(documento.estagioId);
+    return Boolean(estagio && podeConsultarEstagio(usuario, estagio));
+  }
+  return (
+    documento.alunoId === usuario.id ||
+    usuario.papeis.includes("administrador") ||
+    usuario.papeis.includes("coordenador_estagio")
+  );
 }
 
 export async function criarRascunho(
@@ -226,26 +288,35 @@ export async function criarRascunho(
     throw new Error("Selecione o estágio para preencher este documento.");
   }
 
-  if (estagioId && !(await estagioPorId(estagioId))) {
-    throw new Error("Estágio não encontrado.");
-  }
+  const estagio = estagioId ? await exigirAcessoEstagio(aluno, estagioId) : null;
+  const titular = estagio
+    ? obterEstado().usuarios.find((usuario) => usuario.id === estagio.alunoId)
+    : aluno;
+  if (!titular) throw new Error("Cadastro do aluno não encontrado.");
 
   const existente = obterEstado().documentos.find(
     (documento) =>
       documento.templateId === templateId &&
-      documento.alunoId === aluno.id &&
+      documento.alunoId === titular.id &&
       documento.estagioId === estagioId &&
       documento.situacao !== "inativo",
   );
 
-  if (existente) return existente;
+  if (existente) {
+    if (existente.situacao === "rascunho" && titular.situacao === "ativo") {
+      existente.valores = await valoresDoPreenchimento(
+        templateId,
+        titular,
+        estagioId,
+        existente.valores,
+      );
+    }
+    return existente;
+  }
 
   const versaoVigente = template.versoes.find((versao) => versao.vigente);
   const momento = agora();
-  const valoresIniciais: Record<string, unknown> = {
-    ...(await valoresAutomaticos(templateId, aluno, estagioId)),
-    ...valores,
-  };
+  const valoresIniciais = await valoresDoPreenchimento(templateId, titular, estagioId, valores);
 
   // 8.8: o Termo de Compromisso declara a duração em horas, que já vem do total
   // do estágio e continua ajustável pelo aluno.
@@ -262,7 +333,7 @@ export async function criarRascunho(
   const documento: DocumentoPreenchido = {
     id: novoId("doc"),
     templateId,
-    alunoId: aluno.id,
+    alunoId: titular.id,
     estagioId,
     versaoTemplate: versaoVigente?.versao ?? 1,
     valores: valoresIniciais,
@@ -282,10 +353,20 @@ export async function valoresAutomaticos(
   aluno: Usuario,
   estagioId?: string,
 ): Promise<Record<string, unknown>> {
-  const descriptor = descritorPorTemplate(templateId);
   const estagio = estagioId ? await estagioPorId(estagioId) : null;
   const dados = aluno.dadosPessoais;
-  const curso = dados ? await cursoPorId(dados.cursoId) : null;
+  const [curso, turma, periodo] = dados
+    ? await Promise.all([
+        cursoPorId(dados.cursoId),
+        turmaPorId(dados.turmaId),
+        periodoPorId(dados.periodoId),
+      ])
+    : [null, null, null];
+  const endereco = dados?.endereco;
+  const enderecoCompleto =
+    endereco?.logradouro?.trim() && endereco.numero?.trim()
+      ? [endereco.logradouro, endereco.numero, endereco.bairro].filter(Boolean).join(", ")
+      : undefined;
 
   const base: Record<string, unknown> = {
     nomeCompleto: aluno.nome,
@@ -295,24 +376,22 @@ export async function valoresAutomaticos(
     email: dados?.email ?? aluno.email,
     telefone: dados?.telefone,
     celular: dados?.celular,
-    endereco: dados
-      ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.bairro}`
-      : undefined,
-    enderecoAluno: dados
-      ? `${dados.endereco.logradouro}, ${dados.endereco.numero} - ${dados.endereco.bairro}`
-      : undefined,
-    cepAluno: dados?.endereco.cep,
-    bairro: dados?.endereco.bairro,
-    cidade: dados?.endereco.cidade,
-    cep: dados?.endereco.cep,
+    endereco: enderecoCompleto,
+    enderecoAluno: enderecoCompleto,
+    cepAluno: endereco?.cep,
+    bairro: endereco?.bairro,
+    cidade: endereco?.cidade,
+    cep: endereco?.cep,
     telefoneAluno: dados?.telefone,
     celularAluno: dados?.celular,
     emailAluno: dados?.email ?? aluno.email,
     curso: curso?.nome,
-    turma: dados?.turmaId,
-    ano: dados?.periodoId,
-    anoSemestre: dados?.periodoId,
-    semestre: dados?.periodoId,
+    turma: turma?.nome,
+    ano: periodo?.ano,
+    anoSemestre: periodo?.rotulo,
+    semestre: periodo?.semestre,
+    periodo: periodo?.rotulo,
+    turmaSemestreAno: [turma?.nome, periodo?.rotulo].filter(Boolean).join(" — "),
     campus: aluno.campus,
     aluno: aluno.nome,
     matricula: aluno.matricula,
@@ -336,13 +415,40 @@ export async function valoresAutomaticos(
     });
   }
 
-  const automaticos = (descriptor?.auto ?? []).map((campo) => campo.id);
-
   return Object.fromEntries(
-    Object.entries(base).filter(
-      ([chave, valor]) => automaticos.includes(chave) && valor !== undefined,
-    ),
+    camposDoTemplate(templateId)
+      .filter(
+        (campo) =>
+          campo.origem === "aluno" ||
+          campo.origem === "estagio" ||
+          (campo.origem === "literal" && campo.somenteLeitura && campo.ajuda),
+      )
+      .map((campo) => [
+        campo.id,
+        campo.origem === "literal" ? campo.ajuda : (base[campo.id] ?? ""),
+      ]),
   );
+}
+
+/** Valores de origem nunca vêm do cliente; conceitos derivados também são recalculados. */
+export async function valoresDoPreenchimento(
+  templateId: string,
+  aluno: Usuario,
+  estagioId: string | undefined,
+  valores: Record<string, unknown>,
+) {
+  const resultado = { ...valores, ...(await valoresAutomaticos(templateId, aluno, estagioId)) };
+  if (templateId === "tpl-ficha-frequencia") {
+    const notas = camposDoTemplate(templateId)
+      .filter((campo) => /^criterio_\d+$/.test(campo.id))
+      .map((campo) => resultado[campo.id])
+      .filter(
+        (nota): nota is number =>
+          typeof nota === "number" && Number.isFinite(nota) && nota >= 0 && nota <= 10,
+      );
+    resultado.conceitoGlobal = notas.length ? conceitoGlobalDasNotas(notas) : "";
+  }
+  return resultado;
 }
 
 export async function salvarRascunho(
@@ -357,7 +463,16 @@ export async function salvarRascunho(
     throw new Error("Somente rascunhos podem ser editados.");
   }
 
-  documento.valores = { ...documento.valores, ...valores };
+  const aluno = obterEstado().usuarios.find((usuario) => usuario.id === documento.alunoId);
+  if (!aluno) throw new Error("Cadastro do aluno não encontrado.");
+  if (aluno.situacao !== "ativo")
+    throw new Error("Documento de cadastro inativo: apenas consulta.");
+  documento.valores = await valoresDoPreenchimento(
+    documento.templateId,
+    aluno,
+    documento.estagioId,
+    { ...documento.valores, ...valores },
+  );
   documento.atualizadoEm = agora();
 
   return documento;
@@ -369,14 +484,16 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
   if (!documento) throw new Error("Documento não encontrado.");
 
   const template = await templatePorId(documento.templateId);
+  if (!template?.metadados || template.metadados.tipoParecer === "nenhum") {
+    throw new Error("Este documento não está sujeito a parecer.");
+  }
   const problemas = validarValores(documento.templateId, documento.valores);
 
   if (problemas.length > 0) {
     throw new Error(problemas[0].mensagem);
   }
 
-  const alvo: SituacaoDocumento =
-    template?.metadados?.tipoParecer === "nenhum" ? "aprovado" : "submetido";
+  const alvo: SituacaoDocumento = "submetido";
 
   if (!transicaoDocumentoPermitida(documento.situacao, alvo)) {
     throw new Error(`Não é possível enviar um documento em "${documento.situacao}".`);
@@ -384,14 +501,25 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
 
   documento.situacao = alvo;
   documento.atualizadoEm = agora();
-
-  if (alvo === "aprovado") {
-    notificar(
-      documento.alunoId,
-      "Documento concluído",
-      "Não há parecer necessário para este documento.",
-      "parecer",
-    );
+  const tipoParecer = template.metadados.tipoParecer;
+  for (const responsavel of obterEstado().usuarios.filter(
+    (usuario) => usuario.situacao === "ativo",
+  )) {
+    if (
+      (tipoParecer === "coordenador_curso" &&
+        responsavel.papeis.includes("coordenador_curso") &&
+        responsavel.cursoId === cursoDoDocumento(documento)) ||
+      (tipoParecer === "comissao_estagio" &&
+        responsavel.papeis.includes("coordenador_estagio") &&
+        responsavel.membroComissaoEstagio)
+    ) {
+      notificar(
+        responsavel.id,
+        "Documento aguardando parecer",
+        `Documento ${template.nome} submetido para análise.`,
+        "parecer",
+      );
+    }
   }
 
   return documento;
@@ -401,7 +529,7 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
 export function cursoDoDocumento(documento: DocumentoPreenchido): string | undefined {
   const aluno = obterEstado().usuarios.find((usuario) => usuario.id === documento.alunoId);
 
-  return aluno?.dadosPessoais?.cursoId;
+  return aluno?.dadosPessoais?.cursoId ?? aluno?.cursoId;
 }
 
 /**
@@ -413,6 +541,17 @@ export async function documentosParaParecer(
   autor: Usuario,
   consulta: ConsultaDocumentos = {},
 ): Promise<Pagina<DocumentoPreenchido>> {
+  const administrador = autor.papeis.includes("administrador") && autor.situacao === "ativo";
+  const podeVerFila =
+    autor.situacao === "ativo" &&
+    (administrador ||
+      (fila === "coordenador_curso" &&
+        autor.papeis.includes("coordenador_curso") &&
+        Boolean(autor.cursoId)) ||
+      (fila === "comissao_estagio" &&
+        autor.papeis.includes("coordenador_estagio") &&
+        autor.membroComissaoEstagio));
+  if (!podeVerFila || fila === "externo" || fila === "nenhum") return paginar([], consulta);
   const emAnalise = obterEstado()
     .documentos.filter((documento) => documento.situacao === "em_analise")
     .filter((documento) => !consulta.estagioId || documento.estagioId === consulta.estagioId);
@@ -423,8 +562,8 @@ export async function documentosParaParecer(
     const template = await templatePorId(documento.templateId);
 
     if (template?.metadados?.tipoParecer !== fila) continue;
-    if (fila === "externo") continue;
     if (
+      !administrador &&
       fila === "coordenador_curso" &&
       autor.cursoId &&
       cursoDoDocumento(documento) !== autor.cursoId
@@ -447,6 +586,27 @@ export async function registrarParecer(
   const documento = await documentoPorId(documentoId);
 
   if (!documento) throw new Error("Documento não encontrado.");
+
+  const fila = (await templatePorId(documento.templateId))?.metadados?.tipoParecer;
+  const autorizado =
+    autor.situacao === "ativo" &&
+    (autor.papeis.includes("administrador") ||
+      (fila === "coordenador_curso" &&
+        autor.papeis.includes("coordenador_curso") &&
+        Boolean(autor.cursoId) &&
+        cursoDoDocumento(documento) === autor.cursoId) ||
+      (fila === "comissao_estagio" &&
+        autor.papeis.includes("coordenador_estagio") &&
+        autor.membroComissaoEstagio));
+  if (
+    !autorizado ||
+    !fila ||
+    !["aprovado", "indeferido"].includes(decisao) ||
+    fila === "externo" ||
+    fila === "nenhum"
+  ) {
+    throw new Error("Parecer não disponível para este usuário ou decisão inválida.");
+  }
 
   if (!transicaoDocumentoPermitida(documento.situacao, decisao)) {
     throw new Error(`Não é possível emitir parecer a partir de "${documento.situacao}".`);

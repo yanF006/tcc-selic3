@@ -6,6 +6,7 @@ import {
   esquemaLancamentoHoras,
 } from "@/lib/domain/schemas";
 import type { LancamentoHoras, Pagina } from "@/lib/domain/types";
+import { lancamentosEfetivos } from "@/lib/domain/horas";
 import { chaveSemana } from "@/lib/format";
 
 import { filtrarPorTexto, paginar } from "./paginacao";
@@ -34,33 +35,22 @@ export interface ResumoSemana {
   excedeu: boolean;
 }
 
-/** Lançamento que vale para o dia: o original, quando não corrigido, ou a correção. */
+/** Consulta um lançamento efetivo do dia; o total dos vários registros vem de horasEfetivasDoDia. */
 export async function lancamentoEfetivoDoDia(
   estagioId: string,
   data: string,
 ): Promise<LancamentoHoras | null> {
-  const doDia = lancamentosDoEstagio(estagioId).filter((lancamento) => lancamento.data === data);
-  const corrigidos = new Set(
-    doDia
-      .filter((lancamento) => lancamento.tipo === "correcao")
-      .map((lancamento) => lancamento.corrigeId),
+  return (
+    lancamentosEfetivos(
+      lancamentosDoEstagio(estagioId).filter((lancamento) => lancamento.data === data),
+    ).at(-1) ?? null
   );
-
-  const original = doDia.find(
-    (lancamento) => lancamento.tipo === "lancamento" && !corrigidos.has(lancamento.id),
-  );
-  const correcao = doDia
-    .filter((lancamento) => lancamento.tipo === "correcao")
-    .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
-    .pop();
-
-  return correcao ?? original ?? null;
 }
 
 /**
- * Horas que valem para o dia: o lançamento original quando não corrigido ou a
- * última correção registrada. `ignorarId` desconsidera um lançamento, usado ao
- * recalcular o limite do dia durante uma correção.
+ * Soma dos lançamentos do dia, substituindo cada original por sua última correção.
+ * `ignorarId` remove toda a contribuição de um original e suas correções durante
+ * a validação de uma nova correção.
  */
 export async function horasEfetivasDoDia(
   estagioId: string,
@@ -68,30 +58,15 @@ export async function horasEfetivasDoDia(
   ignorarId?: string,
 ): Promise<number> {
   const lancamentos = lancamentosDoEstagio(estagioId).filter(
-    (lancamento) => lancamento.data === data,
+    (lancamento) =>
+      lancamento.data === data &&
+      (ignorarId === undefined ||
+        (lancamento.id !== ignorarId && lancamento.corrigeId !== ignorarId)),
   );
-  const corrigidos = new Set(
-    lancamentos
-      .filter((lancamento) => lancamento.tipo === "correcao")
-      .map((lancamento) => lancamento.corrigeId),
+  return lancamentosEfetivos(lancamentos).reduce(
+    (total, lancamento) => total + lancamento.horas,
+    0,
   );
-  const original = lancamentos.find(
-    (lancamento) => lancamento.tipo === "lancamento" && !corrigidos.has(lancamento.id),
-  );
-  const correcao = lancamentos
-    .filter(
-      (lancamento) =>
-        lancamento.tipo === "correcao" &&
-        lancamento.id !== ignorarId &&
-        lancamento.corrigeId !== ignorarId,
-    )
-    .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
-    .pop();
-  const efetivo = correcao ?? original;
-
-  if (!efetivo || efetivo.id === ignorarId) return 0;
-
-  return efetivo.horas;
 }
 
 export async function horasDaSemana(estagioId: string, semana: string): Promise<number> {
@@ -143,13 +118,6 @@ export async function lancarHoras(dados: NovoLancamento): Promise<LancamentoHora
     throw new ErroDeRegra(
       `A jornada diária não pode passar de ${LIMITE_HORAS_DIA} horas (excluído o almoço).`,
       "limite_diario",
-    );
-  }
-
-  if (await lancamentoEfetivoDoDia(estagio.id, parsed.data)) {
-    throw new ErroDeRegra(
-      "Data já lançada. Use a correção para alterar o horário.",
-      "dia_duplicado",
     );
   }
 
@@ -226,6 +194,10 @@ export async function corrigirLancamento(
     calcularHorasDia(parsed.entrada, parsed.saida, parsed.almocoDesligado),
   );
 
+  if (horas <= 0) {
+    throw new ErroDeRegra("O horário informado não resulta em horas.", "horas_invalidas");
+  }
+
   if (horas > LIMITE_HORAS_DIA) {
     throw new ErroDeRegra(
       `A jornada diária não pode passar de ${LIMITE_HORAS_DIA} horas (excluído o almoço).`,
@@ -239,6 +211,17 @@ export async function corrigirLancamento(
     throw new ErroDeRegra(
       `O dia soma ${totalDia} horas e ultrapassa o limite de ${LIMITE_HORAS_DIA}.`,
       "limite_diario",
+    );
+  }
+
+  const semana = await resumoDaSemana(estagio.id, original.data);
+  const efetivo = lancamentosEfetivos(lancamentosDoEstagio(estagio.id)).find(
+    (lancamento) => lancamento.id === original.id || lancamento.corrigeId === original.id,
+  );
+  if (semana.horas - (efetivo?.horas ?? 0) + horas > LIMITE_HORAS_SEMANA) {
+    throw new ErroDeRegra(
+      `A semana ultrapassa o limite de ${LIMITE_HORAS_SEMANA} horas. Total atual: ${semana.horas} horas.`,
+      "limite_semanal",
     );
   }
 
@@ -273,6 +256,10 @@ export function historicoDoDia(estagioId: string, data: string): LancamentoHoras
 export interface ConsultaLancamentos extends OpcoesPaginacao {
   data?: string;
   busca?: string;
+}
+
+export async function lancamentoPorId(id: string): Promise<LancamentoHoras | null> {
+  return obterEstado().lancamentos.find((lancamento) => lancamento.id === id) ?? null;
 }
 
 export async function listarLancamentos(

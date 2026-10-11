@@ -162,10 +162,10 @@ export function esquemaDadosPessoais(opcoes: OpcoesSelecao) {
     .object({
       nomeCompleto: z.string().min(3, "Informe o nome completo."),
       cpf: esquemaCpf,
-      rg: esquemaRg,
+      rg: esquemaRg.optional().or(z.literal("")).default(""),
       dataNascimento: esquemaData,
       email: esquemaEmail,
-      telefone: esquemaTelefone,
+      telefone: esquemaTelefone.optional().or(z.literal("")).default(""),
       celular: esquemaCelular,
       endereco: esquemaEndereco,
       cursoId: esquemaIdCadastrado(opcoes.cursosIds, "o curso"),

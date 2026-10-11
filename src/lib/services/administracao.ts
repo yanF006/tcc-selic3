@@ -258,29 +258,48 @@ export async function reativarUsuario(id: string): Promise<Usuario> {
   return usuario;
 }
 
-/** Remove o cadastro e os registros dependentes que só existam por causa dele. */
+/** Remove os dados pessoais, preservando identidades referenciadas no histórico. */
 export async function excluirUsuario(id: string): Promise<void> {
   const estado = obterEstado();
   const usuario = estado.usuarios.find((registro) => registro.id === id);
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
-  if (estado.estagios.some((estagio) => estagio.alunoId === id)) {
-    throw new ErroDeRegra(
-      "Não é possível excluir: o aluno possui estágios registrados. Inative o cadastro.",
-      "usuario_com_registros",
-    );
+  const temHistorico =
+    estado.estagios.some((estagio) => estagio.alunoId === id || estagio.editadoPorId === id) ||
+    estado.documentos.some((documento) => documento.alunoId === id) ||
+    estado.pareceres.some((parecer) => parecer.autorId === id);
+  if (temHistorico) {
+    const cursoId = cursoDoUsuario(usuario);
+    Object.assign(usuario, {
+      nome: "Cadastro excluído",
+      email: `excluido.${id}@selic.invalid`,
+      situacao: "inativo",
+      matricula: undefined,
+      dadosPessoais: undefined,
+      cursoId,
+    });
+  } else {
+    estado.usuarios = estado.usuarios.filter((registro) => registro.id !== id);
   }
-
-  estado.usuarios = estado.usuarios.filter((registro) => registro.id !== id);
-  estado.documentos = estado.documentos.filter((documento) => documento.alunoId !== id);
-  estado.pareceres = estado.pareceres.filter((parecer) => parecer.autorId !== id);
   estado.notificacoes = estado.notificacoes.filter(
     (notificacao) => notificacao.destinatarioId !== id,
   );
 }
 
+export function podeDecidirSolicitacao(usuario: Usuario, solicitacao: SolicitacaoAcesso): boolean {
+  if (usuario.situacao !== "ativo") return false;
+  return (
+    usuario.papeis.includes("administrador") ||
+    usuario.papeis.includes("coordenador_estagio") ||
+    (usuario.papeis.includes("coordenador_curso") &&
+      Boolean(usuario.cursoId) &&
+      usuario.cursoId === solicitacao.dadosPessoais.cursoId)
+  );
+}
+
 export async function listarSolicitacoes(
   consulta: ConsultaSolicitacoes = {},
+  autor?: Usuario,
 ): Promise<Pagina<SolicitacaoAcesso>> {
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.solicitacoes, consulta.busca ?? "", (solicitacao) => [
@@ -290,6 +309,7 @@ export async function listarSolicitacoes(
   ]);
 
   const filtradas = busca
+    .filter((solicitacao) => !autor || podeDecidirSolicitacao(autor, solicitacao))
     .filter((solicitacao) => !consulta.situacao || solicitacao.situacao === consulta.situacao)
     .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
 
@@ -307,8 +327,18 @@ export async function decidirSolicitacao(
 
   if (!solicitacao)
     throw new ErroDeRegra("Solicitação não encontrada.", "solicitacao_nao_encontrada");
+  const autor = estado.usuarios.find((usuario) => usuario.id === administradorId);
+  if (!autor || !podeDecidirSolicitacao(autor, solicitacao)) {
+    throw new ErroDeRegra("Solicitação não disponível para este usuário.", "acesso_negado");
+  }
+  if (decisao !== "autorizado" && decisao !== "recusado") {
+    throw new ErroDeRegra("Escolha autorizar ou recusar.", "decisao_invalida");
+  }
   if (solicitacao.situacao !== "pendente") {
     throw new ErroDeRegra(`Solicitação já ${solicitacao.situacao}.`, "solicitacao_decidida");
+  }
+  if (decisao === "recusado" && !motivo?.trim()) {
+    throw new ErroDeRegra("Informe o motivo da recusa.", "motivo_obrigatorio");
   }
 
   solicitacao.situacao = decisao;
@@ -358,6 +388,21 @@ export async function decidirSolicitacao(
     }
   }
 
+  const aluno = estado.usuarios.find(
+    (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
+  );
+  if (aluno) {
+    if (decisao === "recusado") aluno.situacao = "inativo";
+    estado.notificacoes.push({
+      id: novoId("ntf"),
+      destinatarioId: aluno.id,
+      titulo: decisao === "autorizado" ? "Cadastro autorizado" : "Cadastro recusado",
+      mensagem: solicitacao.motivo ?? "",
+      tipo: "acesso",
+      lida: false,
+      criadaEm: agora(),
+    });
+  }
   return solicitacao;
 }
 

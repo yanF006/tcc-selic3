@@ -1,7 +1,8 @@
 "use client";
 
-import * as R from "react";
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,37 +18,75 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { PlusIcon, SearchIcon, AlertCircleIcon, FileTextIcon, ClockIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, AlertCircleIcon, ClockIcon } from "lucide-react";
 
-import { criarEstagioAction, selecionarDocumentosAction, removerDocumentoEstagioAction, lancarHorasAction, corrigirLancamentoAction } from "./acoes";
-import type { Convenio, Estagio, LancamentoHoras, Pessoa, TemplateDocumento } from "@/lib/domain/types";
-import { rotuloSituacaoEstagio, varianteSituacaoEstagio } from "@/lib/domain/status";
+import {
+  criarEstagioAction,
+  editarEstagioAction,
+  solicitarExclusaoEstagioAction,
+  selecionarDocumentosAction,
+  removerDocumentoEstagioAction,
+  lancarHorasAction,
+  corrigirLancamentoAction,
+} from "./acoes";
+import type {
+  Convenio,
+  DocumentoPreenchido,
+  Estagio,
+  LancamentoHoras,
+  Pessoa,
+  TemplateDocumento,
+} from "@/lib/domain/types";
+import {
+  rotuloSituacaoDocumento,
+  varianteSituacaoDocumento,
+  rotuloSituacaoEstagio,
+  varianteSituacaoEstagio,
+} from "@/lib/domain/status";
 import { LIMITE_HORAS_DIA, calcularHorasDia } from "@/lib/domain/schemas";
 import { formatarData, formatarHoras } from "@/lib/format";
 
 export function ConteudoEstagios({
-  alunoId,
+  estagioInicialId,
   estagiosIniciais,
   convenios,
   orientadores,
   supervisores,
   templates,
   resumosHoras,
+  documentos,
+  rotaBase = "/estagio",
+  gestao = false,
+  nomesUsuarios = {},
+  exclusoesPendentes = [],
 }: {
-  alunoId: string;
+  estagioInicialId?: string;
   estagiosIniciais: Estagio[];
   convenios: Convenio[];
   orientadores: Pessoa[];
   supervisores: Pessoa[];
   templates: TemplateDocumento[];
   resumosHoras: Record<string, { total: number; lancamentos: LancamentoHoras[] }>;
+  documentos: DocumentoPreenchido[];
+  rotaBase?: string;
+  gestao?: boolean;
+  nomesUsuarios?: Record<string, string>;
+  exclusoesPendentes?: string[];
 }) {
-  const [estagios, setEstagios] = React.useState<Estagio[]>(estagiosIniciais);
+  const router = useRouter();
+  const estagios = estagiosIniciais;
   const [busca, setBusca] = React.useState("");
   const [filtroSituacao, setFiltroSituacao] = React.useState<string>("todos");
-  const [estagioSelecionadoId, setEstagioSelecionadoId] = React.useState<string | null>(null);
+  const [estagioSelecionadoId, setEstagioSelecionadoId] = React.useState<string | null>(
+    estagioInicialId ?? null,
+  );
+  const [editandoId, setEditandoId] = React.useState<string | null>(null);
+  const [selecionandoDocs, setSelecionandoDocs] = React.useState(false);
+  const [exclusaoPendente, setExclusaoPendente] = React.useState(false);
+  const [situacaoCadastro, setSituacaoCadastro] = React.useState("em_andamento");
   const [criando, setCriando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
+  const [errosCadastro, setErrosCadastro] = React.useState<Record<string, string>>({});
   const [sucesso, setSucesso] = React.useState<string | null>(null);
   const [pendente, iniciar] = React.useTransition();
 
@@ -73,7 +112,16 @@ export function ConteudoEstagios({
   const estagioAtual = estagios.find((e) => e.id === estagioSelecionadoId);
 
   const estagiosFiltrados = estagios.filter((e) => {
-    const matchBusca = !busca || e.id.toLowerCase().includes(busca.toLowerCase());
+    const termos = [
+      e.id,
+      convenios.find((c) => c.id === e.convenioId)?.instituicao,
+      supervisores.find((p) => p.id === e.supervisorId)?.nome,
+      orientadores.find((p) => p.id === e.orientadorId)?.nome,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    const matchBusca = !busca || termos.includes(busca.toLowerCase());
     const matchSit = filtroSituacao === "todos" || e.situacao === filtroSituacao;
     return matchBusca && matchSit;
   });
@@ -81,26 +129,33 @@ export function ConteudoEstagios({
   function lidarComCriacao(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
+    setErrosCadastro({});
 
     iniciar(async () => {
-      const res = await criarEstagioAction({
+      const dados = {
         convenioId,
         supervisorId,
         orientadorId,
         dataInicio,
         dataFim,
         documentosSelecionados,
-      });
+        situacao: situacaoCadastro as "em_andamento" | "concluido",
+      };
+      const res = editandoId
+        ? await editarEstagioAction(editandoId, dados)
+        : await criarEstagioAction(dados);
 
       if (!res.ok) {
+        setErrosCadastro(res.erros ?? {});
         setErro(res.erro ?? "Erro ao cadastrar estágio.");
         return;
       }
 
       setCriando(false);
-      setSucesso("Estágio cadastrado com sucesso.");
-      // Recarregar / atualizar lista simulada ou atualizar estado
-      window.location.reload();
+      const id = editandoId ?? ("estagioId" in res ? res.estagioId : undefined);
+      if (typeof id === "string") setEstagioSelecionadoId(id);
+      setEditandoId(null);
+      router.push(id ? `${rotaBase}?estagio=${id}` : rotaBase);
     });
   }
 
@@ -122,7 +177,7 @@ export function ConteudoEstagios({
         return;
       }
       setSucesso("Documento removido da seleção e inativado com sucesso.");
-      window.location.reload();
+      router.refresh();
     });
   }
 
@@ -145,7 +200,10 @@ export function ConteudoEstagios({
         return;
       }
 
-      window.location.reload();
+      setNovaData("");
+      setNovaEntrada("");
+      setNovaSaida("");
+      router.refresh();
     });
   }
 
@@ -179,17 +237,91 @@ export function ConteudoEstagios({
         return;
       }
 
-      window.location.reload();
+      setCorrigindoId(null);
+      router.refresh();
     });
   }
 
-  if (estagiandoDetalhe(estagioAtual)) {
+  function abrirEdicao() {
+    if (!estagioAtual) return;
+    setEditandoId(estagioAtual.id);
+    setConvenioId(estagioAtual.convenioId);
+    setSupervisorId(estagioAtual.supervisorId);
+    setOrientadorId(estagioAtual.orientadorId);
+    setDataInicio(estagioAtual.dataInicio);
+    setDataFim(estagioAtual.dataFim);
+    setSituacaoCadastro(estagioAtual.situacao);
+    setCriando(true);
+    setErro(null);
+  }
+
+  function salvarSelecao() {
+    if (!estagioAtual) return;
+    iniciar(async () => {
+      const resultado = await selecionarDocumentosAction(estagioAtual.id, documentosSelecionados);
+      if (!resultado.ok) {
+        setErro(resultado.erro ?? "Não foi possível salvar a seleção.");
+        return;
+      }
+      setSelecionandoDocs(false);
+      router.push(`${rotaBase}?estagio=${estagioAtual.id}`);
+    });
+  }
+
+  function pedirExclusao() {
+    if (
+      !estagioAtual ||
+      !window.confirm(
+        "Solicitar a exclusão deste estágio? A remoção depende da autorização de cargo superior.",
+      )
+    )
+      return;
+    iniciar(async () => {
+      const resultado = await solicitarExclusaoEstagioAction(
+        estagioAtual.id,
+        "Solicitação do aluno pela tela de estágio.",
+      );
+      if (!resultado.ok) {
+        setErro(resultado.erro ?? "Não foi possível solicitar a exclusão.");
+        return;
+      }
+      setExclusaoPendente(true);
+    });
+  }
+
+  if (estagiandoDetalhe(estagioAtual) && !criando) {
     return (
       <div className="flex flex-col gap-6">
         <Button variant="ghost" onClick={() => setEstagioSelecionadoId(null)} className="w-fit">
           ← Voltar para o histórico
         </Button>
 
+        {erro ? (
+          <Alert variant="destructive">
+            <AlertTitle>Operação recusada</AlertTitle>
+            <AlertDescription>{erro}</AlertDescription>
+          </Alert>
+        ) : null}
+        {exclusaoPendente || exclusoesPendentes.includes(estagioAtual.id) ? (
+          <Alert>
+            <AlertTitle>Exclusão aguardando autorização</AlertTitle>
+            <AlertDescription>
+              O estágio foi preservado e a solicitação aguarda decisão de cargo superior.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={abrirEdicao}>
+            Editar estágio
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={pedirExclusao}
+            disabled={pendente || exclusaoPendente || exclusoesPendentes.includes(estagioAtual.id)}
+          >
+            Solicitar exclusão
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -200,9 +332,38 @@ export function ConteudoEstagios({
             </div>
             <CardDescription>
               Período: {estagioAtual.dataInicio} a {estagioAtual.dataFim}
+              {estagioAtual.editadoPorId ? (
+                <span className="block">
+                  Última edição por {nomesUsuarios[estagioAtual.editadoPorId] ?? "aluno"} em{" "}
+                  {formatarData(estagioAtual.editadoEm)}
+                </span>
+              ) : null}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
+            <dl className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <dt className="text-muted-foreground text-xs">Instituição</dt>
+                <dd>
+                  {convenios.find((c) => c.id === estagioAtual.convenioId)?.instituicao ??
+                    "Instituição inativa"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">Supervisor</dt>
+                <dd>
+                  {supervisores.find((p) => p.id === estagioAtual.supervisorId)?.nome ??
+                    "Cadastro excluído"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">Orientador</dt>
+                <dd>
+                  {orientadores.find((p) => p.id === estagioAtual.orientadorId)?.nome ??
+                    "Cadastro excluído"}
+                </dd>
+              </div>
+            </dl>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="bg-muted rounded p-4">
                 <p className="text-muted-foreground text-xs font-medium">Início</p>
@@ -214,7 +375,9 @@ export function ConteudoEstagios({
               </div>
               <div className="bg-muted rounded p-4">
                 <p className="text-muted-foreground text-xs font-medium">Situação</p>
-                <p className="text-sm font-semibold">{rotuloSituacaoEstagio(estagioAtual.situacao)}</p>
+                <p className="text-sm font-semibold">
+                  {rotuloSituacaoEstagio(estagioAtual.situacao)}
+                </p>
               </div>
             </div>
 
@@ -238,7 +401,7 @@ export function ConteudoEstagios({
                 {estagioAtual.situacao === "em_andamento" ? (
                   <form
                     onSubmit={lidarComLancamento}
-                    className="border rounded p-4 flex flex-col gap-4"
+                    className="flex flex-col gap-4 rounded border p-4"
                   >
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="flex flex-col gap-2">
@@ -288,7 +451,7 @@ export function ConteudoEstagios({
                         Lançar horas
                       </Button>
                       {novaEntrada && novaSaida ? (
-                        <span className="text-sm text-muted-foreground" data-testid="previa-horas">
+                        <span className="text-muted-foreground text-sm" data-testid="previa-horas">
                           {calcularHorasDia(novaEntrada, novaSaida, novoAlmocoDesligado) > 0
                             ? `Horas a registrar: ${formatarHoras(
                                 calcularHorasDia(novaEntrada, novaSaida, novoAlmocoDesligado),
@@ -325,7 +488,7 @@ export function ConteudoEstagios({
                       {(resumosHoras[estagioAtual.id]?.lancamentos ?? []).map((lancamento) => (
                         <li
                           key={lancamento.id}
-                          className="border rounded p-3 flex flex-col gap-3"
+                          className="flex flex-col gap-3 rounded border p-3"
                           data-testid={`lancamento-${lancamento.id}`}
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -343,7 +506,7 @@ export function ConteudoEstagios({
                                     : "Lançamento original"}
                                 </Badge>
                               </div>
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-muted-foreground text-sm">
                                 {lancamento.entrada}–{lancamento.saida} ·{" "}
                                 {formatarHoras(lancamento.horas)}
                                 {lancamento.almocoDesligado ? " · sem almoço" : ""}
@@ -355,7 +518,7 @@ export function ConteudoEstagios({
                               corrigindoId === lancamento.id ? (
                                 <form
                                   onSubmit={lidarComCorrecao}
-                                  className="w-full border-t pt-3 flex flex-col gap-3"
+                                  className="flex w-full flex-col gap-3 border-t pt-3"
                                 >
                                   <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="flex flex-col gap-2">
@@ -438,6 +601,45 @@ export function ConteudoEstagios({
 
             <div>
               <h3 className="mb-3 text-sm font-semibold">Documentos do Estágio (Seleção)</h3>
+              {estagioAtual.situacao === "em_andamento" ? (
+                <Button
+                  variant="outline"
+                  className="mb-3"
+                  onClick={() => {
+                    setDocumentosSelecionados(estagioAtual.documentosSelecionados);
+                    setSelecionandoDocs(!selecionandoDocs);
+                  }}
+                >
+                  Selecionar documentos
+                </Button>
+              ) : null}
+              {selecionandoDocs ? (
+                <div className="mb-4 flex flex-col gap-3 rounded border p-4">
+                  {templates
+                    .filter(
+                      (t) =>
+                        t.tipo === "preenchivel" &&
+                        t.metadados?.papeisPreenchimento.includes("aluno"),
+                    )
+                    .map((t) => (
+                      <div key={t.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`selecao-${t.id}`}
+                          checked={documentosSelecionados.includes(t.id)}
+                          disabled={estagioAtual.documentosSelecionados.includes(t.id)}
+                          onCheckedChange={() => toggleDocumento(t.id)}
+                        />
+                        <Label htmlFor={`selecao-${t.id}`}>{t.nome}</Label>
+                      </div>
+                    ))}
+                  <p className="text-muted-foreground text-xs">
+                    Use Remover na lista abaixo para retirar um documento com confirmação.
+                  </p>
+                  <Button onClick={salvarSelecao} disabled={pendente}>
+                    Salvar seleção
+                  </Button>
+                </div>
+              ) : null}
               {estagioAtual.documentosSelecionados.length === 0 ? (
                 <Alert>
                   <AlertCircleIcon aria-hidden="true" />
@@ -450,11 +652,36 @@ export function ConteudoEstagios({
                 <div className="flex flex-col gap-2">
                   {estagioAtual.documentosSelecionados.map((docId) => {
                     const tmpl = templates.find((t) => t.id === docId);
+                    const preenchido = documentos.find(
+                      (d) =>
+                        d.estagioId === estagioAtual.id &&
+                        d.templateId === docId &&
+                        d.situacao !== "inativo",
+                    );
                     return (
-                      <div key={docId} className="flex items-center justify-between border rounded p-3">
-                        <span className="text-sm font-medium">{tmpl?.nome ?? docId}</span>
+                      <div
+                        key={docId}
+                        data-template-id={docId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded border p-3"
+                      >
+                        <Link
+                          href={`/documentos/${docId}?estagio=${estagioAtual.id}`}
+                          className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+                        >
+                          {tmpl?.nome ?? docId}
+                        </Link>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline">Selecionado</Badge>
+                          <Badge
+                            variant={
+                              preenchido
+                                ? varianteSituacaoDocumento(preenchido.situacao)
+                                : "outline"
+                            }
+                          >
+                            {preenchido
+                              ? rotuloSituacaoDocumento(preenchido.situacao)
+                              : "Não preenchido"}
+                          </Badge>
                           <Button
                             variant="destructive"
                             size="sm"
@@ -472,6 +699,40 @@ export function ConteudoEstagios({
             </div>
           </CardContent>
         </Card>
+        {gestao &&
+        documentos.some(
+          (documento) =>
+            documento.estagioId === estagioAtual.id && documento.situacao === "inativo",
+        ) ? (
+          <Card data-testid="documentos-inativos">
+            <CardHeader>
+              <CardTitle>Documentos inativos preservados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="flex flex-col gap-3">
+                {documentos
+                  .filter(
+                    (documento) =>
+                      documento.estagioId === estagioAtual.id && documento.situacao === "inativo",
+                  )
+                  .map((documento) => (
+                    <li
+                      key={documento.id}
+                      className="flex flex-wrap items-center justify-between gap-3"
+                    >
+                      <span>
+                        {templates.find((template) => template.id === documento.templateId)?.nome ??
+                          documento.templateId}
+                      </span>
+                      <Badge variant={varianteSituacaoDocumento(documento.situacao)}>
+                        {rotuloSituacaoDocumento(documento.situacao)}
+                      </Badge>
+                    </li>
+                  ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     );
   }
@@ -480,12 +741,28 @@ export function ConteudoEstagios({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Meus Estágios</h2>
+          <h2 className="text-lg font-semibold">
+            {gestao ? "Gestão de estágios" : "Meus Estágios"}
+          </h2>
           <p className="text-muted-foreground text-sm">Histórico e cadastro de novos estágios.</p>
         </div>
-        <Button onClick={() => setCriando(true)}>
-          <PlusIcon className="mr-2 h-4 w-4" /> Cadastrar Estágio
-        </Button>
+        {!gestao ? (
+          <Button
+            onClick={() => {
+              setEditandoId(null);
+              setConvenioId("");
+              setSupervisorId("");
+              setOrientadorId("");
+              setDataInicio("");
+              setDataFim("");
+              setSituacaoCadastro("em_andamento");
+              setDocumentosSelecionados([]);
+              setCriando(true);
+            }}
+          >
+            <PlusIcon className="mr-2 h-4 w-4" /> Cadastrar Estágio
+          </Button>
+        ) : null}
       </div>
 
       {sucesso ? (
@@ -498,8 +775,10 @@ export function ConteudoEstagios({
       {criando ? (
         <Card>
           <CardHeader>
-            <CardTitle>Novo Estágio</CardTitle>
-            <CardDescription>Preencha os dados do convênio, orientador, supervisor e datas.</CardDescription>
+            <CardTitle>{editandoId ? "Editar estágio" : "Novo Estágio"}</CardTitle>
+            <CardDescription>
+              Preencha os dados do convênio, orientador, supervisor e datas.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {conveniosAtivos.length === 0 ? (
@@ -507,7 +786,8 @@ export function ConteudoEstagios({
                 <AlertCircleIcon aria-hidden="true" />
                 <AlertTitle>Nenhum convênio ativo</AlertTitle>
                 <AlertDescription>
-                  Não há convênios ativos cadastrados no momento. Solicite à coordenação o cadastro de um convênio.
+                  Não há convênios ativos cadastrados no momento. Solicite à coordenação o cadastro
+                  de um convênio.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -528,11 +808,13 @@ export function ConteudoEstagios({
                     <SelectValue placeholder="Selecione o convênio ativo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {conveniosAtivos.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome} - {c.instituicao}
-                      </SelectItem>
-                    ))}
+                    {convenios
+                      .filter((c) => c.situacao === "ativo" || (editandoId && c.id === convenioId))
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nome} - {c.instituicao}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -579,8 +861,15 @@ export function ConteudoEstagios({
                     type="date"
                     value={dataInicio}
                     onChange={(e) => setDataInicio(e.target.value)}
+                    aria-invalid={errosCadastro.dataInicio ? true : undefined}
+                    aria-describedby={errosCadastro.dataInicio ? "dataInicio-erro" : undefined}
                     required
                   />
+                  {errosCadastro.dataInicio ? (
+                    <p id="dataInicio-erro" className="text-destructive text-xs">
+                      {errosCadastro.dataInicio}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="dataFim">Data de Fim</Label>
@@ -589,30 +878,55 @@ export function ConteudoEstagios({
                     type="date"
                     value={dataFim}
                     onChange={(e) => setDataFim(e.target.value)}
+                    aria-invalid={errosCadastro.dataFim ? true : undefined}
+                    aria-describedby={errosCadastro.dataFim ? "dataFim-erro" : undefined}
                     required
                   />
+                  {errosCadastro.dataFim ? (
+                    <p id="dataFim-erro" className="text-destructive text-xs">
+                      {errosCadastro.dataFim}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
-              <div>
-                <Label className="mb-2 block">Documentos Iniciais</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {templates
-                    .filter((t) => t.tipo === "preenchivel" && t.metadados?.papeisPreenchimento.includes("aluno"))
-                    .map((t) => (
-                      <div key={t.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`tmpl-${t.id}`}
-                          checked={documentosSelecionados.includes(t.id)}
-                          onCheckedChange={() => toggleDocumento(t.id)}
-                        />
-                        <Label htmlFor={`tmpl-${t.id}`} className="text-sm font-normal">
-                          {t.nome}
-                        </Label>
-                      </div>
-                    ))}
-                </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="situacaoCadastro">Situação do estágio</Label>
+                <Select value={situacaoCadastro} onValueChange={setSituacaoCadastro}>
+                  <SelectTrigger id="situacaoCadastro">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="em_andamento">Em andamento</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              {!editandoId ? (
+                <div>
+                  <Label className="mb-2 block">Documentos Iniciais</Label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {templates
+                      .filter(
+                        (t) =>
+                          t.tipo === "preenchivel" &&
+                          t.metadados?.papeisPreenchimento.includes("aluno"),
+                      )
+                      .map((t) => (
+                        <div key={t.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`tmpl-${t.id}`}
+                            checked={documentosSelecionados.includes(t.id)}
+                            onCheckedChange={() => toggleDocumento(t.id)}
+                          />
+                          <Label htmlFor={`tmpl-${t.id}`} className="text-sm font-normal">
+                            {t.nome}
+                          </Label>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="flex gap-2">
                 <Button type="submit" disabled={pendente}>
@@ -629,16 +943,17 @@ export function ConteudoEstagios({
 
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1">
-          <SearchIcon className="text-muted-foreground absolute left-3 top-2.5 h-4 w-4" />
+          <SearchIcon className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
           <Input
-            placeholder="Buscar por ID..."
+            placeholder="Buscar por instituição, supervisor, orientador ou ID..."
+            aria-label="Buscar estágios"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="pl-9"
           />
         </div>
         <Select value={filtroSituacao} onValueChange={setFiltroSituacao}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px]" aria-label="Filtrar situação">
             <SelectValue placeholder="Filtrar situação" />
           </SelectTrigger>
           <SelectContent>
@@ -655,12 +970,12 @@ export function ConteudoEstagios({
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <ClockIcon className="text-muted-foreground mb-4 h-12 w-12" />
             <h3 className="text-lg font-semibold">Nenhum estágio encontrado</h3>
-            <p className="text-muted-foreground text-sm mt-1 mb-4">
+            <p className="text-muted-foreground mt-1 mb-4 text-sm">
               {estagios.length === 0
                 ? "Você ainda não possui estágios cadastrados."
                 : "Nenhum estágio corresponde aos filtros aplicados."}
             </p>
-            {estagios.length === 0 ? (
+            {estagios.length === 0 && !gestao ? (
               <Button onClick={() => setCriando(true)}>
                 <PlusIcon className="mr-2 h-4 w-4" /> Cadastrar primeiro estágio
               </Button>
@@ -670,19 +985,38 @@ export function ConteudoEstagios({
       ) : (
         <div className="grid gap-4">
           {estagiosFiltrados.map((estagio) => (
-            <Card
-              key={estagio.id}
-              className="cursor-pointer transition-colors hover:bg-muted/50"
-              onClick={() => setEstagioSelecionadoId(estagio.id)}
-            >
+            <Card key={estagio.id} className="hover:bg-muted/50 cursor-pointer transition-colors">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base">Estágio #{estagio.id.slice(-6)}</CardTitle>
+                <CardTitle className="text-base">
+                  <Button
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => {
+                      setEstagioSelecionadoId(estagio.id);
+                      setExclusaoPendente(false);
+                    }}
+                  >
+                    Estágio #{estagio.id.slice(-6)}
+                  </Button>
+                </CardTitle>
                 <Badge variant={varianteSituacaoEstagio(estagio.situacao)}>
                   {rotuloSituacaoEstagio(estagio.situacao)}
                 </Badge>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="text-muted-foreground flex flex-wrap gap-4 text-sm">
+                  {gestao ? (
+                    <span>Aluno: {nomesUsuarios[estagio.alunoId] ?? "Cadastro excluído"}</span>
+                  ) : null}
+                  <span>
+                    Instituição: {convenios.find((c) => c.id === estagio.convenioId)?.instituicao}
+                  </span>
+                  <span>
+                    Supervisor: {supervisores.find((p) => p.id === estagio.supervisorId)?.nome}
+                  </span>
+                  <span>
+                    Orientador: {orientadores.find((p) => p.id === estagio.orientadorId)?.nome}
+                  </span>
                   <span>Início: {estagio.dataInicio}</span>
                   <span>Fim: {estagio.dataFim}</span>
                   <span>Documentos: {estagio.documentosSelecionados.length}</span>
@@ -690,7 +1024,7 @@ export function ConteudoEstagios({
               </CardContent>
             </Card>
           ))}
-          <p className="text-muted-foreground text-xs text-right">
+          <p className="text-muted-foreground text-right text-xs">
             Total de resultados: {estagiosFiltrados.length}
           </p>
         </div>

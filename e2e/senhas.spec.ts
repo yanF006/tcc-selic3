@@ -39,11 +39,25 @@ async function definirPeloLink(
   await page.getByRole("button", { name: "Salvar nova senha" }).click();
 }
 
-async function entrar(page: import("@playwright/test").Page, email: string, senha: string) {
+async function entrar(
+  page: import("@playwright/test").Page,
+  email: string,
+  senha: string,
+  sucesso = true,
+) {
+  await page.context().clearCookies();
   await page.goto("/login");
   await page.getByLabel("E-mail", { exact: true }).fill(email);
   await page.getByLabel("Senha", { exact: true }).fill(senha);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  if (sucesso) {
+    await Promise.all([
+      page.waitForURL(/\/documentos$/),
+      page.getByRole("button", { name: "Entrar", exact: true }).click(),
+    ]);
+  } else {
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(page.getByText("E-mail ou senha inválidos.")).toBeVisible();
+  }
 }
 
 test.describe("recuperação de senha", () => {
@@ -94,7 +108,7 @@ test.describe("recuperação de senha", () => {
     // A senha antiga deixa de valer.
     await page.getByRole("button", { name: /João Pedro Lima/ }).click();
     await page.getByRole("button", { name: "Sair" }).click();
-    await entrar(page, ALUNO, SENHA);
+    await entrar(page, ALUNO, SENHA, false);
     await expect(page.getByText("E-mail ou senha inválidos.")).toBeVisible();
 
     // O mesmo link não serve uma segunda vez.
@@ -137,7 +151,7 @@ test.describe("troca de senha autenticada", () => {
     // E a nova senha nunca passou a valer.
     await page.getByRole("button", { name: /João Pedro Lima/ }).click();
     await page.getByRole("button", { name: "Sair" }).click();
-    await entrar(page, ALUNO, SENHA_NOVA);
+    await entrar(page, ALUNO, SENHA_NOVA, false);
     await expect(page.getByText("E-mail ou senha inválidos.")).toBeVisible();
   });
 

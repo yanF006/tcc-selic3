@@ -133,17 +133,14 @@ test.describe("preenchimento de documentos", () => {
     await expect(quintoComprovante).toBeVisible();
     await expect(quintoComprovante).not.toBeChecked();
 
-    await page.getByRole("button", { name: "Baixar docx" }).click();
+    await page.getByRole("button", { name: "Submeter a parecer" }).click();
 
     await expect(page.getByText("Corrija o documento")).toBeVisible();
-    await expect(page.getByText("Há campos obrigatórios pendentes.")).toBeVisible();
-    await expect(
-      page.getByText(/Cópia da Carteira de Trabalho .* é obrigatório\./),
-    ).toBeVisible();
+    await expect(page.locator("#comprovante_5-mensagem")).toContainText("é obrigatório");
 
     await quintoComprovante.check();
-    await page.getByRole("button", { name: "Salvar rascunho" }).click();
-    await expect(page.getByText("Rascunho salvo.")).toBeVisible();
+    await page.getByRole("button", { name: "Submeter a parecer" }).click();
+    await expect(page.getByText("Documento submetido a parecer.")).toBeVisible();
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
@@ -151,5 +148,30 @@ test.describe("preenchimento de documentos", () => {
     ]);
 
     expect(download.suggestedFilename()).toContain("Requerimento");
+  });
+
+  test("orienta completar o endereço ausente e bloqueia a geração (8.7)", async ({ page }) => {
+    await entrar(page, "luiza.santos@aluno.ifrj.edu.br");
+    await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
+    await expect(page.locator("#endereco-mensagem")).toContainText(
+      "este dado não consta no seu cadastro",
+    );
+    await expect(
+      page.locator("#endereco-mensagem").getByRole("link", { name: "Complete o cadastro" }),
+    ).toHaveAttribute("href", "/perfil");
+    await page.getByRole("button", { name: "Baixar docx" }).click();
+    await expect(page.locator("#endereco-mensagem")).toContainText("Endereço é obrigatório");
+  });
+
+  test("mostra a faixa e recalcula o conceito global das avaliações (8.17)", async ({ page }) => {
+    await entrar(page, "ana.correia@ifrj.edu.br");
+    await page.goto("/documentos/tpl-ficha-frequencia?estagio=est-maria-tecnoweb");
+    await expect(page.locator("#aluno")).toHaveText("Maria de Souza Oliveira");
+    await page.getByLabel("Assiduidade", { exact: true }).fill("9.5");
+    await expect(page.getByTestId("faixa-criterio_1")).toContainText("E — Excelente");
+    await expect(page.getByLabel("Conceito global", { exact: true })).toHaveValue("9.5");
+    await page.getByLabel("Pontualidade", { exact: true }).fill("7.5");
+    await expect(page.getByLabel("Conceito global", { exact: true })).toHaveValue("8.5");
+    await expect(page.getByLabel("Conceito global", { exact: true })).not.toBeEditable();
   });
 });

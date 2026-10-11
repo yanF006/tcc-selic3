@@ -12,13 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { podeAcessarAlgum } from "@/lib/auth/permissions";
 import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
 import { rotuloPapel } from "@/lib/domain/status";
+import { criarRascunho, documentosDoEstagio, templatePorId } from "@/lib/services/documentos";
 import {
-  criarRascunho,
-  documentosDoEstagio,
-  templatePorId,
-} from "@/lib/services/documentos";
-import { estagioPorId, estagiosDoAluno, listarEstagios } from "@/lib/services/estagios";
+  estagioPorId,
+  podeConsultarEstagio,
+  estagiosDoAluno,
+  listarEstagios,
+} from "@/lib/services/estagios";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
+import { usuarioPorId } from "@/lib/services/administracao";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params, searchParams }: PageProps<"/documentos/[templateId]">) {
+export default async function Page({
+  params,
+  searchParams,
+}: PageProps<"/documentos/[templateId]">) {
   const usuario = await usuarioDaRequisicao();
 
   if (!usuario) redirect("/login");
@@ -108,7 +113,9 @@ export default async function Page({ params, searchParams }: PageProps<"/documen
   if (metadados.exigeEstagio) {
     const estagios = usuario.papeis.includes("aluno")
       ? await estagiosDoAluno(usuario.id)
-      : (await listarEstagios({ tamanho: 100 })).itens;
+      : (await listarEstagios({ tamanho: 100 })).itens.filter((estagio) =>
+          podeConsultarEstagio(usuario, estagio),
+        );
 
     if (estagios.length === 0) {
       return (
@@ -133,9 +140,7 @@ export default async function Page({ params, searchParams }: PageProps<"/documen
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Selecione o estágio</CardTitle>
-              <CardDescription>
-                O documento fica vinculado ao estágio escolhido.
-              </CardDescription>
+              <CardDescription>O documento fica vinculado ao estágio escolhido.</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="flex flex-col gap-2">
@@ -160,7 +165,7 @@ export default async function Page({ params, searchParams }: PageProps<"/documen
 
     const estagio = await estagioPorId(estagioParam);
 
-    if (!estagio) {
+    if (!estagio || !podeConsultarEstagio(usuario, estagio)) {
       return (
         <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
           <Alert variant="destructive">
@@ -183,9 +188,8 @@ export default async function Page({ params, searchParams }: PageProps<"/documen
     metadados.exigeEstagio ? estagioParam : undefined,
   );
 
-  const preenchidos = documento.estagioId
-    ? await documentosDoEstagio(documento.estagioId)
-    : [];
+  const preenchidos = documento.estagioId ? await documentosDoEstagio(documento.estagioId) : [];
+  const titular = await usuarioPorId(documento.alunoId);
 
   return (
     <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
@@ -198,6 +202,7 @@ export default async function Page({ params, searchParams }: PageProps<"/documen
           situacao: item.situacao,
         }))}
         estagioId={documento.estagioId}
+        consultaApenas={titular?.situacao !== "ativo"}
       />
       {documento.estagioId ? (
         <div>

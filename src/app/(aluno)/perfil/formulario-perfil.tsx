@@ -2,12 +2,7 @@
 
 import * as React from "react";
 
-import {
-  CampoTexto,
-  LegendaObrigatorios,
-  MensagemCampo,
-  RotuloCampo,
-} from "@/components/formularios/campo";
+import { CampoTexto, LegendaObrigatorios, RotuloCampo } from "@/components/formularios/campo";
 import { CampoMascarado } from "@/components/formularios/campo-mascarado";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -52,7 +47,9 @@ export function FormularioPerfil({
   const [sucesso, setSucesso] = React.useState<string | null>(null);
   const [pendente, iniciar] = React.useTransition();
 
-  const [nomeCompleto, setNomeCompleto] = React.useState(dadosIniciais?.nomeCompleto ?? usuario.nome);
+  const [nomeCompleto, setNomeCompleto] = React.useState(
+    dadosIniciais?.nomeCompleto ?? usuario.nome,
+  );
   const [email, setEmail] = React.useState(dadosIniciais?.email ?? usuario.email);
   const [cpf, setCpf] = React.useState(dadosIniciais?.cpf ?? "");
   const [rg, setRg] = React.useState(dadosIniciais?.rg ?? "");
@@ -77,7 +74,11 @@ export function FormularioPerfil({
     return errosCampo[campo] ?? null;
   }
 
-  function conferirAoSair(campo: string, esquema: Parameters<typeof mensagemDeErro>[0], valor: string) {
+  function conferirAoSair(
+    campo: string,
+    esquema: Parameters<typeof mensagemDeErro>[0],
+    valor: string,
+  ) {
     const mensagem = valor.trim().length === 0 ? null : mensagemDeErro(esquema, valor);
     setErrosCampo((atual) => {
       const proximo = { ...atual };
@@ -263,7 +264,12 @@ export function FormularioPerfil({
               aoSair={() => conferirAoSair("cep", esquemaCep, cep)}
               erro={erroDoCampo("cep")}
               acao={
-                <Button type="button" variant="secondary" onClick={buscarEndereco} disabled={pendente}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={buscarEndereco}
+                  disabled={pendente}
+                >
                   Buscar
                 </Button>
               }

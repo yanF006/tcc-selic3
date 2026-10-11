@@ -242,6 +242,7 @@ const IDENTIFICACAO_ALUNO: CampoDescriptor[] = [
     rotulo: "Endereço",
     tipo: "texto",
     origem: "aluno",
+    obrigatorio: true,
     somenteLeitura: true,
     ajuda: "Endereço do cadastro do aluno.",
   },
@@ -443,6 +444,7 @@ const PESAGEM_AVALIACAO = FATORES_RELATORIO.map(([fator, definicao], indice) => 
   rotulo: fator,
   tipo: "radio" as const,
   origem: "digitado" as const,
+  obrigatorio: true,
   ajuda: definicao,
   opcoes: [
     { valor: "otimo", rotulo: "Ótimo" },
@@ -655,7 +657,7 @@ export const DESCRITORES: DescriptorDocumento[] = [
     preenchivel: true,
     metadados: {
       papeisPreenchimento: ["aluno"],
-      tipoParecer: "coordenador_curso",
+      tipoParecer: "nenhum",
       exigeEstagio: true,
       assinaturas: [
         { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
@@ -1558,7 +1560,8 @@ export const DESCRITORES: DescriptorDocumento[] = [
             id: "conceitoGlobal",
             rotulo: "Conceito global",
             tipo: "numero",
-            origem: "digitado",
+            origem: "literal",
+            somenteLeitura: true,
             validacao: ["numero"],
             min: 0,
             max: 10,
@@ -1624,11 +1627,11 @@ export const DESCRITORES: DescriptorDocumento[] = [
     preenchivel: true,
     metadados: {
       papeisPreenchimento: ["aluno"],
-      tipoParecer: "coordenador_curso",
+      tipoParecer: "externo",
       exigeEstagio: true,
       assinaturas: [
         { papel: "aluno", rotulo: "Aluno(a)", tipo: "interna" },
-        { papel: "orientador", rotulo: "Professor(a) Orientador(a)", tipo: "interna" },
+        { papel: "orientador", rotulo: "Professor(a) Orientador(a)", tipo: "externa" },
         { papel: "coordenador_curso", rotulo: "Coordenador(a) do Curso", tipo: "interna" },
       ],
       arquivoOrigem: "Contexto/kit-estagio/09 - Relatorio Semestral de Estagio 2019.docx",

@@ -41,7 +41,9 @@ test.describe("catálogo de documentos", () => {
     // Os dois documentos fixos do Kit são apenas para download.
     for (const nome of ["Lei de Estágio", "Regulamento de Estágio dos Cursos de Licenciatura"]) {
       await expect(cartao(page, nome).getByText("Apenas download")).toBeVisible();
-      await expect(cartao(page, nome).getByRole("link", { name: "Baixar documento" })).toBeVisible();
+      await expect(
+        cartao(page, nome).getByRole("link", { name: "Baixar documento" }),
+      ).toBeVisible();
       await expect(
         cartao(page, nome).getByRole("link", { name: "Preencher documento" }),
       ).toHaveCount(0);
@@ -50,14 +52,18 @@ test.describe("catálogo de documentos", () => {
     // Os demais são preenchíveis.
     for (const nome of ["Formulário de Liberação", "Plano de Atividades de Estágio"]) {
       await expect(cartao(page, nome).getByText("Preenchível", { exact: true })).toBeVisible();
-      await expect(cartao(page, nome).getByRole("link", { name: "Preencher documento" })).toBeVisible();
+      await expect(
+        cartao(page, nome).getByRole("link", { name: "Preencher documento" }),
+      ).toBeVisible();
     }
 
     await expect(page.getByText("Apenas download")).toHaveCount(2);
     await expect(page.getByText("Preenchível", { exact: true })).toHaveCount(10);
   });
 
-  test("a coordenação abre o mesmo catálogo e vê quem preenche cada documento", async ({ page }) => {
+  test("a coordenação abre o mesmo catálogo e vê quem preenche cada documento", async ({
+    page,
+  }) => {
     await entrar(page, "ana.correia@ifrj.edu.br");
     await page.goto("/documentos");
 
@@ -79,6 +85,12 @@ test.describe("catálogo de documentos", () => {
 });
 
 test.describe("download dos documentos fixos", () => {
+  test("cadastro pendente não baixa arquivo diretamente pela URL", async ({ page }) => {
+    await entrar(page, "paula.batista@aluno.ifrj.edu.br");
+    const resposta = await page.request.get("/documentos/tpl-lei-estagio/baixar");
+    expect(resposta.status()).toBe(401);
+    expect((await resposta.json()).erro).toContain("É preciso entrar");
+  });
   test("baixa a Lei de Estágio sem abrir formulário", async ({ page }) => {
     await entrar(page, "maria.souza@aluno.ifrj.edu.br");
     await page.goto("/documentos");

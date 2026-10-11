@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Cada arquivo cria um JSDOM: um worker evita esgotar a memória na validação local.
+    maxWorkers: 1,
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],

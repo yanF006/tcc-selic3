@@ -20,7 +20,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ templateId: string }> },
 ) {
-  if (!(await usuarioDaRequisicao())) {
+  const usuario = await usuarioDaRequisicao();
+  if (!usuario || usuario.situacao !== "ativo") {
     return Response.json(
       { erro: "É preciso entrar no sistema para baixar este documento." },
       { status: 401 },
@@ -47,7 +48,13 @@ export async function GET(
     return Response.json({ erro: "Documento sem versão vigente." }, { status: 409 });
   }
 
-  const arquivo = path.join(process.cwd(), vigente.arquivo);
+  // O prefixo estático limita a leitura e o tracing ao Kit, sem empacotar a raiz inteira.
+  const arquivo = path.join(
+    process.cwd(),
+    "Contexto",
+    "kit-estagio",
+    path.basename(vigente.arquivo),
+  );
   const conteudo = await readFile(arquivo).catch(() => null);
 
   if (!conteudo) {

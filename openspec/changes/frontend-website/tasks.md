@@ -23,7 +23,7 @@
 - [x] 3.1 Tipar os agregados de domínio: usuário e papéis, aluno, curso, turma, período, convênio, estágio, documento, template, parecer, notificação e lançamento de horas — verificação: `npm run typecheck` passa
 - [x] 3.2 Criar fixtures realistas com pelo menos dois cursos, turmas e períodos, convênios ativos e expirados, orientadores, supervisores, estágios em andamento e concluídos e documentos em todas as situações — verificação: script de validação de fixtures executa sem referência quebrada
 - [x] 3.3 Implementar um módulo de serviço por agregado com funções assíncronas, busca, filtro e paginação — verificação: testes unitários chamando cada serviço e conferindo o retorno
-- [x] 3.4 Implementar mutações em memória de criar, editar, excluir e inativar com duração da sessão do navegador — verificação: teste E2E de criar, editar e inativar um registro
+- [x] 3.4 Implementar mutações em memória do processo do servidor de criar, editar, excluir e inativar, conforme D4 — verificação: teste E2E de criar, editar e inativar um registro
 - [x] 3.5 Definir as transições válidas de situação de documento e de estágio em `lib/domain/status` — verificação: teste unitário das transições aceitas e recusadas
 - [x] 3.6 Escrever as máscaras puras de CPF, RG, celular, telefone, CEP e data — verificação: testes unitários com valores válidos, inválidos e colagem de texto
 - [x] 3.7 Escrever os esquemas Zod reutilizáveis de CPF com dígito verificador, e-mail, telefone, intervalo de datas e campos condicionais — verificação: testes unitários de cada esquema
@@ -104,7 +104,7 @@
 
 ## 9. Parecer e notificações
 
-- [ ] 9.1 Ler o metadado de parecer do descritor e identificar os documentos com parecer interno e externo — verificação: testes unitários da matriz de parecer dos doze documentos
+- [x] 9.1 Ler o metadado de parecer do descritor e identificar os documentos com parecer interno e externo — verificação: testes unitários da matriz de parecer dos doze documentos
 - [ ] 9.2 Implementar a submissão a parecer validando o documento completo — verificação: teste E2E de recusa com campo pendente e de sucesso com documento completo
 - [ ] 9.3 Recusar a submissão em documento que não exige parecer — verificação: teste E2E do aviso de que o documento não está sujeito a parecer
 - [ ] 9.4 Aplicar as transições de situação do documento, de rascunho a submetido, em análise, aprovado e indeferido — verificação: testes unitários das transições permitidas e recusadas
@@ -169,7 +169,7 @@
 ## 14. Testes de fluxo
 
 - [x] 14.1 Escrever o teste E2E do cadastro em duas etapas para matrícula válida e inválida — verificação: `npm run test:e2e` passa
-- [ ] 14.2 Escrever o teste E2E do ciclo de estágio com seleção de documentos e limite de horas — verificação: `npm run test:e2e` passa
+- [x] 14.2 Escrever o teste E2E do ciclo de estágio com seleção de documentos e limite de horas — verificação: `npm run test:e2e` passa
 - [ ] 14.3 Escrever o teste E2E do ciclo de parecer, da submissão à decisão e à notificação — verificação: `npm run test:e2e` passa
 - [ ] 14.4 Ampliar a suíte unitária para cobrir máscaras, esquemas Zod, descritores, situações e limites de horas — verificação: `npm run test:unit` passa cobrindo todas as regras de domínio
 
@@ -185,6 +185,15 @@
 
 - [ ] 16.1 Revisar responsividade e acessibilidade com a cliente e corrigir o que for apontado — verificação: lista de problemas zerada
 - [ ] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo
-- [ ] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
-- [ ] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build — verificação: todos os comandos passam
+- [x] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
+- [x] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build — verificação: todos os comandos passam
 - [x] 16.5 Publicar o Preview na Vercel para validação das telas — verificação: endereço acessível e testado pela cliente
+
+### Evidências da reconciliação de implementação
+
+- `e2e/estagios.spec.ts`: histórico e filtros (7.4), seleção e reabertura (7.8), inativação com consulta pela coordenação (7.9), edição e solicitação de exclusão persistida (7.10), recorte por curso e autoria (7.11), ciclo de cadastro/seleção/horas/correção (14.2).
+- `e2e/documentos-preenchimento.spec.ts`: endereço ausente (8.7), cálculo do conceito global (8.17) e submissão real recusada por comprovante pendente (8.18).
+- `src/lib/services/correcoes.test.ts`: somatório de múltiplos lançamentos, limites em correções, autorização por registro, proteção dos valores automáticos, vínculo da ficha ao aluno e integridade de edição.
+- `src/lib/templates/descriptors.test.ts`: matriz de parecer dos doze documentos (9.1).
+- A submissão inicial reutilizada em 8.18 está disponível; as tarefas restantes do fluxo completo de parecer continuam sujeitas aos seus próprios critérios de aceitação. O registro da ficha assinada (8.12) e o preview integrado (8.13) permanecem pendentes.
+- Validação desta reconciliação: typecheck e lint sem erros/avisos de código, 419 testes unitários, build sem avisos e 88 E2E aprovados contra o build compilado (`PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`). O teste do seletor, omitido por depender de flag na suíte principal, foi aprovado separadamente em `npm run test:e2e:seletor`.

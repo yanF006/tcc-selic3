@@ -264,15 +264,28 @@ test.describe("edição, inativação e exclusão", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("recusa excluir aluno com estágios registrados", async ({ page }) => {
+  test("exclui dados do aluno preservando os estágios registrados", async ({ page }) => {
     await entrarComoAdministrador(page);
+    await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
+    await expect(page.locator("#nomeCompleto")).toHaveText("Luiza Santos");
+    await page.goto("/admin/usuarios");
 
-    await buscar(page, "maria");
+    await buscar(page, "luiza");
 
-    await page.getByRole("button", { name: "Ações de Maria de Souza Oliveira" }).click();
+    await page.getByRole("button", { name: "Ações de Luiza Santos" }).click();
     await page.getByRole("menuitem", { name: "Excluir cadastro" }).click();
 
-    await expect(page.getByRole("alert").filter({ hasText: "Inative o cadastro" })).toBeVisible();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Cadastro de Luiza Santos excluído." }),
+    ).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Luiza Santos", exact: true })).toHaveCount(0);
+    await page.goto("/coordenacao/estagios?estagio=est-sem-endereco");
+    await expect(page.getByText("Detalhes do Estágio", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("total-horas")).toHaveText("0,00 h");
+    await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
+    await expect(page.getByText("Documento apenas para consulta", { exact: true })).toBeVisible();
+    await expect(page.locator("#nomeCompleto")).toHaveText("Luiza Santos");
+    await expect(page.getByRole("button", { name: "Salvar rascunho" })).toBeDisabled();
   });
 });
 

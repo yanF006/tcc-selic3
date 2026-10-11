@@ -15,12 +15,12 @@ export const metadata: Metadata = {
  * guarda está no layout de `(gestao)`.
  */
 export default async function PaginaSolicitacoes() {
-  await exigirAlgumDosPapeis(
+  const usuario = await exigirAlgumDosPapeis(
     ["coordenador_estagio", "coordenador_curso", "administrador"],
     "/solicitacoes",
   );
 
-  const pagina = await listarSolicitacoes({ tamanho: 100 });
+  const pagina = await listarSolicitacoes({ tamanho: 100 }, usuario);
 
   return (
     <PaginaArea

@@ -33,7 +33,13 @@ const DESCRITOR: DescriptorDocumento = {
       id: "campos",
       titulo: "Campos",
       campos: [
-        { id: "texto", rotulo: "Campo de texto", tipo: "texto", origem: "digitado", obrigatorio: true },
+        {
+          id: "texto",
+          rotulo: "Campo de texto",
+          tipo: "texto",
+          origem: "digitado",
+          obrigatorio: true,
+        },
         {
           id: "resumo",
           rotulo: "Resumo",
@@ -62,7 +68,13 @@ const DESCRITOR: DescriptorDocumento = {
           ],
         },
         { id: "marcacao", rotulo: "Marcação", tipo: "checkbox", origem: "digitado" },
-        { id: "fixo", rotulo: "Texto fixo", tipo: "fixo", origem: "literal", ajuda: "Conteúdo fixo." },
+        {
+          id: "fixo",
+          rotulo: "Texto fixo",
+          tipo: "fixo",
+          origem: "literal",
+          ajuda: "Conteúdo fixo.",
+        },
         {
           id: "instrucao",
           rotulo: "Instrução",
@@ -153,5 +165,36 @@ describe("FormularioDocumento", () => {
 
     expect(screen.getAllByText("4,0").length).toBeGreaterThan(0);
     expect(screen.getByText(/total \(duração \(h\)\)/i)).toBeInTheDocument();
+  });
+
+  it("totaliza horas mensais digitadas na Ficha de Frequência", () => {
+    const descriptor: DescriptorDocumento = {
+      ...DESCRITOR,
+      auto: [],
+      secoes: [
+        {
+          id: "meses",
+          titulo: "Frequência mensal",
+          campos: [
+            {
+              id: "meses",
+              rotulo: "Meses",
+              tipo: "grade",
+              origem: "digitado",
+              totalAutomatico: true,
+              colunas: [{ chave: "horasTrabalhadas", rotulo: "Horas trabalhadas", tipo: "numero" }],
+            },
+          ],
+        },
+      ],
+    };
+    render(
+      <FormularioDocumento
+        descriptor={descriptor}
+        valores={{ meses: [{ horasTrabalhadas: "120" }, { horasTrabalhadas: "80" }] }}
+        aoMudar={() => {}}
+      />,
+    );
+    expect(screen.getByText("200,0")).toBeInTheDocument();
   });
 });

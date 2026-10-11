@@ -107,7 +107,7 @@ describe("lançamento de horas (8.19)", () => {
     ).rejects.toThrow(/fora do período do estágio/);
   });
 
-  it("recusa lançar um dia que já tem lançamento", async () => {
+  it("recusa a soma de lançamentos que ultrapassa o teto do mesmo dia", async () => {
     await mariaLogada();
 
     await expect(
@@ -118,7 +118,7 @@ describe("lançamento de horas (8.19)", () => {
         saida: "15:00",
         almocoDesligado: true,
       }),
-    ).rejects.toThrow(/Data já lançada/i);
+    ).rejects.toThrow(/limite de 6/);
   });
 
   it("aplica o teto de 30 horas por semana", async () => {

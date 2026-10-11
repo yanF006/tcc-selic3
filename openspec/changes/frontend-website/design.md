@@ -32,9 +32,9 @@ Estado atual e restrições que moldam a abordagem. A motivação está em `prop
 
 ### D1. Rotas por role group, com guarda única em layout compartilhado
 
-As telas ficam em route groups do App Router por domínio de acesso (`(publico)`, `(aluno)`, `(coordenacao)`, `(admin)`), e cada group tem um único layout que resolve a sessão e executa a guarda de papel. As URLs não carregam o papel.
+As telas ficam em route groups do App Router por domínio de acesso (`(publico)`, `(aluno)`, `(coordenacao)`, `(admin)`), e cada group tem um único layout que resolve a sessão e executa a guarda de papel. Os prefixos `/admin` e `/coordenacao` representam áreas funcionais compartilhadas, não um papel exclusivo; os route groups em si não entram na URL.
 
-- **Alternativa:** prefixos de papel na URL (`/admin/...`, `/coordenacao/...`). Rejeitada porque amarra a URL ao papel: um coordenador de curso que também precisar da visão de aluno ficaria preso numa URL só, e trocar o modelo de papéis viria com migração de links.
+- **Alternativa:** uma URL por cargo (`/coordenador-curso/...`, `/coordenador-estagio/...`). Rejeitada porque duplica as áreas compartilhadas e amarra a navegação ao papel.
 - **Alternativa:** um layout por papel replicando a guarda. Rejeitada por duplicação.
 - **Efeito colateral:** como o admin tem todos os privilégios (§4), `administrator` satisfaz qualquer guarda; a regra é `rolesDoUsuario ⊇ rolesExigidas`.
 
@@ -137,7 +137,7 @@ Heranças do `Contexto/visaoGeral.md` onde ele é omissivo, escolhendo o comport
 
 ## Risks / Trade-offs
 
-- **A guarda de papel é só de interface até existir backend** → todas as regras de acesso ficam em um único módulo (`lib/auth/permissions`) e todas as telas passam por ele; nenhuma tela importa fixtures nem recebe dados por prop vinda do servidor, o que reduz a superfície a revisar quando a verificação real chegar.
+- **Autenticação ainda simulada** → layouts resolvem o cookie e aplicam as guardas; Server Actions e serviços verificam o vínculo do registro ao usuário, curso ou campus. As páginas de servidor consultam serviços e entregam às telas somente os dados autorizados; nenhuma tela importa fixtures diretamente. Better Auth e persistência serão integrados na mudança de backend.
 - **As fixtures podem divergir do modelo real** → os tipos de serviço são o contrato; o `schema.prisma` futuro é gerado a partir deles, e as fixtures entram na revisão da cliente para validar volume e variety antes do backend.
 - **Formulário genérico é menos refinado que um formulário por documento** → os tipos de campo cobrem os padrões dos documentos do Kit (texto, número, data, select, caixa de marcação, área de texto); os descritores ficam em uma pasta só e são lidos com a cliente documento a documento.
 - **O seletor de papel e a sessão simulada são uma brecha se vazarem para produção** → ficam atrás de flag de ambiente e o `README` registra que devem ser removidos antes da entrega final; o teste E2E depende deles, então a remoção é um passo explícito da lista de tarefas.

@@ -258,7 +258,9 @@ function CampoTextoDescritor({
           id={campo.id}
           className={classes}
           aria-readonly="true"
-          aria-describedby={[descrito, pendente ? idMensagem : null].filter(Boolean).join(" ")}
+          aria-describedby={[descrito, erro || pendente ? idMensagem : null]
+            .filter(Boolean)
+            .join(" ")}
         >
           {vazio ? <span className="text-muted-foreground">—</span> : valor}
         </p>
@@ -332,10 +334,7 @@ function CampoAreaTextoDescritor({
 
       {campo.maximoPalavras ? (
         <p
-          className={cn(
-            "text-muted-foreground text-xs",
-            excedeu && "text-destructive font-medium",
-          )}
+          className={cn("text-muted-foreground text-xs", excedeu && "text-destructive font-medium")}
         >
           {palavras} de {campo.maximoPalavras} palavras
         </p>
@@ -365,10 +364,15 @@ function CampoNumeroDescritor({
   aoMudar: (campoId: string, valor: unknown) => void;
 }) {
   const idMensagem = `${campo.id}-mensagem`;
-  const automatico = campo.somenteLeitura;
+  const automatico = campo.somenteLeitura || campo.origem === "aluno" || campo.origem === "estagio";
   const exibido = valor === undefined || valor === null || valor === "" ? "" : String(valor);
   const nota = Number(exibido);
-  const notaValida = campo.faixa && exibido !== "" && !Number.isNaN(nota) && nota >= (campo.min ?? 0) && nota <= (campo.max ?? 10);
+  const notaValida =
+    campo.faixa &&
+    exibido !== "" &&
+    !Number.isNaN(nota) &&
+    nota >= (campo.min ?? 0) &&
+    nota <= (campo.max ?? 10);
   const faixa = notaValida ? faixaDaNota(nota) : null;
 
   return (
@@ -598,9 +602,7 @@ function GradeDescritor({
   const idMensagem = `${campo.id}-mensagem`;
 
   function alterarLinha(indice: number, chave: string, novo: string) {
-    const proximas = linhas.map((linha, i) =>
-      i === indice ? { ...linha, [chave]: novo } : linha,
-    );
+    const proximas = linhas.map((linha, i) => (i === indice ? { ...linha, [chave]: novo } : linha));
 
     aoMudar(campo.id, proximas);
   }
@@ -619,9 +621,13 @@ function GradeDescritor({
   }
 
   const colunaAutomatica = colunas.find((coluna) => coluna.automatica);
-  const total = colunaAutomatica
+  const colunaTotal =
+    colunaAutomatica ?? colunas.find((coluna) => coluna.chave === "horasTrabalhadas");
+  const total = colunaTotal
     ? linhas.reduce((soma, linha) => {
-        const bruto = valorAutomatico(colunaAutomatica, linha).replace(",", ".");
+        const bruto = colunaTotal.automatica
+          ? valorAutomatico(colunaTotal, linha).replace(",", ".")
+          : String(linha[colunaTotal.chave] ?? "").replace(",", ".");
 
         return soma + (Number(bruto) || 0);
       }, 0)
@@ -683,7 +689,8 @@ function GradeDescritor({
                             indice,
                             coluna.chave,
                             coluna.mascara
-                              ? (MASCARAS[coluna.mascara]?.(evento.target.value) ?? evento.target.value)
+                              ? (MASCARAS[coluna.mascara]?.(evento.target.value) ??
+                                  evento.target.value)
                               : evento.target.value,
                           )
                         }
@@ -707,11 +714,11 @@ function GradeDescritor({
               </tr>
             ))}
           </tbody>
-          {campo.totalAutomatico && colunaAutomatica ? (
+          {campo.totalAutomatico && colunaTotal ? (
             <tfoot>
               <tr>
                 <td className="px-2 py-1 text-right font-medium" colSpan={colunas.length}>
-                  Total ({colunaAutomatica.rotulo})
+                  Total ({colunaTotal.rotulo})
                 </td>
                 <td className="px-2 py-1 font-semibold">{total.toFixed(1).replace(".", ",")}</td>
                 <td />

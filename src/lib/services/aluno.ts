@@ -26,7 +26,9 @@ export type ResultadoDadosPessoais =
 
 /** Dados pessoais do usuário, ou null quando ele ainda não tem cadastro completo. */
 export async function dadosDoAluno(usuario: Usuario): Promise<DadosPessoais | null> {
-  const dados = obterEstado().usuarios.find((registro) => registro.id === usuario.id)?.dadosPessoais;
+  const dados = obterEstado().usuarios.find(
+    (registro) => registro.id === usuario.id,
+  )?.dadosPessoais;
 
   return dados ? structuredClone(dados) : null;
 }
@@ -48,6 +50,9 @@ export async function atualizarDadosPessoais(
   usuario: Usuario,
   dados: DadosPessoais,
 ): Promise<ResultadoDadosPessoais> {
+  if (usuario.situacao !== "ativo") {
+    return { ok: false, erro: "Cadastro não autorizado para edição.", erros: {} };
+  }
   const registro = obterEstado().usuarios.find((registro) => registro.id === usuario.id);
 
   if (!registro) {
@@ -58,7 +63,8 @@ export async function atualizarDadosPessoais(
     return { ok: false, erro: "Cadastro de dados pessoais não encontrado.", erros: {} };
   }
 
-  const { matricula: _ignorado, ...payload } = dados as DadosPessoais & { matricula?: string };
+  const payload = { ...dados } as DadosPessoais & { matricula?: string };
+  delete payload.matricula;
   const validado = esquemaDadosPessoais(await opcoesSelecao()).safeParse(payload);
 
   if (!validado.success) {

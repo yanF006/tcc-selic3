@@ -40,6 +40,18 @@ import { obterEstado, reiniciarEstado } from "./store";
 
 const HOJE = "2026-06-01";
 
+const VALORES_LIBERACAO = {
+  enderecoAluno: "Rua das Acácias, 215",
+  cepAluno: "23940000",
+  telefoneAluno: "2133337788",
+  celularAluno: "21998761234",
+  emailAluno: "maria.souza@aluno.ifrj.edu.br",
+  enderecoLocal: "Rua da Empresa, 10",
+  telefoneSupervisor: "2133331000",
+  planoDeAcordo: "sim",
+  dataParecer: "01/03/2026",
+};
+
 async function login(email: string) {
   const resultado = await entrar(email, "selic123");
 
@@ -294,7 +306,7 @@ describe("lançamento de horas", () => {
     ).rejects.toThrow(/fora do período/);
   });
 
-  it("recusa data já lançada", async () => {
+  it("recusa a soma acima do teto diário numa data já lançada", async () => {
     await login("maria.souza@aluno.ifrj.edu.br");
 
     await expect(
@@ -305,7 +317,7 @@ describe("lançamento de horas", () => {
         saida: "16:00",
         almocoDesligado: true,
       }),
-    ).rejects.toThrow(/já lançada/);
+    ).rejects.toThrow(/limite de 6/);
   });
 
   it("recusa ultrapassar 30 horas na semana", async () => {
@@ -487,6 +499,9 @@ describe("documentos", () => {
     );
 
     const completo = validarValores("tpl-requerimento-aproveitamento", {
+      nomeCompleto: "Maria de Souza Oliveira",
+      instituicao: "Tecnoweb",
+      supervisor: "Ricardo",
       cargaHorariaTotal: 120,
       comprovante_1: true,
       comprovante_2: true,
@@ -500,16 +515,17 @@ describe("documentos", () => {
 
   it("exige os campos obrigatórios na submissão", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
-    const documento = await criarRascunho(aluno, "tpl-plano-atividades", "est-maria-tecnoweb");
+    const documento = await criarRascunho(aluno, "tpl-formulario-liberacao", "est-maria-tecnoweb");
 
     await expect(submeter(documento.id)).rejects.toThrow(/obrigatório/);
   });
 
   it("submete documento com parecer para a fila do coordenador", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
-    const documento = await criarRascunho(aluno, "tpl-plano-atividades", "est-maria-tecnoweb");
+    const documento = await criarRascunho(aluno, "tpl-formulario-liberacao", "est-maria-tecnoweb");
 
     await salvarRascunho(documento.id, {
+      ...VALORES_LIBERACAO,
       tipoAtividade: "estagio",
       dataInicioPrevista: "01/03/2026",
       dataFimPrevista: "28/08/2026",
@@ -527,9 +543,10 @@ describe("documentos", () => {
 
   it("registra parecer depois da análise", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
-    const documento = await criarRascunho(aluno, "tpl-relatorio-semestral", "est-maria-tecnoweb");
+    const documento = await criarRascunho(aluno, "tpl-formulario-liberacao", "est-maria-tecnoweb");
 
     await salvarRascunho(documento.id, {
+      ...VALORES_LIBERACAO,
       descricaoEmpresa: "Empresa de tecnologia.",
       objetivos: "Aprender a prática.",
       desenvolvimento: "Desenvolvimento de sistemas.",
@@ -595,9 +612,10 @@ describe("documentos", () => {
 
   it("impede editar documento que não é rascunho", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
-    const documento = await criarRascunho(aluno, "tpl-plano-atividades", "est-maria-tecnoweb");
+    const documento = await criarRascunho(aluno, "tpl-formulario-liberacao", "est-maria-tecnoweb");
 
     await salvarRascunho(documento.id, {
+      ...VALORES_LIBERACAO,
       tipoAtividade: "estagio",
       dataInicioPrevista: "01/03/2026",
       dataFimPrevista: "28/08/2026",
@@ -612,9 +630,10 @@ describe("documentos", () => {
 
   it("não registra parecer em documento submetido fora da fila", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
-    const documento = await criarRascunho(aluno, "tpl-plano-atividades", "est-maria-tecnoweb");
+    const documento = await criarRascunho(aluno, "tpl-formulario-liberacao", "est-maria-tecnoweb");
 
     await salvarRascunho(documento.id, {
+      ...VALORES_LIBERACAO,
       tipoAtividade: "estagio",
       dataInicioPrevista: "01/03/2026",
       dataFimPrevista: "28/08/2026",

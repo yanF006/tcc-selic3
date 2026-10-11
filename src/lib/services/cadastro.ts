@@ -4,6 +4,9 @@ import {
   esquemaData,
   esquemaEmail,
   esquemaEndereco,
+  esquemaCelular,
+  esquemaTelefone,
+  esquemaRg,
   esquemaSenha,
 } from "@/lib/domain/schemas";
 import type { DadosPessoais, Endereco, SituacaoUsuario, Usuario } from "@/lib/domain/types";
@@ -212,6 +215,18 @@ export async function concluirCadastro(
 
   if (!endereco.success) {
     return { ok: false, campo: "dados", erro: "Confira o endereço informado." };
+  }
+  if (
+    dados.nomeCompleto.trim().length < 3 ||
+    !esquemaCelular.safeParse(dados.celular).success ||
+    (dados.telefone.trim() !== "" && !esquemaTelefone.safeParse(dados.telefone).success) ||
+    (dados.rg.trim() !== "" && !esquemaRg.safeParse(dados.rg).success)
+  ) {
+    return {
+      ok: false,
+      campo: "dados",
+      erro: "Confira o nome, o celular e os contatos informados.",
+    };
   }
 
   const dadosPessoais: DadosPessoais = {

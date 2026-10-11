@@ -2,9 +2,20 @@ import type { Metadata } from "next";
 
 import { PaginaArea } from "@/components/layout/pagina-area";
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
-import { estagiosDoAluno, lancamentosDoEstagio, totalHorasDoEstagio } from "@/lib/services/estagios";
-import { listarConvenios, listarOrientadores, listarSupervisores } from "@/lib/services/catalogo";
+import {
+  estagiosDoAluno,
+  exclusaoPendenteDoEstagio,
+  lancamentosDoEstagio,
+  totalHorasDoEstagio,
+} from "@/lib/services/estagios";
+import {
+  classificacaoConvenio,
+  listarConvenios,
+  listarOrientadores,
+  listarSupervisores,
+} from "@/lib/services/catalogo";
 import { listarTemplates } from "@/lib/services/documentos";
+import { documentosDoAluno } from "@/lib/services/documentos";
 import type { LancamentoHoras } from "@/lib/domain/types";
 
 import { ConteudoEstagios } from "./conteudo-estagios";
@@ -14,8 +25,9 @@ export const metadata: Metadata = {
   description: "Cadastrar o estágio, o convênio e o horário.",
 };
 
-export default async function Page() {
+export default async function Page({ searchParams }: PageProps<"/estagio">) {
   const usuario = await usuarioDaRequisicaoObrigatorio();
+  const { estagio: selecionado } = await searchParams;
   const [estagios, conveniosPagina, orientadores, supervisores, templates] = await Promise.all([
     estagiosDoAluno(usuario.id),
     listarConvenios({ tamanho: 100 }),
@@ -25,6 +37,14 @@ export default async function Page() {
   ]);
 
   const resumosHoras: Record<string, { total: number; lancamentos: LancamentoHoras[] }> = {};
+  const documentos = await documentosDoAluno(usuario.id);
+  const exclusoesPendentes = (
+    await Promise.all(
+      estagios.map(async (estagio) =>
+        (await exclusaoPendenteDoEstagio(estagio.id)) ? estagio.id : null,
+      ),
+    )
+  ).filter((id): id is string => id !== null);
 
   for (const estagio of estagios) {
     resumosHoras[estagio.id] = {
@@ -36,13 +56,21 @@ export default async function Page() {
   return (
     <PaginaArea titulo="Estágio" descricao="Cadastrar o estágio, o convênio e o horário.">
       <ConteudoEstagios
-        alunoId={usuario.id}
+        estagioInicialId={typeof selecionado === "string" ? selecionado : undefined}
         estagiosIniciais={estagios}
-        convenios={conveniosPagina.itens}
+        convenios={conveniosPagina.itens.map((convenio) => ({
+          ...convenio,
+          situacao:
+            convenio.situacao === "ativo" && classificacaoConvenio(convenio) === "ativo"
+              ? "ativo"
+              : "inativo",
+        }))}
         orientadores={orientadores}
         supervisores={supervisores}
         templates={templates}
         resumosHoras={resumosHoras}
+        documentos={documentos}
+        exclusoesPendentes={exclusoesPendentes}
       />
     </PaginaArea>
   );

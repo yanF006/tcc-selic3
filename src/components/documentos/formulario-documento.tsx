@@ -58,7 +58,7 @@ export function FormularioDocumento({
               aoMudar={aoMudar}
               erro={erros[campo.id]}
               desabilitado
-              pendente={campo.obrigatorio === true && vazio(valores[campo.id])}
+              pendente={vazio(valores[campo.id])}
             />
           ))}
         </SecaoFormulario>
@@ -148,6 +148,7 @@ function TrechoDaSecao({
       aoMudar={aoMudar}
       erro={erro}
       desabilitado={desabilitado}
+      pendente={(campo.origem === "aluno" || campo.origem === "estagio") && vazio(valor)}
     />
   );
 }

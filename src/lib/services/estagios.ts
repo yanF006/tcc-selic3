@@ -1,4 +1,6 @@
 import { esquemaEstagio } from "@/lib/domain/schemas";
+import { lancamentosEfetivos } from "@/lib/domain/horas";
+import { cursoDoUsuario } from "@/lib/domain/usuario";
 import type {
   Convenio,
   Estagio,
@@ -72,6 +74,29 @@ export async function estagioPorId(id: string): Promise<Estagio | null> {
   return obterEstado().estagios.find((estagio) => estagio.id === id) ?? null;
 }
 
+export function podeConsultarEstagio(usuario: Usuario, estagio: Estagio): boolean {
+  if (usuario.situacao !== "ativo") return false;
+  if (usuario.papeis.includes("administrador") || usuario.papeis.includes("coordenador_estagio")) {
+    return (
+      usuario.campus ===
+      obterEstado().usuarios.find((aluno) => aluno.id === estagio.alunoId)?.campus
+    );
+  }
+  if (usuario.papeis.includes("coordenador_curso") && usuario.cursoId) {
+    const aluno = obterEstado().usuarios.find((registro) => registro.id === estagio.alunoId);
+    if (aluno && cursoDoUsuario(aluno) === usuario.cursoId) return true;
+  }
+  return usuario.papeis.includes("aluno") && estagio.alunoId === usuario.id;
+}
+
+export async function exigirAcessoEstagio(usuario: Usuario, estagioId: string): Promise<Estagio> {
+  const estagio = await estagioPorId(estagioId);
+  if (!estagio || !podeConsultarEstagio(usuario, estagio)) {
+    throw new ErroDeRegra("Estágio não disponível para este usuário.", "acesso_negado");
+  }
+  return estagio;
+}
+
 export async function estagioComContexto(id: string): Promise<EstagioContexto | null> {
   const estagio = await estagioPorId(id);
 
@@ -88,26 +113,10 @@ export async function estagioComContexto(id: string): Promise<EstagioContexto | 
 }
 
 export async function totalHorasDoEstagio(estagioId: string): Promise<number> {
-  const lancamentos = lancamentosDoEstagio(estagioId);
-  const datas = [...new Set(lancamentos.map((lancamento) => lancamento.data))];
-  const corrigidos = new Set(
-    lancamentos
-      .filter((lancamento) => lancamento.tipo === "correcao")
-      .map((lancamento) => lancamento.corrigeId),
+  return lancamentosEfetivos(lancamentosDoEstagio(estagioId)).reduce(
+    (total, lancamento) => total + lancamento.horas,
+    0,
   );
-
-  return datas.reduce((total, data) => {
-    const doDia = lancamentos.filter((lancamento) => lancamento.data === data);
-    const correcao = doDia
-      .filter((lancamento) => lancamento.tipo === "correcao")
-      .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
-      .pop();
-    const original = doDia.find(
-      (lancamento) => lancamento.tipo === "lancamento" && !corrigidos.has(lancamento.id),
-    );
-
-    return total + ((correcao ?? original)?.horas ?? 0);
-  }, 0);
 }
 
 export function lancamentosDoEstagio(estagioId: string): LancamentoHoras[] {
@@ -121,7 +130,7 @@ export function lancamentosDoEstagio(estagioId: string): LancamentoHoras[] {
  * convênio vigente, supervisor ativo e não sobreposição de períodos.
  */
 export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<Estagio> {
-  if (!aluno.papeis.includes("aluno")) {
+  if (aluno.situacao !== "ativo" || !aluno.papeis.includes("aluno")) {
     throw new ErroDeRegra("Apenas alunos cadastram estágios.", "papel_invalido");
   }
 
@@ -130,6 +139,8 @@ export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<
   const convenio = await convenioPorId(parsed.convenioId);
 
   if (!convenio) throw new ErroDeRegra("Convênio não encontrado.", "convenio_inexistente");
+  if (convenio.situacao !== "ativo")
+    throw new ErroDeRegra("Selecione um convênio ativo.", "convenio_inativo");
 
   if (classificacaoConvenio(convenio) === "expirado") {
     throw new ErroDeRegra(
@@ -281,13 +292,52 @@ export async function editarEstagio(
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
-
-  if (dados.convenioId) estagio.convenioId = dados.convenioId;
-  if (dados.supervisorId) estagio.supervisorId = dados.supervisorId;
-  if (dados.orientadorId) estagio.orientadorId = dados.orientadorId;
-  if (dados.dataInicio) estagio.dataInicio = dados.dataInicio;
-  if (dados.dataFim) estagio.dataFim = dados.dataFim;
-  if (dados.situacao) estagio.situacao = dados.situacao;
+  const validado = esquemaEstagio().parse({ ...estagio, ...dados });
+  const convenio = await convenioPorId(validado.convenioId);
+  if (
+    !convenio ||
+    (validado.convenioId !== estagio.convenioId &&
+      (convenio.situacao !== "ativo" || classificacaoConvenio(convenio) !== "ativo"))
+  ) {
+    throw new ErroDeRegra("Selecione um convênio ativo.", "convenio_invalido");
+  }
+  const [supervisor, orientador] = await Promise.all([
+    pessoaPorId(validado.supervisorId),
+    pessoaPorId(validado.orientadorId),
+  ]);
+  if (
+    !supervisor ||
+    supervisor.papel !== "supervisor" ||
+    (supervisor.id !== estagio.supervisorId && supervisor.situacao !== "ativo") ||
+    !orientador ||
+    orientador.papel !== "orientador" ||
+    (orientador.id !== estagio.orientadorId && orientador.situacao !== "ativo")
+  ) {
+    throw new ErroDeRegra("Selecione supervisor e orientador cadastrados.", "pessoa_invalida");
+  }
+  if (
+    (await estagiosDoAluno(estagio.alunoId)).some(
+      (outro) =>
+        outro.id !== estagio.id &&
+        sobrepoe(validado.dataInicio, validado.dataFim, outro.dataInicio, outro.dataFim),
+    )
+  ) {
+    throw new ErroDeRegra(
+      "O período conflita com um estágio já cadastrado.",
+      "periodo_conflictante",
+    );
+  }
+  if (
+    lancamentosDoEstagio(estagio.id).some(
+      (lancamento) => lancamento.data < validado.dataInicio || lancamento.data > validado.dataFim,
+    )
+  ) {
+    throw new ErroDeRegra(
+      "O período deve incluir os lançamentos já registrados.",
+      "periodo_com_lancamentos",
+    );
+  }
+  Object.assign(estagio, validado);
 
   estagio.editadoPorId = editorId;
   estagio.editadoEm = agora();
@@ -303,6 +353,10 @@ export async function solicitarExclusaoEstagio(
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
+  const pendente = obterEstado().exclusoes.find(
+    (solicitacao) => solicitacao.estagioId === estagioId && solicitacao.situacao === "pendente",
+  );
+  if (pendente) return pendente;
 
   const solicitacao: SolicitacaoExclusaoEstagio = {
     id: novoId("exc"),
@@ -318,12 +372,16 @@ export async function solicitarExclusaoEstagio(
   return solicitacao;
 }
 
+export async function exclusaoPendenteDoEstagio(estagioId: string): Promise<boolean> {
+  return obterEstado().exclusoes.some(
+    (solicitacao) => solicitacao.estagioId === estagioId && solicitacao.situacao === "pendente",
+  );
+}
+
 export async function estagiosDoCurso(cursoId: string): Promise<Estagio[]> {
   const estado = obterEstado();
   const alunosDoCurso = new Set(
-    estado.usuarios
-      .filter((u) => u.dadosPessoais?.cursoId === cursoId)
-      .map((u) => u.id),
+    estado.usuarios.filter((u) => cursoDoUsuario(u) === cursoId).map((u) => u.id),
   );
 
   return estado.estagios.filter((e) => alunosDoCurso.has(e.alunoId));

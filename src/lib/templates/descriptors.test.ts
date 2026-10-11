@@ -61,6 +61,25 @@ describe("catálogo de templates", () => {
 });
 
 describe("metadados de preenchimento", () => {
+  it("identifica a matriz de parecer dos doze documentos conforme as specs (9.1)", () => {
+    const matriz = Object.fromEntries(
+      templates.map((template) => [template.id, template.metadados?.tipoParecer ?? null]),
+    );
+    expect(matriz).toEqual({
+      "tpl-lei-estagio": null,
+      "tpl-regulamento-licenciatura": null,
+      "tpl-formulario-liberacao": "coordenador_curso",
+      "tpl-plano-atividades": "nenhum",
+      "tpl-convenio-estagio": "externo",
+      "tpl-termo-compromisso": "externo",
+      "tpl-ficha-acompanhamento": "nenhum",
+      "tpl-ficha-frequencia": "externo",
+      "tpl-relatorio-semestral": "externo",
+      "tpl-requerimento-aproveitamento": "comissao_estagio",
+      "tpl-termo-aditivo": "externo",
+      "tpl-proposta-atuacao-pedagogica": "coordenador_curso",
+    });
+  });
   it("preenche documento só por quem é autorizado", () => {
     const preenchiveisPorAluno = templatesPreenchiveis
       .filter((template) => template.metadados?.papeisPreenchimento.includes("aluno"))

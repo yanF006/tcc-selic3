@@ -58,16 +58,9 @@ test.describe("lançamento de horas do estágio", () => {
     await expect(page.getByTestId("tipo-lan-3")).toHaveText("Lançamento original");
     await expect(page.getByTestId("tipo-lan-4")).toHaveText("Correção de lan-3");
 
-    await page
-      .getByTestId("lancamento-lan-1")
-      .getByRole("button", { name: "Corrigir" })
-      .click();
+    await page.getByTestId("lancamento-lan-1").getByRole("button", { name: "Corrigir" }).click();
     await page.getByLabel("Nova saída").fill("16:00");
     await page.getByRole("button", { name: "Registrar correção" }).click();
-
-    await expect(page.getByText("Estágio #cnoweb", { exact: true })).toBeVisible();
-    await page.getByText("Estágio #cnoweb", { exact: true }).click();
-    await expect(page.getByTestId("total-horas")).toBeVisible();
 
     await expect(page.getByTestId("total-horas")).toHaveText("18,50 h");
     await expect(page.getByText("Correção de lan-1")).toBeVisible();

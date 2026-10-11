@@ -219,6 +219,22 @@ const dadosPessoaisJoao = {
 
 export const usuarios: Usuario[] = [
   {
+    id: "usr-sem-endereco",
+    nome: "Luiza Santos",
+    email: "luiza.santos@aluno.ifrj.edu.br",
+    papeis: ["aluno"],
+    situacao: "ativo",
+    campus: "Pinheiral",
+    matricula: "2026100100",
+    dadosPessoais: {
+      ...dadosPessoaisMaria,
+      nomeCompleto: "Luiza Santos",
+      email: "luiza.santos@aluno.ifrj.edu.br",
+      endereco: { cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "" },
+    },
+    criadoEm: "2026-03-01T10:00:00",
+  },
+  {
     id: "usr-maria",
     nome: "Maria de Souza Oliveira",
     email: "maria.souza@aluno.ifrj.edu.br",
@@ -326,6 +342,18 @@ export const usuarios: Usuario[] = [
 ];
 
 export const estagios: Estagio[] = [
+  {
+    id: "est-sem-endereco",
+    alunoId: "usr-sem-endereco",
+    convenioId: "conv-ti-pinheiral",
+    supervisorId: "sup-ricardo",
+    orientadorId: "ori-carla",
+    dataInicio: "2026-03-02",
+    dataFim: "2026-08-28",
+    situacao: "em_andamento",
+    documentosSelecionados: ["tpl-relatorio-semestral"],
+    criadoEm: "2026-03-01T10:00:00",
+  },
   {
     id: "est-maria-tecnoweb",
     alunoId: "usr-maria",
@@ -692,6 +720,13 @@ export const matriculasImportadas: MatriculaImportada[] = [
 
 /** Contas de desenvolvimento, com senha `selic123`. */
 export const CONTAS_DE_DESENVOLVIMENTO = [
+  {
+    id: "usr-sem-endereco",
+    email: "luiza.santos@aluno.ifrj.edu.br",
+    senha: "selic123",
+    papeis: ["aluno"],
+    rotulo: "Aluno com endereço pendente",
+  },
   {
     id: "usr-maria",
     email: "maria.souza@aluno.ifrj.edu.br",

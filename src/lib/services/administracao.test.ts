@@ -20,7 +20,7 @@ import {
 } from "./administracao";
 import { convenioPorId } from "./catalogo";
 import { entrar, temPapel, usuarioAtual } from "./sessao";
-import { reiniciarEstado } from "./store";
+import { obterEstado, reiniciarEstado } from "./store";
 
 beforeEach(() => {
   reiniciarEstado();
@@ -179,10 +179,19 @@ describe("usuários", () => {
     expect(await contarUsuariosPorSituacao()).toMatchObject({ ativo: expect.any(Number) });
   });
 
-  it("recusa excluir aluno com estágios registrados", async () => {
+  it("remove dados pessoais e preserva o histórico ao excluir aluno com estágios", async () => {
     await entrarComoAdministrador();
 
-    await expect(excluirUsuario("usr-maria")).rejects.toThrow(/Inative o cadastro/);
+    const documentos = structuredClone(obterEstado().documentos);
+    const pareceres = structuredClone(obterEstado().pareceres);
+    await excluirUsuario("usr-maria");
+    expect(await usuarioPorId("usr-maria")).toMatchObject({
+      nome: "Cadastro excluído",
+      situacao: "inativo",
+    });
+    expect((await usuarioPorId("usr-maria"))?.dadosPessoais).toBeUndefined();
+    expect(obterEstado().documentos).toEqual(documentos);
+    expect(obterEstado().pareceres).toEqual(pareceres);
     await expect(excluirUsuario("usr-inexistente")).rejects.toThrow(/não encontrado/);
   });
 });

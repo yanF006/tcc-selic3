@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { conceitoGlobalDasNotas, faixaDaNota, faixaDeNota } from "./avaliacao";
+import { camposDoTemplate } from "@/lib/templates/descriptors";
 
 describe("faixaDeNota", () => {
   it("enquadra cada nota em E, B, R e I nos limites das faixas", () => {
@@ -32,8 +33,19 @@ describe("faixaDeNota", () => {
   });
 
   it("gera a escala qualitativa da autoavaliação com um único nível por fator", () => {
-    const niveis = ["otimo", "bom", "regular", "insuficiente"];
-
-    expect(new Set(niveis).size).toBe(4);
+    const fatores = camposDoTemplate("tpl-relatorio-semestral").filter((campo) =>
+      campo.id.startsWith("autoavaliacao_"),
+    );
+    expect(fatores).toHaveLength(11);
+    for (const fator of fatores) {
+      expect(fator.tipo).toBe("radio");
+      expect(fator.obrigatorio).toBe(true);
+      expect(fator.opcoes?.map((opcao) => opcao.valor)).toEqual([
+        "otimo",
+        "bom",
+        "regular",
+        "insuficiente",
+      ]);
+    }
   });
 });

@@ -2,9 +2,11 @@ import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
 import { arquivoDoDocumento, type FormatoDocumento } from "@/lib/documentos/baixar-documento";
 import {
   documentoPorId,
-  podePreencher,
+  podeConsultarDocumento,
+  valoresDoPreenchimento,
   templatePorId,
 } from "@/lib/services/documentos";
+import { usuarioPorId } from "@/lib/services/administracao";
 
 /**
  * Download do documento preenchido (8.14, 8.15), para acesso direto pela URL.
@@ -20,7 +22,10 @@ export async function GET(
   const usuario = await usuarioDaRequisicao();
 
   if (!usuario) {
-    return Response.json({ erro: "É preciso entrar no sistema para baixar o documento." }, { status: 401 });
+    return Response.json(
+      { erro: "É preciso entrar no sistema para baixar o documento." },
+      { status: 401 },
+    );
   }
 
   const { templateId } = await params;
@@ -43,17 +48,19 @@ export async function GET(
     return Response.json({ erro: "Documento não encontrado." }, { status: 404 });
   }
 
-  if (documento.alunoId !== usuario.id && !podePreencher(usuario, template)) {
+  if (!(await podeConsultarDocumento(usuario, documento))) {
     return Response.json({ erro: "Você não pode baixar este documento." }, { status: 403 });
   }
 
-  const resultado = arquivoDoDocumento(documento, templateId, formato);
+  const aluno = await usuarioPorId(documento.alunoId);
+  const valores =
+    documento.situacao === "rascunho" && aluno?.situacao === "ativo"
+      ? await valoresDoPreenchimento(templateId, aluno, documento.estagioId, documento.valores)
+      : documento.valores;
+  const resultado = arquivoDoDocumento({ ...documento, valores }, templateId, formato);
 
   if (!resultado.ok) {
-    return Response.json(
-      { erro: resultado.erro, problemas: resultado.problemas },
-      { status: 422 },
-    );
+    return Response.json({ erro: resultado.erro, problemas: resultado.problemas }, { status: 422 });
   }
 
   return new Response(new Uint8Array(resultado.bytes as Uint8Array), {

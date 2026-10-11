@@ -7,17 +7,53 @@ import { arquivoDoDocumento, type FormatoDocumento } from "@/lib/documentos/baix
 import {
   documentoPorId,
   podePreencher,
+  podeConsultarDocumento,
+  valoresDoPreenchimento,
   salvarRascunho,
+  submeter,
   templatePorId,
   validarValores,
   type ProblemaValidacao,
 } from "@/lib/services/documentos";
 import { ErroDeRegra } from "@/lib/services/erros";
+import { usuarioPorId } from "@/lib/services/administracao";
 
 export interface ResultadoDocumento {
   ok: boolean;
   erro?: string;
   problemas?: ProblemaValidacao[];
+  valores?: Record<string, unknown>;
+}
+
+export async function submeterDocumentoAction(
+  documentoId: string,
+  valores: Record<string, unknown>,
+): Promise<ResultadoDocumento> {
+  const usuario = await usuarioDaRequisicaoObrigatorio();
+  const documento = await documentoPorId(documentoId);
+  if (
+    !documento ||
+    !(await podeConsultarDocumento(usuario, documento)) ||
+    documento.alunoId !== usuario.id
+  ) {
+    return { ok: false, erro: "Documento não disponível para submissão." };
+  }
+  const template = await templatePorId(documento.templateId);
+  if (!template?.metadados || template.metadados.tipoParecer === "nenhum") {
+    return { ok: false, erro: "Este documento não está sujeito a parecer." };
+  }
+  const salvo = await salvarDocumentoAction(documentoId, valores);
+  if (!salvo.ok) return salvo;
+  try {
+    await submeter(documentoId);
+    revalidatePath(`/documentos/${documento.templateId}`);
+    return salvo;
+  } catch (erro) {
+    return {
+      ok: false,
+      erro: erro instanceof Error ? erro.message : "Não foi possível submeter o documento.",
+    };
+  }
 }
 
 /**
@@ -37,7 +73,11 @@ export async function salvarDocumentoAction(
 
     const template = await templatePorId(documento.templateId);
 
-    if (!template || !podePreencher(usuario, template)) {
+    if (
+      !template ||
+      !podePreencher(usuario, template) ||
+      !(await podeConsultarDocumento(usuario, documento))
+    ) {
       return { ok: false, erro: "O preenchimento deste documento cabe a outro perfil." };
     }
 
@@ -45,16 +85,26 @@ export async function salvarDocumentoAction(
       return { ok: false, erro: "Somente rascunhos podem ser editados." };
     }
 
-    const problemas = validarValores(documento.templateId, valores);
+    const aluno = await usuarioPorId(documento.alunoId);
+    if (!aluno) return { ok: false, erro: "Cadastro do aluno não encontrado." };
+    if (aluno.situacao !== "ativo")
+      return { ok: false, erro: "Documento de cadastro inativo: apenas consulta." };
+    const preparados = await valoresDoPreenchimento(
+      documento.templateId,
+      aluno,
+      documento.estagioId,
+      valores,
+    );
+    const problemas = validarValores(documento.templateId, preparados);
 
     if (problemas.length > 0) {
       return { ok: false, erro: problemas[0].mensagem, problemas };
     }
 
-    await salvarRascunho(documentoId, valores);
+    await salvarRascunho(documentoId, preparados);
     revalidatePath(`/documentos/${documento.templateId}`);
 
-    return { ok: true };
+    return { ok: true, valores: preparados };
   } catch (erro) {
     if (erro instanceof ErroDeRegra) {
       return { ok: false, erro: erro.message };
@@ -93,11 +143,16 @@ export async function baixarDocumentoAction(
 
     const template = await templatePorId(templateId);
 
-    if (!template || (documento.alunoId !== usuario.id && !podePreencher(usuario, template))) {
+    if (!template || !(await podeConsultarDocumento(usuario, documento))) {
       return { ok: false, erro: "Você não pode baixar este documento." };
     }
 
-    const resultado = arquivoDoDocumento(documento, templateId, formato);
+    const aluno = await usuarioPorId(documento.alunoId);
+    const valores =
+      documento.situacao === "rascunho" && aluno?.situacao === "ativo"
+        ? await valoresDoPreenchimento(templateId, aluno, documento.estagioId, documento.valores)
+        : documento.valores;
+    const resultado = arquivoDoDocumento({ ...documento, valores }, templateId, formato);
 
     if (!resultado.ok) {
       return { ok: false, erro: resultado.erro, problemas: resultado.problemas };

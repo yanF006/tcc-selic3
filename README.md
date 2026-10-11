@@ -1,178 +1,158 @@
 # SELic — Sistema de Gestão de Estágio
 
-> Sistema de Gestão de Estágio (SELic) do IFRJ Campus Pinheiral, para
-> acompanhamento de estágios, lançamento de horas, documentos do Kit de Estágio e
-> pareceres de coordenação.
+Frontend demonstrável do Sistema de Gestão de Estágio do IFRJ Campus Pinheiral.
+O desenvolvimento segue OpenSpec/SDD: validar as telas e os contratos de domínio
+primeiro, integrar banco de dados e backend definitivo depois.
 
-Este repositório contém **apenas o frontend** (Next.js 16, App Router, React 19 e
-Tailwind 4). Os dados vêm de um simulador em memória; o backend é a etapa
-seguinte do projeto.
+## Tecnologias
 
-## Requisitos
+- Next.js 16, App Router, React 19 e TypeScript em modo estrito.
+- Tailwind CSS 4, componentes shadcn/ui sobre Radix UI e `next-themes`.
+- React Hook Form, Zod, máscaras próprias e formatação pt-BR.
+- Vitest/Testing Library para regras e componentes; Playwright para fluxos.
+- Server Components para leitura e Server Actions para mutações no simulador.
 
-- Node.js 20 ou superior (testado no Node 24)
-- npm 10 ou superior (testado no npm 11)
+## Setup e comandos
 
-## Comandos
+Requisitos: Node.js 20 ou superior (testado no Node 24) e npm 10 ou superior.
 
 ```bash
-npm install          # instala as dependências
-npm run dev          # servidor de desenvolvimento em http://localhost:3000
-npm run build        # build de produção
-npm run start        # serve o build de produção
-
-npm run typecheck     # next typegen e tsc --noEmit
-npm run lint         # ESLint (flat config, padrão do Next.js)
-npm run format       # Prettier
-
-npm run test:unit       # Vitest em execução única
-npm run test:unit:watch # Vitest em modo watch
-npm run test:e2e        # Playwright (fluxos de ponta a ponta)
-npm run test:e2e:seletor # Playwright com o seletor de papel ligado
+npm install
+npm run dev             # http://localhost:3000
+npm run typecheck       # tipos das rotas e TypeScript
+npm run lint
+npm run test:unit
+npm run test:e2e
+npm run test:e2e:seletor # fluxo com seletor de papel habilitado
+npm run build
+npm run start           # serve o build de produção
 ```
 
-## Como rodar e testar em três minutos
+`/login` inicia o fluxo de acesso. `/laboratorio` reúne os componentes, temas,
+formulário dirigido por descritor e demonstração do isolamento de impressão.
+`npm run format` formata o projeto; `npm run format:check` confere a formatação.
 
-1. `npm install`
-2. `npm run dev`: `http://localhost:3000/login` entra no sistema e
-   `http://localhost:3000/laboratorio` mostra os componentes base, o controle de
-   tema claro/escuro e o contraste medido.
-3. `npm run test:unit` para a suíte unitária (326 testes), `npm run test:e2e`
-   para os fluxos de acesso, de senhas e de gestão de usuários,
-   `npm run test:e2e:seletor` para o seletor de papel e `npm run typecheck` para a
-   checagem de tipos.
+Os E2E modificam o simulador. Para uma execução completa e reproduzível, use um
+servidor recém-iniciado. O Playwright inicia e encerra seu próprio `next dev`
+quando não há servidor na porta 3000; se já houver um, ele o reutiliza, com o
+estado existente. `PLAYWRIGHT_BASE_URL` permite apontar para outro servidor.
 
-## Contas de desenvolvimento
+Para validar o build compilado, execute `npm run build` e depois
+`PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`. Isso evita a
+compilação de rotas durante os testes. O fluxo do seletor de papel usa o servidor
+de desenvolvimento com sua flag específica.
 
-A tela de login simula o Better Auth com quatro contas fixas. A senha de todas é
-`selic123`.
+## Contas de demonstração
 
-| Papel                  | E-mail                        | O que enxerga                                     |
-| ---------------------- | ----------------------------- | ------------------------------------------------- |
-| Aluno                  | maria.souza@aluno.ifrj.edu.br | Estágios, horas e documentos próprios             |
-| Coordenador de Estágio | ana.correia@ifrj.edu.br       | Estágios da координа, fichas e pareceres da COIEE |
-| Coordenador de Curso   | carla.menezes@ifrj.edu.br     | Documentos dos alunos do próprio curso            |
-| Administrador          | felipe.andrade@ifrj.edu.br    | Usuários, convênios, matrículas e solicitações    |
-| Aluno pendente         | paula.batista@aluno.ifrj.edu.br | Apenas o aviso de aguardo da autorização        |
+A senha das contas de desenvolvimento é `selic123`.
 
-O campus é fixo em **Pinheiral**: não existe seletor de campus.
+| Perfil                      | E-mail                          |
+| --------------------------- | ------------------------------- |
+| Aluna                       | maria.souza@aluno.ifrj.edu.br   |
+| Aluno com estágio concluído | joao.lima@aluno.ifrj.edu.br     |
+| Aluna com endereço pendente | luiza.santos@aluno.ifrj.edu.br  |
+| Coordenadora de Estágio     | ana.correia@ifrj.edu.br         |
+| Coordenadora de Curso       | carla.menezes@ifrj.edu.br       |
+| Administrador               | felipe.andrade@ifrj.edu.br      |
+| Aluna com cadastro pendente | paula.batista@aluno.ifrj.edu.br |
 
-## O que ainda é simulado
+O campus é fixo em **Pinheiral**. O seletor de papel é uma ferramenta de
+demonstração, habilitada por `NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true`.
 
-Nada abaixo fala com a rede: tudo roda no navegador.
+## Arquitetura
 
-- **Cadastro público.** `/cadastro` faz as duas etapas em memória
-  (`src/lib/services/cadastro.ts`): matrícula e e-mail conferidos no servidor,
-  confirmação de senha, selects dependentes de curso, turma e período e
-  cadastro pendente quando a matrícula não consta nos registros importados.
-- **Autenticação e sessão.** A sessão simulada vive em um cookie httpOnly com o
-  identificador do usuário (`src/lib/auth/sessao-servidor.ts`), e o layout de
-  servidor aplica a guarda de papel (`src/lib/auth/guard.ts`). Não há Better
-  Auth: a senha fica em memória como sal + digest SHA-256
-  (`src/lib/services/credenciais.ts`), sem texto legível, e o cadastro público
-  passa a valer no login.
-- **E-mail de redefinição.** `/recuperar-senha` pede o link e `/conta/senha` troca
-  a senha autenticada (`src/lib/services/senhas.ts`). O link vale por 1 hora, é de
-  uso único e a resposta é a mesma exista ou não a conta; como não há Nodemailer, o
-  link aparece na própria tela para a demonstração.
-- **Persistência.** `src/lib/services/store.ts` guarda o estado em memória: ele
-  se perde ao recarregar a página e vale enquanto a aba do navegador estiver
-  aberta.
-- **Banco de dados.** Não há Prisma nem MySQL. `src/lib/domain/types.ts` é o
-  contrato que o `schema.prisma` vai reproduzir.
-- **Geração de `.docx` e PDF.** Os 12 documentos do Kit de Estágio estão
-  catalogados em `src/lib/fixtures/templates.ts` com seus descritores em
-  `src/lib/templates/descriptors.ts`, mas a geração do arquivo final é da etapa
-  do backend.
-- **Assinatura digital e envio externo.** Assinaturas de componentes externos
-  (supervisor, instituição) ficam registradas como pendentes, sem Nodemailer.
-- **Comprovantes, convênios e matrículas.** Validações de CPF, e-mail e datas
-  existem (`src/lib/domain/schemas.ts`); consulta a Receita, ao SIGAA e ao
-  backend do IFRJ não existe.
-- **Estatísticas.** Os dados existem para a tela, mas os cálculos e o PDF ainda
-  não foram implementados.
-
-## Estrutura
-
-```
-src/
-  app/                  rotas (App Router) e tokens globais em globals.css
-  components/ui/        componentes base no estilo shadcn/ui
-  components/           providers, logotipo e controles de tema
-  lib/domain/           tipos, situações, esquemas Zod e máscaras
-  lib/fixtures/         dados de exemplo do simulador
-  lib/services/         fronteira de dados: telas nunca importam fixtures
-  lib/templates/        descritores dos 12 documentos do Kit
-  lib/mask/  lib/format/  lib/design/
-openspec/changes/frontend-website/
-  proposal.md           motivate e escopo
-  design.md             arquitetura e decisões fechadas
-  specs/                requisitos por capacidade
-  tasks.md              as 142 tasks, com o estado da implementação
-Contexto/kit-estagio/   documentos-fonte do Kit (12 arquivos)
+```text
+src/app/                 rotas, layouts, Server Actions e downloads
+src/components/ui/       componentes base shadcn/ui
+src/components/          shell, formulários, documentos, temas e identidade
+src/features/            componentes de cadastro e gestão
+src/lib/domain/          tipos, autorização de domínio, situações e validação
+src/lib/services/        leitura e mutações do simulador
+src/lib/fixtures/        dados fictícios de desenvolvimento
+src/lib/templates/       descritores dos 12 documentos do Kit de Estágio
+src/lib/auth/            cookie de sessão e guardas das áreas
+src/lib/mask/            máscaras controladas
+src/lib/format/          datas, números e horas pt-BR
+openspec/changes/frontend-website/  proposta, design, specs e tarefas
+Contexto/kit-estagio/     documentos-fonte do Kit
 ```
 
-## Regras de negócio implementadas
+As telas acessam os serviços; não importam fixtures diretamente. Papéis são um
+conjunto, a navegação vem de `src/nav.ts` e o administrador satisfaz as guardas
+de papel. As operações de estágio e documento também conferem o vínculo do
+registro ao aluno, curso ou campus.
 
-- Jornada de **6 horas por dia**, excluído o horário de almoço, e **30 horas por
-  semana**.
-- Correção de lançamento **preserva o histórico**: o valor anterior continua
-  registrado e a correção entra como novo lançamento.
-- Convênio **vigente por 5 anos**, com renovação e registro de histórico.
-- Documentos seguem transições controladas: rascunho → submetido → em análise →
-  aprovado/indeferido, sem volta para rascunho depois de aprovado.
-- Formulários são gerados por **descritores**, com limites de palavras do Kit
-  (por exemplo, 400 palavras na introdução da Proposta de Atuação Pedagógica).
-- Nenhuma situação usa só cor: sempre há rótulo textual.
-- **Inativar não exclui**: o acesso é bloqueado na sessão, o cadastro continua
-  na lista e os registros criados pela pessoa são preservados.
-- Cadastro de aluno com **matrícula fora do SIGAA** exige autorização explícita
-  do administrador; sem ela o cadastro é recusado.
+## Funcionalidades disponíveis
 
-## Pendências conhecidas
+- Login, cadastro público em duas etapas, fila de autorização, recuperação e
+  troca de senha simuladas.
+- Perfil com máscaras, validação e matrícula imutável; busca de CEP simulada.
+- Gestão administrativa de usuários e lançamento/listagem de matrículas.
+- Cadastro, histórico, detalhes, edição, seleção de documentos e solicitação
+  de exclusão de estágio. A exclusão solicitada aguarda autorização superior.
+- Gestão de estágios com recorte por curso e autoria da edição registrada.
+- Catálogo dos 12 documentos, formulários dirigidos por descritor, rascunhos,
+  identificação automática somente leitura e aviso de dados ausentes.
+- Limites de palavras, escalas de avaliação e conceito global calculado.
+- Lançamentos de horas: até 6 h por dia e 30 h por semana, com opção de descontar
+  1 h de almoço. Múltiplos lançamentos por data respeitam a soma diária.
+- Correções imutáveis: cada correção substitui a contribuição de seu original
+  nos totais, mantendo todos os registros no histórico.
+- Submissão inicial a parecer, com recusa de campos e comprovantes pendentes.
+  O Plano de Atividades não exige parecer; o Relatório Semestral exige parecer
+  externo do orientador. As filas e o ciclo completo ainda estão pendentes.
+- Downloads fixos do Kit e geração de arquivos **demonstrativos** em DOCX/PDF.
+  O download usa o último preenchimento salvo ou submetido.
+- Exclusão de usuários remove dados pessoais do cadastro e mantém referências
+  necessárias aos documentos, estágios e pareceres históricos.
 
-- Os documentos 03 (Convênio de Estágio) e 06 (Termo de Compromisso) estão em
-  `.doc` no Kit e ainda não foram convertidos para `.docx` (tarefa 15.1).
-- Identidade visual (verde, tipografia, logotipo e ícone) é provisória, até a
-  aprovação da cliente.
-- Os descritores dos documentos ainda passam por revisão com a cliente.
+## O que é simulado e o que ainda falta
 
-## Rotas e navegação
+### Simulação prevista nesta entrega
 
-As telas ficam em route groups do App Router por área, com uma guarda única por
-área (`src/components/layout/shell-area.tsx`):
+- **Persistência:** `src/lib/services/store.ts` mantém dados na memória do
+  processo do servidor, compartilhados entre usuários atendidos pela mesma
+  instância. Recarregar a página ou fazer logout não limpa os registros;
+  reiniciar o processo restaura as fixtures. Não há persistência em banco.
+- **Preview Vercel:** instâncias podem ter estados diferentes. A publicação
+  serve à revisão visual e de navegação; escrita é verificada localmente.
+- **Autenticação:** o cookie HTTP-only contém o identificador do usuário. As
+  credenciais ficam em memória como sal e digest SHA-256; Better Auth ainda não
+  está integrado.
+- **CEP e matrícula:** dados de demonstração, sem consulta oficial ao SIGAA ou
+  a um serviço externo de endereço. A importação por arquivo ainda não tem UI.
+- **E-mail:** recuperação mostra um link de demonstração. Não há envio real,
+  Nodemailer ou integração com assinantes externos.
+- **Documentos:** DOCX/PDF demonstrativos contêm valores do preenchimento, mas
+  não reproduzem o layout oficial. Geração final com Docxtemplater é futura.
 
-| Área          | Route group             | Papéis exigidos                              |
-| ------------- | ----------------------- | -------------------------------------------- |
-| Público       | `src/app/(publico)`     | —                                            |
-| Conta         | `src/app/(conta)`       | qualquer usuário autenticado                 |
-| Aluno         | `src/app/(aluno)`       | `aluno`                                      |
-| Coordenação   | `src/app/(coordenacao)` | `coordenador_estagio` ou `coordenador_curso` |
-| Administração | `src/app/(admin)`       | `administrador`                              |
-| Gestão        | `src/app/(gestao)`      | coordenação ou administrador                  |
+### Próximos incrementos planejados
 
-- `/recuperar-senha` pede o link de redefinição, `/redefinir-senha` consome o link
-  e `/conta/senha` troca a senha de qualquer usuário autenticado, a partir do menu
-  de conta da navbar.
+O estado detalhado e os critérios de aceitação estão em
+`openspec/changes/frontend-website/tasks.md`. Permanecem, entre outros:
 
-- `/solicitacoes` é a fila de cadastros pendentes: a coordenação e a
-  administração autorizam ou recusam com motivo registrado.
-- O cadastro pendente entra no sistema, mas a casca troca o conteúdo pelo aviso
-  de aguardo, sem nenhum dado do sistema.
+- Registro da Ficha de Frequência recebida já assinada (8.12).
+- Preview do documento preenchido e página de impressão integrada (8.13).
+- Filas de parecer, decisões, central de notificações e histórico de envios.
+- Gestão completa de convênios, cursos, turmas, orientadores e supervisores.
+- Gerenciamento/versionamento de templates e importação de matrículas por arquivo.
+- Estatísticas, auditoria de acessibilidade/responsividade e revisão com a cliente.
 
-- `src/nav.ts` é o registro único de navegação: cada item declara `requiredRoles`
-  e a navbar é filtrada pelo conjunto de papéis do usuário.
-- O administrador satisfaz qualquer guarda de papel (§4 do design).
-- A Comissão de Estágio é condição do papel de Coordenador de Estágio, não um
-  quinto papel: a Ficha de Frequência só aparece para membros.
-- O seletor de papel (para demonstrar as quatro áreas) só é incluído quando
-  `NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true`.
+Prisma/MySQL, Better Auth, Nodemailer, geração final e integração oficial com
+SIGAA pertencem às próximas mudanças. Os arquivos legados do Convênio e do
+Termo de Compromisso já foram convertidos para DOCX; os originais permanecem
+no histórico. A marca oficial do SELic já está incorporada.
 
-## Convenções
+## Fluxo OpenSpec
 
-- Nenhuma tela importa `src/lib/fixtures` diretamente: passa por
-  `src/lib/services`.
-- Nenhuma tela escreve o layout de um documento em JSX: usa
-  `src/lib/templates/descriptors.ts`.
-- Comandos de validação antes de commit: `npm run typecheck`, `npm run lint` e
-  `npm run test:unit`.
+```bash
+openspec list --json
+openspec status --change frontend-website --json
+openspec instructions apply --change frontend-website --json
+openspec validate frontend-website --type change
+```
+
+Uma tarefa só deve ser marcada como concluída depois de atender seu cenário e
+executar a verificação correspondente. Antes de commit, execute typecheck,
+lint, testes pertinentes e build. Revisões visuais com a cliente precisam de
+registro próprio; testes automatizados não substituem essa confirmação.
