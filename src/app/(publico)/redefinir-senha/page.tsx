@@ -32,7 +32,7 @@ export default async function RedefinirSenhaPage({ searchParams }: PageProps<"/r
       <div className="flex flex-col items-center gap-2 text-center">
         <Logo tamanho="grande" />
         <p className="text-muted-foreground text-sm">
-          Sistema de Gestão de Estágio do IFRJ Campus Pinheiral
+          Sistema de Estágios das Licenciaturas do IFRJ Campus Pinheiral
         </p>
       </div>
 

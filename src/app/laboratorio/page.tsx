@@ -293,7 +293,7 @@ export default function PaginaLaboratorio() {
         >
           <header className="flex flex-col gap-1 border-b pb-4">
             <p className="text-center text-sm font-semibold uppercase">
-              Sistema de Gestão de Estágio — SELic
+              Sistema de Estágios das Licenciaturas — SELic
             </p>
             <h3 className="text-center text-base font-semibold">Termo de Compromisso de Estágio</h3>
           </header>

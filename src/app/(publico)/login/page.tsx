@@ -9,7 +9,7 @@ import { contasDeDesenvolvimento } from "@/lib/services/sessao";
 
 export const metadata: Metadata = {
   title: "Entrar",
-  description: "Acesso ao SELic — Sistema de Gestão de Estágio do IFRJ Campus Pinheiral.",
+  description: "Acesso ao SELic — Sistema de Estágios das Licenciaturas do IFRJ Campus Pinheiral.",
 };
 
 /** Formulário de acesso com as quatro contas de desenvolvimento (D3). */
@@ -31,7 +31,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="flex flex-col items-center gap-2 text-center">
         <Logo tamanho="grande" />
         <p className="text-muted-foreground text-sm">
-          Sistema de Gestão de Estágio do IFRJ Campus Pinheiral
+          Sistema de Estágios das Licenciaturas do IFRJ Campus Pinheiral
         </p>
       </div>
 

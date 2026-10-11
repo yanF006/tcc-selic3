@@ -14,7 +14,7 @@ const SENHA = "selic123";
 
 async function irParaSegundaEtapa(page: import("@playwright/test").Page) {
   await page.goto("/cadastro");
-  await page.getByLabel("Matrícula", { exact: true }).fill("2023100457");
+  await page.getByLabel("Matrícula", { exact: true }).fill("20241006904");
   await page.getByLabel("E-mail", { exact: true }).fill(`dados.${SUFIXO}@aluno.ifrj.edu.br`);
   await page.getByLabel("Senha", { exact: true }).fill(SENHA);
   await page.getByLabel("Confirmar senha").fill(SENHA);

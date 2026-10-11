@@ -26,7 +26,7 @@ DOCUMENTACAO: ESTAGIO (1,1) — DOCUMENTO (0,N).
 SUPERVISAO: ESTAGIO (0,N) — SUPERVISOR (1,1).
 CONCEDER: ESTAGIO (0,N) — INSTITUICAO CONCEDENTE (1,1).
 
-# SOBSERVACOES
+# OBSERVACOES
 As cardinalidades foram transcritas conforme estão posicionadas visualmente na imagem, sem correções ou inversões.
 O diagrama não mostra atributos, chaves primárias ou estrangeiras.
 A generalização não possui restrições adicionais explicitadas.

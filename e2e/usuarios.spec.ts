@@ -13,9 +13,9 @@ const SENHA = "selic123";
 /**
  * O estado do simulador vive em memória no processo do servidor, então cada
  * execução usa identificadores novos para não colidir com cadastros de rodadas
- * anteriores. O sufixo é só de dígitos porque a matrícula tem dez.
+ * anteriores. O sufixo é só de dígitos porque a matrícula tem onze.
  */
-const SUFIXO = Date.now().toString().slice(-6);
+const SUFIXO = Date.now().toString().slice(-7);
 
 async function entrarComoAdministrador(page: import("@playwright/test").Page) {
   await page.goto("/login");
@@ -170,7 +170,7 @@ test.describe("cadastro pela administração", () => {
     await dialogo.getByLabel("Matrícula", { exact: true }).fill("123");
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
 
-    await expect(page.getByRole("alert").filter({ hasText: "10 dígitos" })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "11 dígitos" })).toBeVisible();
   });
 
   test("recusa cadastro sem papel definido", async ({ page }) => {
@@ -348,7 +348,7 @@ test.describe("filtros e perfil", () => {
     const perfil = page.getByRole("dialog");
 
     await expect(perfil.getByRole("heading", { name: /João Pedro Lima/ })).toBeVisible();
-    await expect(perfil.getByText("2023100788")).toBeVisible();
+    await expect(perfil.getByText("20231000788")).toBeVisible();
     await expect(perfil.getByText("Aluno", { exact: true })).toBeVisible();
     await expect(perfil.getByRole("heading", { name: "Acesso" })).toBeVisible();
     await expect(perfil.getByRole("heading", { name: "Dados pessoais" })).toBeVisible();

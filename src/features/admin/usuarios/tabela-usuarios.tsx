@@ -537,7 +537,7 @@ function FormularioUsuario({
               rotulo="Matrícula"
               obrigatorio
               inputMode="numeric"
-              maxLength={10}
+              maxLength={11}
               descricao="Ao salvar, a matrícula é registrada automaticamente se ainda não existir."
               valor={matricula}
               aoMudar={setMatricula}

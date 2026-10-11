@@ -132,9 +132,9 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
                 rotulo="Matrícula"
                 obrigatorio
                 inputMode="numeric"
-                maxLength={10}
-                placeholder="2023100457"
-                descricao="10 dígitos."
+                maxLength={11}
+                placeholder="20241006904"
+                descricao="11 dígitos."
                 valor={matricula}
                 aoMudar={setMatricula}
               />

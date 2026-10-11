@@ -225,7 +225,7 @@ export const usuarios: Usuario[] = [
     papeis: ["aluno"],
     situacao: "ativo",
     campus: "Pinheiral",
-    matricula: "2026100100",
+    matricula: "20261000100",
     dadosPessoais: {
       ...dadosPessoaisMaria,
       nomeCompleto: "Luiza Santos",
@@ -241,7 +241,7 @@ export const usuarios: Usuario[] = [
     papeis: ["aluno"],
     situacao: "ativo",
     campus: "Pinheiral",
-    matricula: "2023100457",
+    matricula: "20241006904",
     dadosPessoais: dadosPessoaisMaria,
     criadoEm: "2026-02-10T14:00:00",
   },
@@ -252,7 +252,7 @@ export const usuarios: Usuario[] = [
     papeis: ["aluno"],
     situacao: "ativo",
     campus: "Pinheiral",
-    matricula: "2023100788",
+    matricula: "20231000788",
     dadosPessoais: dadosPessoaisJoao,
     criadoEm: "2026-02-11T09:30:00",
   },
@@ -263,7 +263,7 @@ export const usuarios: Usuario[] = [
     papeis: ["aluno"],
     situacao: "pendente",
     campus: "Pinheiral",
-    matricula: "2023100999",
+    matricula: "20231000999",
     dadosPessoais: {
       ...dadosPessoaisMaria,
       nomeCompleto: "Paula Batista",
@@ -280,7 +280,7 @@ export const usuarios: Usuario[] = [
     papeis: ["aluno"],
     situacao: "pendente",
     campus: "Pinheiral",
-    matricula: "2026999001",
+    matricula: "20260999001",
     dadosPessoais: {
       ...dadosPessoaisMaria,
       nomeCompleto: "Rafaela Nogueira",
@@ -660,7 +660,7 @@ export const solicitacoesAcesso: SolicitacaoAcesso[] = [
     id: "sol-pendente-1",
     nome: "Rafaela Nogueira",
     email: "rafaela.nogueira@aluno.ifrj.edu.br",
-    matricula: "2026999001",
+    matricula: "20260999001",
     dadosPessoais: {
       ...dadosPessoaisMaria,
       nomeCompleto: "Rafaela Nogueira",
@@ -676,7 +676,7 @@ export const solicitacoesAcesso: SolicitacaoAcesso[] = [
     id: "sol-recusada-1",
     nome: "Diego Farias",
     email: "diego.farias@aluno.ifrj.edu.br",
-    matricula: "2026999002",
+    matricula: "20260999002",
     dadosPessoais: {
       ...dadosPessoaisMaria,
       nomeCompleto: "Diego Farias",
@@ -694,7 +694,7 @@ export const solicitacoesAcesso: SolicitacaoAcesso[] = [
 export const matriculasImportadas: MatriculaImportada[] = [
   {
     id: "mat-1",
-    matricula: "2023100457",
+    matricula: "20241006904",
     nome: "Maria de Souza Oliveira",
     curso: "Análise e Desenvolvimento de Sistemas",
     origem: "importacao",
@@ -702,7 +702,7 @@ export const matriculasImportadas: MatriculaImportada[] = [
   },
   {
     id: "mat-2",
-    matricula: "2023100788",
+    matricula: "20231000788",
     nome: "João Pedro Lima",
     curso: "Eletricidade",
     origem: "importacao",
@@ -710,7 +710,7 @@ export const matriculasImportadas: MatriculaImportada[] = [
   },
   {
     id: "mat-3",
-    matricula: "2023100999",
+    matricula: "20231000999",
     nome: "Paula Batista",
     curso: "Informática",
     origem: "cadastro_administrador",

@@ -157,8 +157,8 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
 
     if (!MATRICULA_SIGAA.test(matricula)) {
       throw new ErroDeRegra(
-        "Informe a matrícula com 10 dígitos.",
-        "informe_a_matricula_com_dez_digitos",
+        "Informe a matrícula com 11 dígitos.",
+        "informe_a_matricula_com_onze_digitos",
       );
     }
 
@@ -465,6 +465,17 @@ export async function importarMatriculas(
       continue;
     }
 
+    if (!MATRICULA_SIGAA.test(matricula)) {
+      resultado.rejeitadas += 1;
+      resultado.itens.push({
+        matricula,
+        nome,
+        resultado: "rejeitada",
+        motivo: "Informe a matrícula com 11 dígitos.",
+      });
+      continue;
+    }
+
     if (existentes.has(matricula)) {
       resultado.ignoradas += 1;
       resultado.itens.push({ matricula, nome, resultado: "ignorada" });
@@ -504,8 +515,8 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
 
   if (!MATRICULA_SIGAA.test(matricula)) {
     throw new ErroDeRegra(
-      "Informe a matrícula com 10 dígitos.",
-      "informe_a_matricula_com_dez_digitos",
+      "Informe a matrícula com 11 dígitos.",
+      "informe_a_matricula_com_onze_digitos",
     );
   }
 

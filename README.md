@@ -1,6 +1,6 @@
-# SELic — Sistema de Gestão de Estágio
+# SELic — Sistema de Estágios das Licenciaturas
 
-Frontend demonstrável do Sistema de Gestão de Estágio do IFRJ Campus Pinheiral.
+Frontend demonstrável do Sistema de Estágios das Licenciaturas do IFRJ Campus Pinheiral.
 O desenvolvimento segue OpenSpec/SDD: validar as telas e os contratos de domínio
 primeiro, integrar banco de dados e backend definitivo depois.
 

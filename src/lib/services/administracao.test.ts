@@ -64,7 +64,7 @@ describe("usuários", () => {
       nome: "Novo Aluno",
       email: "novo.aluno@aluno.ifrj.edu.br",
       papeis: ["aluno"],
-      matricula: "2026009999",
+      matricula: "20260009999",
     });
 
     // Matrícula recem-registrada significa acesso liberado: nada de pendência.
@@ -72,10 +72,10 @@ describe("usuários", () => {
     expect(aluno.campus).toBe("Pinheiral");
     expect(await usuarioPorId(aluno.id)).toMatchObject({ nome: "Novo Aluno" });
 
-    const matriculas = await listarMatriculas({ busca: "2026009999" });
+    const matriculas = await listarMatriculas({ busca: "20260009999" });
     expect(matriculas.itens).toHaveLength(1);
     expect(matriculas.itens[0]).toMatchObject({
-      matricula: "2026009999",
+      matricula: "20260009999",
       nome: "Novo Aluno",
       origem: "cadastro_administrador",
     });
@@ -85,7 +85,7 @@ describe("usuários", () => {
     await entrarComoAdministrador();
 
     await registrarMatricula({
-      matricula: "2026008888",
+      matricula: "20260008888",
       nome: "Aluno Do Lançamento Manual",
       curso: "Informática",
     });
@@ -94,25 +94,28 @@ describe("usuários", () => {
       nome: "Aluno Do Lançamento Manual",
       email: "manual@aluno.ifrj.edu.br",
       papeis: ["aluno"],
-      matricula: "2026008888",
+      matricula: "20260008888",
     });
 
-    const matriculas = await listarMatriculas({ busca: "2026008888" });
+    const matriculas = await listarMatriculas({ busca: "20260008888" });
     expect(matriculas.itens).toHaveLength(1);
   });
 
-  it("recusa a matrícula fora do formato de dez dígitos", async () => {
-    await entrarComoAdministrador();
+  it.each(["123", "2024100690", "202410069040", "2024100690A"])(
+    "recusa a matrícula fora do formato de onze dígitos: %s",
+    async (matricula) => {
+      await entrarComoAdministrador();
 
-    await expect(
-      cadastrarUsuario({
-        nome: "Aluno Sem Formato",
-        email: "formato@aluno.ifrj.edu.br",
-        papeis: ["aluno"],
-        matricula: "123",
-      }),
-    ).rejects.toThrow(/10 dígitos/);
-  });
+      await expect(
+        cadastrarUsuario({
+          nome: "Aluno Sem Formato",
+          email: "formato@aluno.ifrj.edu.br",
+          papeis: ["aluno"],
+          matricula,
+        }),
+      ).rejects.toThrow(/11 dígitos/);
+    },
+  );
 
   it("filtra usuários por curso, do aluno e do coordenador", async () => {
     const doCurso = await listarUsuarios({ cursoId: "curso-ads" });
@@ -244,16 +247,23 @@ describe("solicitações de acesso", () => {
 describe("importação manual de matrículas", () => {
   it("classifica válidas, ignoradas e rejeitadas", async () => {
     const resultado = await importarMatriculas("matriculas-2026-1.csv", [
-      { matricula: "2026001", nome: "Ana Paula Souza", curso: "Informática" },
-      { matricula: "2026001", nome: "Ana Paula Souza", curso: "Informática" },
+      { matricula: "20260000001", nome: "Ana Paula Souza", curso: "Informática" },
+      { matricula: "20260000001", nome: "Ana Paula Souza", curso: "Informática" },
       { matricula: "", nome: "Sem matrícula", curso: "Informática" },
+      { matricula: "2024100690", nome: "Matrícula curta", curso: "Informática" },
+      { matricula: "202410069040", nome: "Matrícula longa", curso: "Informática" },
+      { matricula: "2024100690A", nome: "Matrícula com letra", curso: "Informática" },
     ]);
 
     expect(resultado.validas).toBe(1);
     expect(resultado.ignoradas).toBe(1);
-    expect(resultado.rejeitadas).toBe(1);
+    expect(resultado.rejeitadas).toBe(4);
     expect(resultado.itens[1].resultado).toBe("ignorada");
     expect(resultado.itens[2].motivo).toMatch(/obrigatórios/);
+    expect(resultado.itens.slice(3).every((item) => item.motivo?.includes("11 dígitos"))).toBe(
+      true,
+    );
+    expect((await listarMatriculas({ busca: "2024100690" })).itens).toHaveLength(1);
     expect(resultado.arquivo).toBe("matriculas-2026-1.csv");
   });
 
@@ -266,20 +276,20 @@ describe("importação manual de matrículas", () => {
     const importadas = await listarMatriculas({ origem: "importacao" });
 
     expect(importadas.total).toBe(2);
-    expect(importadas.itens.every((matricula) => matricula.matricula.length === 10)).toBe(true);
+    expect(importadas.itens.every((matricula) => matricula.matricula.length === 11)).toBe(true);
   });
 
   it("registra matrícula válida por lançamento manual e recusa duplicidade", async () => {
     await entrarComoAdministrador();
 
     const registro = await registrarMatricula({
-      matricula: "2026444888",
+      matricula: "20260444888",
       nome: "Aluno Lançado",
       curso: "Informática",
     });
 
     expect(registro).toMatchObject({
-      matricula: "2026444888",
+      matricula: "20260444888",
       origem: "cadastro_administrador",
     });
 
@@ -288,17 +298,17 @@ describe("importação manual de matrículas", () => {
       nome: "Aluno Lançado",
       email: "aluno.lancado@aluno.ifrj.edu.br",
       papeis: ["aluno"],
-      matricula: "2026444888",
+      matricula: "20260444888",
     });
 
     expect(aluno.situacao).toBe("ativo");
 
     await expect(
-      registrarMatricula({ matricula: "2026444888", nome: "Outro", curso: "Informática" }),
+      registrarMatricula({ matricula: "20260444888", nome: "Outro", curso: "Informática" }),
     ).rejects.toThrow(/já está registrada/);
     await expect(
       registrarMatricula({ matricula: "123", nome: "Matrícula curta", curso: "Informática" }),
-    ).rejects.toThrow(/10 dígitos/);
+    ).rejects.toThrow(/11 dígitos/);
   });
 });
 

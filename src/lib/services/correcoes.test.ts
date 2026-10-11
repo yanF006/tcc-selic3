@@ -243,7 +243,7 @@ describe("autorização por vínculo e integridade de edição", () => {
 
   it("valida contato também no cadastro público do servidor", async () => {
     const previa = await validarEtapaUm({
-      matricula: "2026000500",
+      matricula: "20260000500",
       email: "contato.invalido@aluno.ifrj.edu.br",
       senha: "selic123",
       confirmacao: "selic123",

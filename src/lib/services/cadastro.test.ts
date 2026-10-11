@@ -37,9 +37,23 @@ describe("cadastro público", () => {
     limparPrevias();
   });
 
+  it.each(["2024100690", "202410069040", "2024100690A"])(
+    "recusa matrícula fora do formato de onze dígitos: %s",
+    async (matricula) => {
+      const resultado = await validarEtapaUm({
+        matricula,
+        email: "nova@aluno.ifrj.edu.br",
+        senha,
+        confirmacao: senha,
+      });
+
+      expect(resultado).toMatchObject({ ok: false, campo: "matricula" });
+    },
+  );
+
   it("recusa confirmação de senha divergente no campo", async () => {
     const resultado = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "nova@aluno.ifrj.edu.br",
       senha,
       confirmacao: "outra",
@@ -54,7 +68,7 @@ describe("cadastro público", () => {
 
   it("recusa e-mail já cadastrado sem dizer que a conta existe", async () => {
     const resultado = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "maria.souza@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,
@@ -67,13 +81,13 @@ describe("cadastro público", () => {
 
   it("usa a mesma mensagem para e-mail livre com senha curta", async () => {
     const comSenhaCurta = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "livre@aluno.ifrj.edu.br",
       senha: "123",
       confirmacao: "123",
     });
     const comEmailEmUso = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "maria.souza@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,
@@ -88,7 +102,7 @@ describe("cadastro público", () => {
 
   it("confirma matrícula importada e libera o acesso", async () => {
     const primeira = await validarEtapaUm({
-      matricula: "2023100788",
+      matricula: "20231000788",
       email: "novo.joao@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,
@@ -105,13 +119,13 @@ describe("cadastro público", () => {
     const usuario = await usuarioPorId(conclusao.ok ? conclusao.usuarioId : "");
 
     expect(usuario?.papeis).toEqual(["aluno"]);
-    expect(usuario?.matricula).toBe("2023100788");
+    expect(usuario?.matricula).toBe("20231000788");
     expect(usuario?.dadosPessoais?.turmaId).toBe("turma-ads-2026-1a");
   });
 
   it("mantém cadastro pendente e cria a solicitação quando a matrícula não consta", async () => {
     const primeira = await validarEtapaUm({
-      matricula: "2023777000",
+      matricula: "20230777000",
       email: "pendente@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,
@@ -127,12 +141,12 @@ describe("cadastro público", () => {
     const pendentes = await listarSolicitacoes({ situacao: "pendente", busca: "pendente@" });
 
     expect(pendentes.total).toBe(1);
-    expect(pendentes.itens[0].matricula).toBe("2023777000");
+    expect(pendentes.itens[0].matricula).toBe("20230777000");
   });
 
   it("recusa conclusão com selects dependentes incoerentes", async () => {
     const primeira = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "coerente@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,
@@ -149,7 +163,7 @@ describe("cadastro público", () => {
 
   it("recusa curso, turma e período que não estão cadastrados (6.5)", async () => {
     const primeira = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "selecao@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,
@@ -187,7 +201,7 @@ describe("cadastro público", () => {
 
   it("recusa CPF inválido na segunda etapa", async () => {
     const primeira = await validarEtapaUm({
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "cpf@aluno.ifrj.edu.br",
       senha,
       confirmacao: senha,

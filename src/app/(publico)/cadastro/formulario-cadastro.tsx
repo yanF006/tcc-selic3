@@ -107,7 +107,11 @@ export function FormularioCadastro({
    * guarda a mensagem no próprio campo (6.2 e 6.3). Campo vazio não vira erro
    * aqui: a obrigatoriedade é cobrada no envio.
    */
-  function conferirAoSair(campo: string, esquema: Parameters<typeof mensagemDeErro>[0], valor: string) {
+  function conferirAoSair(
+    campo: string,
+    esquema: Parameters<typeof mensagemDeErro>[0],
+    valor: string,
+  ) {
     const mensagem = valor.trim().length === 0 ? null : mensagemDeErro(esquema, valor);
 
     setErrosCampo((atual) => {
@@ -283,10 +287,10 @@ export function FormularioCadastro({
               id="cadastro-matricula"
               rotulo="Matrícula"
               obrigatorio
-              descricao="Os 10 dígitos da matrícula do SIGAA."
+              descricao="Os 11 dígitos da matrícula do SIGAA."
               inputMode="numeric"
-              maxLength={10}
-              placeholder="2023100457"
+              maxLength={11}
+              placeholder="20241006904"
               valor={matricula}
               aoMudar={setMatricula}
               erro={erroDoCampo("matricula")}

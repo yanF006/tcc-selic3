@@ -45,7 +45,7 @@ test.describe("cadastro público", () => {
 
   test("bloqueia confirmação divergente com erro no campo", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: email("divergente"),
       senha: SENHA,
       confirmacao: "outra-senha",
@@ -75,7 +75,7 @@ test.describe("cadastro público", () => {
 
   test("recusa e-mail já cadastrado sem revelar a conta", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "2023100457",
+      matricula: "20241006904",
       email: "maria.souza@aluno.ifrj.edu.br",
       senha: SENHA,
       confirmacao: SENHA,
@@ -88,7 +88,7 @@ test.describe("cadastro público", () => {
 
   test("confirma matrícula importada e conclui cadastro", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "2023100788",
+      matricula: "20231000788",
       email: email("importada"),
       senha: SENHA,
       confirmacao: SENHA,
@@ -115,7 +115,7 @@ test.describe("cadastro público", () => {
 
   test("mantém cadastro pendente quando a matrícula não está registrada", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "2023444555",
+      matricula: "20230444555",
       email: email("pendente"),
       senha: SENHA,
       confirmacao: SENHA,
@@ -140,7 +140,7 @@ test.describe("cadastro público", () => {
 
   test("limpa turma e período ao trocar o curso", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "2023100999",
+      matricula: "20231000999",
       email: email("dependentes"),
       senha: SENHA,
       confirmacao: SENHA,
@@ -166,7 +166,7 @@ test.describe("cadastro público", () => {
 
   test("oferece apenas opções cadastradas e recusa valor não cadastrado", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "2023100999",
+      matricula: "20231000999",
       email: email("selecao"),
       senha: SENHA,
       confirmacao: SENHA,

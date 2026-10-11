@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { FormularioDocumento } from "./formulario-documento";
-import type { DescriptorDocumento } from "@/lib/templates/descriptors";
+import { descritorPorTemplate, type DescriptorDocumento } from "@/lib/templates/descriptors";
 
 const DESCRITOR: DescriptorDocumento = {
   templateId: "tpl-teste",
@@ -101,14 +101,14 @@ const DESCRITOR: DescriptorDocumento = {
 };
 
 /** Formulário controlado, como a página de preenchimento usa. */
-function Controlado() {
+function Controlado({ descriptor = DESCRITOR }: { descriptor?: DescriptorDocumento }) {
   const [valores, setValores] = React.useState<Record<string, unknown>>({
     autoPreenchido: "Maria de Souza",
   });
 
   return (
     <FormularioDocumento
-      descriptor={DESCRITOR}
+      descriptor={descriptor}
       valores={valores}
       aoMudar={(campoId, valor) => setValores((atual) => ({ ...atual, [campoId]: valor }))}
     />
@@ -116,6 +116,22 @@ function Controlado() {
 }
 
 describe("FormularioDocumento", () => {
+  it("exibe um único rótulo e mantém as máscaras no Formulário de Liberação", async () => {
+    const pessoa = userEvent.setup();
+    const descriptor = descritorPorTemplate("tpl-formulario-liberacao")!;
+
+    render(<Controlado descriptor={descriptor} />);
+
+    for (const rotulo of ["CEP", "Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
+      expect(screen.getByText(rotulo)).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: rotulo })).toBeRequired();
+    }
+
+    const cep = screen.getByRole("textbox", { name: "CEP" });
+    await pessoa.type(cep, "23940000");
+    expect(cep).toHaveValue("23940-000");
+  });
+
   it("renderiza um controle para cada tipo de campo do descritor", () => {
     render(<Controlado />);
 

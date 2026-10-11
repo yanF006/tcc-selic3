@@ -9,8 +9,8 @@ import { expect, test } from "@playwright/test";
  */
 
 const SUFIXO = Date.now().toString(36);
-/** Só dígitos: a matrícula tem dez dígitos. */
-const DIGITOS = Date.now().toString().slice(-6);
+/** Só dígitos: a matrícula tem onze dígitos. */
+const DIGITOS = Date.now().toString().slice(-7);
 const SENHA = "selic123";
 
 async function entrar(page: import("@playwright/test").Page, email: string): Promise<void> {
@@ -36,7 +36,7 @@ async function criarCadastroPendente(
   contador += 1;
 
   const nome = `Fila ${SUFIXO}-${contador}`;
-  // Três + seis + um dígito de contador: dez dígitos, sem cortar o contador.
+  // Três + sete + um dígito de contador: onze dígitos, sem cortar o contador.
   const matricula = `202${DIGITOS}${contador}`;
 
   await page.goto("/cadastro");

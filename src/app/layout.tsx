@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SELic — Sistema de Estágio",
+    default: "SELic — Sistema de Estágios das Licenciaturas",
     template: "%s | SELic",
   },
   description: "Gerenciamento de documentos e estágios dos alunos do IFRJ Campus Pinheiral.",

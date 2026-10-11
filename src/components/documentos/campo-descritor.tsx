@@ -241,6 +241,24 @@ function CampoTextoDescritor({
   const classes =
     "border-input bg-muted/40 text-foreground flex min-h-9 w-full items-center rounded-md border px-3 py-2 text-sm";
 
+  if (!automatico && campo.mascara) {
+    return (
+      <LarguraCampo largura={campo.largura}>
+        <CampoMascarado
+          id={campo.id}
+          rotulo={campo.rotulo}
+          mascara={campo.mascara}
+          valor={valor}
+          aoMudar={(novo) => aoMudar(campo.id, novo)}
+          obrigatorio={campo.obrigatorio}
+          descricao={campo.ajuda}
+          erro={erro ?? null}
+          disabled={desabilitado}
+        />
+      </LarguraCampo>
+    );
+  }
+
   return (
     <LarguraCampo largura={campo.largura}>
       <RotuloCampo htmlFor={campo.id} obrigatorio={campo.obrigatorio}>
@@ -264,17 +282,6 @@ function CampoTextoDescritor({
         >
           {vazio ? <span className="text-muted-foreground">—</span> : valor}
         </p>
-      ) : campo.mascara ? (
-        <CampoMascarado
-          id={campo.id}
-          rotulo={campo.rotulo}
-          mascara={campo.mascara}
-          valor={valor}
-          aoMudar={(novo) => aoMudar(campo.id, novo)}
-          obrigatorio={campo.obrigatorio}
-          erro={erro ?? null}
-          disabled={desabilitado}
-        />
       ) : (
         <Input
           id={campo.id}
@@ -290,10 +297,7 @@ function CampoTextoDescritor({
         />
       )}
 
-      {automatico || campo.mascara ? null : (
-        <MensagemDoCampo id={idMensagem} erro={erro} pendente={pendente} />
-      )}
-      {automatico ? <MensagemDoCampo id={idMensagem} erro={erro} pendente={pendente} /> : null}
+      <MensagemDoCampo id={idMensagem} erro={erro} pendente={pendente} />
     </LarguraCampo>
   );
 }

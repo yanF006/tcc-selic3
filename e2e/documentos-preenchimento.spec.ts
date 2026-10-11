@@ -23,6 +23,20 @@ async function entrar(page: Page, email: string) {
 }
 
 test.describe("preenchimento de documentos", () => {
+  test("não duplica os rótulos dos campos com máscara na liberação", async ({ page }) => {
+    await entrar(page, "maria.souza@aluno.ifrj.edu.br");
+    await page.goto("/documentos/tpl-formulario-liberacao?estagio=est-maria-tecnoweb");
+
+    for (const rotulo of ["CEP", "Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
+      await expect(page.getByText(rotulo, { exact: true })).toHaveCount(1);
+      await expect(page.getByLabel(rotulo, { exact: true })).toBeEditable();
+    }
+
+    const cep = page.getByLabel("CEP", { exact: true });
+    await cep.fill("23940000");
+    await expect(cep).toHaveValue("23940-000");
+  });
+
   test("exige escolher o estágio antes de abrir o formulário (8.10)", async ({ page }) => {
     await entrar(page, "maria.souza@aluno.ifrj.edu.br");
     await page.goto("/documentos/tpl-formulario-liberacao");
