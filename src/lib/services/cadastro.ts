@@ -13,6 +13,7 @@ import type { DadosPessoais, Endereco, SituacaoUsuario, Usuario } from "@/lib/do
 
 import { agora, obterEstado, novoId } from "./store";
 import { definirSenha } from "./credenciais";
+import { garantirHidratacao, gravarUsuario } from "@/lib/db/persistencia";
 
 /**
  * Cadastro público do aluno em duas etapas (5.2 a 5.7).
@@ -99,6 +100,8 @@ function emailEmUso(email: string): boolean {
  * se a conta existe.
  */
 export async function validarEtapaUm(dados: EtapaUmCadastro): Promise<ResultadoCadastro> {
+  await garantirHidratacao();
+
   const matricula = dados.matricula.trim();
   const email = normalizarEmail(dados.email);
 
@@ -172,6 +175,8 @@ export async function concluirCadastro(
       erro: "O cadastro expirou. Recomece pela primeira etapa.",
     };
   }
+
+  await garantirHidratacao();
 
   const estado = obterEstado();
 
@@ -258,6 +263,7 @@ export async function concluirCadastro(
   };
 
   estado.usuarios.push(usuario);
+  await gravarUsuario(usuario);
 
   // A senha escolhida na primeira etapa vira credencial: sem isso o cadastro
   // concluído não liberaria acesso a ninguém (o §5.4 exige liberar a área do

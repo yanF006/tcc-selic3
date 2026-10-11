@@ -4,6 +4,7 @@ import type { DadosPessoais, Usuario } from "@/lib/domain/types";
 import { opcoesSelecao } from "./catalogo";
 import { moverCredencial } from "./credenciais";
 import { obterEstado } from "./store";
+import { garantirHidratacao, gravarUsuario } from "@/lib/db/persistencia";
 
 /**
  * Dados pessoais do aluno (6.6 e 6.7): leitura e edição do próprio cadastro.
@@ -26,6 +27,8 @@ export type ResultadoDadosPessoais =
 
 /** Dados pessoais do usuário, ou null quando ele ainda não tem cadastro completo. */
 export async function dadosDoAluno(usuario: Usuario): Promise<DadosPessoais | null> {
+  await garantirHidratacao();
+
   const dados = obterEstado().usuarios.find(
     (registro) => registro.id === usuario.id,
   )?.dadosPessoais;
@@ -53,6 +56,9 @@ export async function atualizarDadosPessoais(
   if (usuario.situacao !== "ativo") {
     return { ok: false, erro: "Cadastro não autorizado para edição.", erros: {} };
   }
+
+  await garantirHidratacao();
+
   const registro = obterEstado().usuarios.find((registro) => registro.id === usuario.id);
 
   if (!registro) {
@@ -97,6 +103,7 @@ export async function atualizarDadosPessoais(
   registro.nome = validado.data.nomeCompleto;
   registro.email = validado.data.email;
   registro.dadosPessoais = validado.data;
+  await gravarUsuario(registro);
 
   return {
     ok: true,

@@ -1,0 +1,55 @@
+// Contrato de persistência do SELic (Prisma 7 + MySQL/Aiven).
+//
+// Esta é a primeira etapa da migração do simulador em memória (D4) para o banco
+// definitivo. Por decisão de escopo, apenas `usuarios` e `matriculas` saem do
+// estado em memória; cursos, turmas, períodos, estágios, documentos e pareceres
+// continuam nas fixtures de `src/lib/fixtures`.
+//
+// O gerador `prisma-client` (ESM, sem engine Rust) exige `output`. O cliente é
+// gerado em `src/generated/prisma` e importado pelos serviços de servidor.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  // A URL de conexão vive em `prisma7.config.ts` (Prisma 7 removeu `url` daqui).
+}
+
+/// Espelha `Usuario` de `src/lib/domain/types.ts`.
+model Usuario {
+  id         String @id @db.VarChar(64)
+  nome       String @db.VarChar(191)
+  email      String @unique @db.VarChar(191)
+  /// Papel[] serializado como JSON (o MySQL não tem arrays nativos).
+  papeis     Json
+  situacao   String @db.VarChar(20)
+  campus     String @db.VarChar(50)
+  /// Matrícula do aluno; imutável após o cadastro. Ausente nos demais papéis.
+  matricula  String? @db.VarChar(20)
+  /// Curso do coordenador de curso; ausente nos demais papéis.
+  cursoId    String? @db.VarChar(64)
+  membroComissaoEstagio Boolean  @default(false)
+  /// DadosPessoais completo serializado como JSON; ausente até o cadastro.
+  dadosPessoais Json?
+  criadoEm   DateTime @default(now())
+
+  @@index([situacao])
+  @@map("usuarios")
+}
+
+/// Espelha `MatriculaImportada` de `src/lib/domain/types.ts`.
+model MatriculaImportada {
+  id          String   @id @db.VarChar(64)
+  matricula   String   @unique @db.VarChar(20)
+  nome        String   @db.VarChar(191)
+  curso       String   @db.VarChar(191)
+  /// "importacao" | "cadastro_administrador".
+  origem      String   @db.VarChar(30)
+  importadaEm DateTime @default(now())
+
+  @@index([origem])
+  @@map("matriculas")
+}

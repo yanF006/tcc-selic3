@@ -28,6 +28,9 @@ next-env.d.ts
 *.tsbuildinfo
 .eslintcache
 
+# cliente Prisma gerado (recriado por `prisma generate` / postinstall)
+/src/generated
+
 # sistema
 .DS_Store
 Thumbs.db

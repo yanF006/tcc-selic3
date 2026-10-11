@@ -15,6 +15,13 @@ import type {
 import { agora, obterEstado, novoId } from "./store";
 import { filtrarPorTexto, paginar } from "./paginacao";
 
+import {
+  excluirUsuarioDoBanco,
+  garantirHidratacao,
+  gravarMatricula,
+  gravarUsuario,
+} from "@/lib/db/persistencia";
+
 import { ErroDeRegra } from "./erros";
 
 /**
@@ -69,7 +76,9 @@ function porNome<T extends { nome: string }>(a: T, b: T): number {
 }
 
 /** true quando a matrícula já vale no sistema, venha de onde vier. */
-export function matriculaRegistrada(matricula: string): boolean {
+export async function matriculaRegistrada(matricula: string): Promise<boolean> {
+  await garantirHidratacao();
+
   return obterEstado().matriculas.some((registro) => registro.matricula === matricula.trim());
 }
 
@@ -79,6 +88,8 @@ function nomeDoCurso(cursoId: string): string {
 }
 
 export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<Pagina<Usuario>> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.usuarios, consulta.busca ?? "", (usuario) => [
     usuario.nome,
@@ -96,11 +107,15 @@ export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<P
 }
 
 export async function usuarioPorId(id: string): Promise<Usuario | null> {
+  await garantirHidratacao();
+
   return obterEstado().usuarios.find((usuario) => usuario.id === id) ?? null;
 }
 
 /** Usuário pelo e-mail, que é o identificador do login; null quando não existe. */
 export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
+  await garantirHidratacao();
+
   const alvo = email.trim().toLowerCase();
 
   return (
@@ -109,6 +124,8 @@ export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
 }
 
 export async function contarUsuariosPorSituacao(): Promise<Record<SituacaoUsuario, number>> {
+  await garantirHidratacao();
+
   const usuarios = obterEstado().usuarios;
 
   return {
@@ -119,6 +136,8 @@ export async function contarUsuariosPorSituacao(): Promise<Record<SituacaoUsuari
 }
 
 export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuario> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const email = cadastro.email.trim().toLowerCase();
 
@@ -165,15 +184,18 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     // O cadastro do aluno registra a matrícula que ainda não consta, com a origem
     // do cadastro de administrador, e libera o acesso na mesma operação. Quem já
     // está registrado mantém o registro existente, sem duplicar.
-    if (!matriculaRegistrada(matricula)) {
-      estado.matriculas.push({
+    if (!(await matriculaRegistrada(matricula))) {
+      const registro = {
         id: novoId("mat"),
         matricula,
         nome: cadastro.nome.trim(),
         curso: cadastro.cursoId ? nomeDoCurso(cadastro.cursoId) : "Não informado",
-        origem: "cadastro_administrador",
+        origem: "cadastro_administrador" as const,
         importadaEm: agora(),
-      });
+      };
+
+      estado.matriculas.push(registro);
+      await gravarMatricula(registro);
     }
   }
 
@@ -191,6 +213,7 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
   };
 
   estado.usuarios.push(usuario);
+  await gravarUsuario(usuario);
 
   return usuario;
 }
@@ -199,6 +222,8 @@ export async function editarUsuario(
   id: string,
   alteracoes: Partial<CadastroUsuario> & { nome?: string; situacao?: SituacaoUsuario },
 ): Promise<Usuario> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const usuario = estado.usuarios.find((registro) => registro.id === id);
 
@@ -225,6 +250,8 @@ export async function editarUsuario(
 
   if (alteracoes.situacao) usuario.situacao = alteracoes.situacao;
 
+  await gravarUsuario(usuario);
+
   return usuario;
 }
 
@@ -233,6 +260,8 @@ export async function editarUsuario(
  * usuário (estágios, documentos e pareceres continuam apontando para ele).
  */
 export async function inativarUsuario(id: string): Promise<Usuario> {
+  await garantirHidratacao();
+
   const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
@@ -244,22 +273,28 @@ export async function inativarUsuario(id: string): Promise<Usuario> {
   }
 
   usuario.situacao = "inativo";
+  await gravarUsuario(usuario);
 
   return usuario;
 }
 
 export async function reativarUsuario(id: string): Promise<Usuario> {
+  await garantirHidratacao();
+
   const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
 
   usuario.situacao = "ativo";
+  await gravarUsuario(usuario);
 
   return usuario;
 }
 
 /** Remove os dados pessoais, preservando identidades referenciadas no histórico. */
 export async function excluirUsuario(id: string): Promise<void> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const usuario = estado.usuarios.find((registro) => registro.id === id);
 
@@ -278,8 +313,10 @@ export async function excluirUsuario(id: string): Promise<void> {
       dadosPessoais: undefined,
       cursoId,
     });
+    await gravarUsuario(usuario);
   } else {
     estado.usuarios = estado.usuarios.filter((registro) => registro.id !== id);
+    await excluirUsuarioDoBanco(id);
   }
   estado.notificacoes = estado.notificacoes.filter(
     (notificacao) => notificacao.destinatarioId !== id,
@@ -322,6 +359,8 @@ export async function decidirSolicitacao(
   administradorId: string,
   motivo?: string,
 ): Promise<SolicitacaoAcesso> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const solicitacao = estado.solicitacoes.find((registro) => registro.id === id);
 
@@ -351,14 +390,17 @@ export async function decidirSolicitacao(
     // de depender de autorização avulsa e a matrícula fica registrada para os
     // próximos cadastros.
     if (!estado.matriculas.some((registro) => registro.matricula === solicitacao.matricula)) {
-      estado.matriculas.push({
+      const registro = {
         id: novoId("mat"),
         matricula: solicitacao.matricula,
         nome: solicitacao.nome,
         curso: nomeDoCurso(solicitacao.dadosPessoais.cursoId),
-        origem: "cadastro_administrador",
+        origem: "cadastro_administrador" as const,
         importadaEm: agora(),
-      });
+      };
+
+      estado.matriculas.push(registro);
+      await gravarMatricula(registro);
     }
 
     const existente = estado.usuarios.find(
@@ -367,8 +409,9 @@ export async function decidirSolicitacao(
 
     if (existente) {
       existente.situacao = "ativo";
+      await gravarUsuario(existente);
     } else {
-      estado.usuarios.push({
+      const usuario: Usuario = {
         id: novoId("usr"),
         nome: solicitacao.nome,
         email: solicitacao.email.toLowerCase(),
@@ -384,7 +427,10 @@ export async function decidirSolicitacao(
         } as Usuario["dadosPessoais"],
         membroComissaoEstagio: false,
         criadoEm: agora(),
-      });
+      };
+
+      estado.usuarios.push(usuario);
+      await gravarUsuario(usuario);
     }
   }
 
@@ -392,7 +438,10 @@ export async function decidirSolicitacao(
     (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
   );
   if (aluno) {
-    if (decisao === "recusado") aluno.situacao = "inativo";
+    if (decisao === "recusado") {
+      aluno.situacao = "inativo";
+      await gravarUsuario(aluno);
+    }
     estado.notificacoes.push({
       id: novoId("ntf"),
       destinatarioId: aluno.id,
@@ -414,6 +463,8 @@ export async function listarMatriculas(
     tamanho?: number;
   } = {},
 ): Promise<Pagina<MatriculaImportada>> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.matriculas, consulta.busca ?? "", (matricula) => [
     matricula.nome,
@@ -437,6 +488,8 @@ export async function importarMatriculas(
   arquivo: string,
   linhas: LinhaImportacao[],
 ): Promise<ResultadoImportacao> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const existentes = new Set(estado.matriculas.map((matricula) => matricula.matricula));
   const resultado: ResultadoImportacao = {
@@ -483,14 +536,17 @@ export async function importarMatriculas(
     }
 
     existentes.add(matricula);
-    estado.matriculas.push({
+    const registro: MatriculaImportada = {
       id: novoId("mat"),
       matricula,
       nome,
       curso,
       origem: "importacao",
       importadaEm: agora(),
-    });
+    };
+
+    estado.matriculas.push(registro);
+    await gravarMatricula(registro);
     resultado.validas += 1;
     resultado.itens.push({ matricula, nome, resultado: "valida" });
   }
@@ -499,6 +555,8 @@ export async function importarMatriculas(
 }
 
 export async function totalMatriculasImportadas(): Promise<number> {
+  await garantirHidratacao();
+
   return obterEstado().matriculas.length;
 }
 
@@ -508,6 +566,8 @@ export async function totalMatriculasImportadas(): Promise<number> {
  * aluno correspondente.
  */
 export async function registrarMatricula(linha: LinhaImportacao): Promise<MatriculaImportada> {
+  await garantirHidratacao();
+
   const estado = obterEstado();
   const matricula = linha.matricula.trim();
   const nome = linha.nome.trim();
@@ -523,7 +583,7 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   if (!nome) throw new ErroDeRegra("Informe o nome do aluno.", "informe_o_nome_do_aluno");
   if (!curso) throw new ErroDeRegra("Informe o curso do aluno.", "informe_o_curso_do_aluno");
 
-  if (matriculaRegistrada(matricula)) {
+  if (await matriculaRegistrada(matricula)) {
     throw new ErroDeRegra(
       `A matrícula ${matricula} já está registrada.`,
       "matricula_ja_registrada",
@@ -540,6 +600,7 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   };
 
   estado.matriculas.push(registro);
+  await gravarMatricula(registro);
 
   return registro;
 }

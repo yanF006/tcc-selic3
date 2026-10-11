@@ -14,12 +14,21 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:seletor": "NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true playwright test e2e/seletor-papel.spec.ts"
+    "test:e2e:seletor": "NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true playwright test e2e/seletor-papel.spec.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
+    "@prisma/adapter-mariadb": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^18.0.7",
     "lucide-react": "^1.50.0",
     "next": "16.3.8",
     "next-themes": "^0.4.6",
@@ -48,7 +57,9 @@
     "jsdom": "^30.1.1",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "prisma": "^7.10.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.3"
   }

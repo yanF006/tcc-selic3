@@ -11,6 +11,8 @@ primeiro, integrar banco de dados e backend definitivo depois.
 - React Hook Form, Zod, máscaras próprias e formatação pt-BR.
 - Vitest/Testing Library para regras e componentes; Playwright para fluxos.
 - Server Components para leitura e Server Actions para mutações no simulador.
+- Prisma 7 com driver adapter `mariadb` para persistir **usuários e matrículas**
+  no MySQL; o restante do domínio segue no simulador em memória.
 
 ## Setup e comandos
 
@@ -42,6 +44,34 @@ Para validar o build compilado, execute `npm run build` e depois
 compilação de rotas durante os testes. O fluxo do seletor de papel usa o servidor
 de desenvolvimento com sua flag específica.
 
+## Banco de dados (Prisma 7 + MySQL)
+
+A persistência real cobre **usuários e matrículas**; o restante do estado
+continua nas fixtures em memória. O acesso usa o driver adapter
+`@prisma/adapter-mariadb` (exigido pelo Prisma 7) com TLS, lido de uma única
+variável de ambiente:
+
+```bash
+cp .env.example .env   # preencha DATABASE_URL com a URI do MySQL
+```
+
+Sem `DATABASE_URL` — e sempre nos testes unitários — a persistência fica
+desligada e o simulador se comporta como antes. Com a variável presente, a
+primeira leitura hidrata a memória a partir do banco; um banco vazio é semeado
+com as fixtures, então as contas de demonstração continuam funcionando.
+
+```bash
+npm run db:generate   # gera o cliente em src/generated/prisma
+npm run db:deploy     # aplica as migrações versionadas
+npm run db:seed       # opcional: semeia usuários e matrículas
+npm run db:migrate    # cria uma migração nova durante o desenvolvimento
+```
+
+O cliente gerado (`src/generated/prisma`) não é versionado: o `postinstall`
+o recria a cada `npm install`. A conexão do app é montada em
+`src/lib/db/prisma.ts`; hidratação e escrita contínua ficam em
+`src/lib/db/persistencia.ts`.
+
 ## Contas de demonstração
 
 A senha das contas de desenvolvimento é `selic123`.
@@ -71,8 +101,10 @@ src/lib/services/        leitura e mutações do simulador
 src/lib/fixtures/        dados fictícios de desenvolvimento
 src/lib/templates/       descritores dos 12 documentos do Kit de Estágio
 src/lib/auth/            cookie de sessão e guardas das áreas
+src/lib/db/              cliente Prisma, hidratação e escrita contínua
 src/lib/mask/            máscaras controladas
 src/lib/format/          datas, números e horas pt-BR
+prisma/                  schema, migrações e seed do MySQL
 openspec/changes/frontend-website/  proposta, design, specs e tarefas
 Contexto/kit-estagio/     documentos-fonte do Kit
 ```
@@ -110,10 +142,12 @@ registro ao aluno, curso ou campus.
 
 ### Simulação prevista nesta entrega
 
-- **Persistência:** `src/lib/services/store.ts` mantém dados na memória do
-  processo do servidor, compartilhados entre usuários atendidos pela mesma
-  instância. Recarregar a página ou fazer logout não limpa os registros;
-  reiniciar o processo restaura as fixtures. Não há persistência em banco.
+- **Persistência:** usuários e matrículas vivem no MySQL (Prisma 7, driver
+  `mariadb`). Os demais dados — cursos, turmas, períodos, convênios, estágios,
+  documentos e pareceres — seguem em `src/lib/services/store.ts`, na memória do
+  processo do servidor. A memória é hidratada a partir do banco na primeira
+  leitura e cada mutação é gravada de volta; sem `DATABASE_URL` o simulador roda
+  inteiramente em memória, como antes.
 - **Preview Vercel:** instâncias podem ter estados diferentes. A publicação
   serve à revisão visual e de navegação; escrita é verificada localmente.
 - **Autenticação:** o cookie HTTP-only contém o identificador do usuário. As
@@ -138,7 +172,8 @@ O estado detalhado e os critérios de aceitação estão em
 - Gerenciamento/versionamento de templates e importação de matrículas por arquivo.
 - Estatísticas, auditoria de acessibilidade/responsividade e revisão com a cliente.
 
-Prisma/MySQL, Better Auth, Nodemailer, geração final e integração oficial com
+Prisma/MySQL cobre hoje usuários e matrículas; Better Auth, Nodemailer, geração
+final, a migração do restante do domínio para o banco e a integração oficial com
 SIGAA pertencem às próximas mudanças. Os arquivos legados do Convênio e do
 Termo de Compromisso já foram convertidos para DOCX; os originais permanecem
 no histórico. A marca oficial do SELic já está incorporada.
