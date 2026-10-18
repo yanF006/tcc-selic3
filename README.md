@@ -37,7 +37,9 @@ formulário dirigido por descritor e demonstração do isolamento de impressão.
 Os E2E modificam o simulador. Para uma execução completa e reproduzível, use um
 servidor recém-iniciado. O Playwright inicia e encerra seu próprio `next dev`
 quando não há servidor na porta 3000; se já houver um, ele o reutiliza, com o
-estado existente. `PLAYWRIGHT_BASE_URL` permite apontar para outro servidor.
+estado existente. `PLAYWRIGHT_BASE_URL` permite apontar para outro servidor;
+testes que escrevem estado devem rodar em servidor local ou de CI dedicado,
+nunca contra o Preview da Vercel, cujo estado é compartilhado entre execuções.
 
 Para validar o build compilado, execute `npm run build` e depois
 `PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`. Isso evita a
@@ -105,7 +107,7 @@ src/lib/db/              cliente Prisma, hidratação e escrita contínua
 src/lib/mask/            máscaras controladas
 src/lib/format/          datas, números e horas pt-BR
 prisma/                  schema, migrações e seed do MySQL
-openspec/changes/frontend-website/  proposta, design, specs e tarefas
+openspec/changes/        mudanças ativas; as arquivadas ficam em archive/
 Contexto/kit-estagio/     documentos-fonte do Kit
 ```
 
@@ -130,9 +132,11 @@ registro ao aluno, curso ou campus.
   1 h de almoço. Múltiplos lançamentos por data respeitam a soma diária.
 - Correções imutáveis: cada correção substitui a contribuição de seu original
   nos totais, mantendo todos os registros no histórico.
-- Submissão inicial a parecer, com recusa de campos e comprovantes pendentes.
-  O Plano de Atividades não exige parecer; o Relatório Semestral exige parecer
-  externo do orientador. As filas e o ciclo completo ainda estão pendentes.
+- Submissão inicial a parecer, com recusa de campos e comprovantes pendentes,
+  já utilizada pelo Requerimento para Aproveitamento de Horas. O Plano de
+  Atividades não exige parecer; o Relatório Semestral exige parecer externo do
+  orientador. A submissão dedicada com transições de situação (9.2–9.4), as
+  filas e o ciclo completo de parecer ainda estão pendentes.
 - Downloads fixos do Kit e geração de arquivos **demonstrativos** em DOCX/PDF.
   O download usa o último preenchimento salvo ou submetido.
 - Exclusão de usuários remove dados pessoais do cadastro e mantém referências
@@ -163,7 +167,8 @@ registro ao aluno, curso ou campus.
 ### Próximos incrementos planejados
 
 O estado detalhado e os critérios de aceitação estão em
-`openspec/changes/frontend-website/tasks.md`. Permanecem, entre outros:
+`openspec/changes/archive/2026-10-11-frontend-website/tasks.md`, com 48 das 143
+tarefas ainda abertas. Permanecem, entre outros:
 
 - Registro da Ficha de Frequência recebida já assinada (8.12).
 - Preview do documento preenchido e página de impressão integrada (8.13).
@@ -174,9 +179,12 @@ O estado detalhado e os critérios de aceitação estão em
 
 Prisma/MySQL cobre hoje usuários e matrículas; Better Auth, Nodemailer, geração
 final, a migração do restante do domínio para o banco e a integração oficial com
-SIGAA pertencem às próximas mudanças. Os arquivos legados do Convênio e do
-Termo de Compromisso já foram convertidos para DOCX; os originais permanecem
-no histórico. A marca oficial do SELic já está incorporada.
+SIGAA pertencem às próximas mudanças. A remoção do seletor de papel e dos dados
+de desenvolvimento (16.2) é o último gate antes da entrega; a ordem de execução
+da validação final está registrada na seção 16 do arquivo de tarefas. Os
+arquivos legados do Convênio e do Termo de Compromisso já foram convertidos para
+DOCX; os originais permanecem no histórico. A marca oficial do SELic já está
+incorporada.
 
 ## Fluxo OpenSpec
 

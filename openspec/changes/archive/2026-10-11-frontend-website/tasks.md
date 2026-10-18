@@ -183,6 +183,12 @@
 
 ## 16. Validação final
 
+> Ordem de execução: 16.1 → 16.2 → 16.3 → 16.4 → 16.5. A 16.2 (remoção do
+> seletor de papel e dos dados de desenvolvimento) é o último gate antes da
+> entrega: execute-a depois da revisão com a cliente e antes dos checks finais
+> da 16.4, porque o seletor sustenta a demonstração e o teste
+> `test:e2e:seletor`; a 16.4 então valida o build limpo.
+
 - [ ] 16.1 Revisar responsividade e acessibilidade com a cliente e corrigir o que for apontado — verificação: lista de problemas zerada
 - [ ] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo
 - [x] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
