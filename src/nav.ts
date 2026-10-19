@@ -72,7 +72,7 @@ export const NAV: ItemNav[] = [
     href: "/coordenacao/frequencia",
     icone: "frequencia",
     rotulo: "Frequência e avaliação",
-    descricao: "Conferir a Ficha de Frequência e Avaliação.",
+    descricao: "Registrar e conferir a Ficha de Frequência e Avaliação.",
     requiredRoles: ["coordenador_estagio"],
     exigeComissaoDeEstagio: true,
     grupo: "gestao",

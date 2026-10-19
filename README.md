@@ -137,6 +137,8 @@ registro ao aluno, curso ou campus.
   Atividades não exige parecer; o Relatório Semestral exige parecer externo do
   orientador. A submissão dedicada com transições de situação (9.2–9.4), as
   filas e o ciclo completo de parecer ainda estão pendentes.
+- Registro da Ficha de Frequência já assinada pela concedente, com lançamento
+  de horas e avaliações, associado ao estágio como documento consultável.
 - Downloads fixos do Kit e geração de arquivos **demonstrativos** em DOCX/PDF.
   O download usa o último preenchimento salvo ou submetido.
 - Exclusão de usuários remove dados pessoais do cadastro e mantém referências
@@ -167,10 +169,9 @@ registro ao aluno, curso ou campus.
 ### Próximos incrementos planejados
 
 O estado detalhado e os critérios de aceitação estão em
-`openspec/changes/archive/2026-10-11-frontend-website/tasks.md`, com 48 das 143
+`openspec/changes/archive/2026-10-11-frontend-website/tasks.md`, com 47 das 143
 tarefas ainda abertas. Permanecem, entre outros:
 
-- Registro da Ficha de Frequência recebida já assinada (8.12).
 - Preview do documento preenchido e página de impressão integrada (8.13).
 - Filas de parecer, decisões, central de notificações e histórico de envios.
 - Gestão completa de convênios, cursos, turmas, orientadores e supervisores.

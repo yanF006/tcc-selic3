@@ -65,6 +65,7 @@ describe("integridade das fixtures", () => {
 
     for (const situacao of [
       "rascunho",
+      "registrada",
       "submetido",
       "em_analise",
       "aprovado",
