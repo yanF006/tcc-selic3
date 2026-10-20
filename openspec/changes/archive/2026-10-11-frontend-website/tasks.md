@@ -91,8 +91,8 @@
 - [x] 8.9 Implementar gravação, reabertura e listagem dos documentos preenchidos por estágio — verificação: teste E2E de salvar, reabrir e localizar na lista
 - [x] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada
 - [x] 8.11 Aplicar as permissões de preenchimento por perfil vindas do descritor — verificação: teste E2E de aluno recusado na Ficha de Frequência e no Convênio
-- [ ] 8.12 Criar o registro da Ficha de Frequência já assinada, com lançamento de horas e das avaliações — verificação: teste E2E do registro associado ao estágio
-- [ ] 8.13 Montar a página de impressão do preview, com a folha isolada em tokens de impressão e sem a interface ao redor — verificação: inspeção visual nos dois temas com a cliente e impressão sem áreas escuras (o isolamento em si é o 2.5)
+- [x] 8.12 Criar o registro da Ficha de Frequência já assinada, com lançamento de horas e das avaliações — verificação: teste E2E do registro associado ao estágio
+- [x] 8.13 Montar a página de impressão do preview, com a folha isolada em tokens de impressão e sem a interface ao redor — verificação: inspeção visual nos dois temas com a cliente e impressão sem áreas escuras (o isolamento em si é o 2.5)
 - [x] 8.14 Implementar o download em docx e pdf devolvendo arquivo de demonstração nesta entrega — verificação: teste E2E do download concluído
 - [x] 8.15 Recusar o download quando houver campo obrigatório pendente — verificação: teste E2E da recusa com a lista de pendências
 - [x] 8.16 Implementar o limite de palavras por seção com contador visível durante a digitação — verificação: teste E2E bloqueando a gravação acima do limite
@@ -183,6 +183,12 @@
 
 ## 16. Validação final
 
+> Ordem de execução: 16.1 → 16.2 → 16.3 → 16.4 → 16.5. A 16.2 (remoção do
+> seletor de papel e dos dados de desenvolvimento) é o último gate antes da
+> entrega: execute-a depois da revisão com a cliente e antes dos checks finais
+> da 16.4, porque o seletor sustenta a demonstração e o teste
+> `test:e2e:seletor`; a 16.4 então valida o build limpo.
+
 - [ ] 16.1 Revisar responsividade e acessibilidade com a cliente e corrigir o que for apontado — verificação: lista de problemas zerada
 - [ ] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo
 - [x] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
@@ -195,5 +201,5 @@
 - `e2e/documentos-preenchimento.spec.ts`: endereço ausente (8.7), cálculo do conceito global (8.17) e submissão real recusada por comprovante pendente (8.18).
 - `src/lib/services/correcoes.test.ts`: somatório de múltiplos lançamentos, limites em correções, autorização por registro, proteção dos valores automáticos, vínculo da ficha ao aluno e integridade de edição.
 - `src/lib/templates/descriptors.test.ts`: matriz de parecer dos doze documentos (9.1).
-- A submissão inicial reutilizada em 8.18 está disponível; as tarefas restantes do fluxo completo de parecer continuam sujeitas aos seus próprios critérios de aceitação. O registro da ficha assinada (8.12) e o preview integrado (8.13) permanecem pendentes.
+- A submissão inicial reutilizada em 8.18 está disponível; as tarefas restantes do fluxo completo de parecer continuam sujeitas aos seus próprios critérios de aceitação. O registro da ficha assinada (8.12) foi concluído com `e2e/ficha-frequencia.spec.ts` e `src/lib/services/frequencia.test.ts`; a página de impressão do preview (8.13) foi concluída com `e2e/documento-impressao.spec.ts`, `src/components/documentos/documento-impressao.tsx` e `src/lib/templates/valores-legiveis.ts`.
 - Validação desta reconciliação: typecheck e lint sem erros/avisos de código, 419 testes unitários, build sem avisos e 88 E2E aprovados contra o build compilado (`PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`). O teste do seletor, omitido por depender de flag na suíte principal, foi aprovado separadamente em `npm run test:e2e:seletor`.

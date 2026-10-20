@@ -557,10 +557,26 @@ export const documentos: DocumentoPreenchido[] = [
     alunoId: "usr-maria",
     estagioId: "est-maria-hospital",
     versaoTemplate: 1,
-    valores: { conceitoGlobal: 8.5, nomeSupervisor: "Marta Ribeiro" },
-    situacao: "aprovado",
+    valores: {
+      conceitoGlobal: 8.5,
+      nomeSupervisor: "Marta Ribeiro",
+      meses: [
+        {
+          ano: 2025,
+          mes: "Dezembro",
+          diasUteis: 21,
+          diasTrabalhados: 19,
+          horasTrabalhadas: 152,
+        },
+      ],
+      criterio_1: 9.5,
+      criterio_2: 7.5,
+    },
+    situacao: "registrada",
     criadoEm: "2025-12-19T10:00:00",
     atualizadoEm: "2025-12-19T18:00:00",
+    registradoPorId: "usr-ana",
+    registradoEm: "2025-12-19T18:00:00",
   },
   {
     id: "doc-requerimento-maria",

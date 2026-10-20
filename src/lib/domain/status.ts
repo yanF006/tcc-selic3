@@ -3,6 +3,7 @@ import {
   CheckCircleIcon,
   CircleDashedIcon,
   CircleDotIcon,
+  ClipboardCheckIcon,
   ClockIcon,
   FileCheckIcon,
   FileClockIcon,
@@ -34,6 +35,13 @@ const situacoesDocumento: Record<SituacaoDocumento, MetadadoSituacao> = {
     variante: "neutro",
     Icone: CircleDashedIcon,
     descricao: "Documento aberto pelo aluno e ainda não submetido a parecer.",
+  },
+  registrada: {
+    rotulo: "Registrado",
+    variante: "success",
+    Icone: ClipboardCheckIcon,
+    descricao:
+      "Documento recebido já preenchido e assinado, registrado diretamente pela coordenação.",
   },
   submetido: {
     rotulo: "Submetido",
@@ -186,7 +194,10 @@ export function varianteSituacaoUsuario(situacao: SituacaoUsuario) {
 export type TransicaoDocumento = SituacaoDocumento;
 
 const transicoesDocumento: Record<SituacaoDocumento, SituacaoDocumento[]> = {
-  rascunho: ["submetido", "inativo"],
+  // A Ficha de Frequência registrada já vem assinada pela concedente (8.12):
+  // entra pronta pelo registro e não passa por parecer.
+  rascunho: ["registrada", "submetido", "inativo"],
+  registrada: ["inativo"],
   submetido: ["em_analise", "inativo"],
   em_analise: ["aprovado", "indeferido", "inativo"],
   aprovado: ["inativo"],

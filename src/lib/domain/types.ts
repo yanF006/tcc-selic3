@@ -137,7 +137,13 @@ export interface Estagio {
 }
 
 export type SituacaoDocumento =
-  "rascunho" | "submetido" | "em_analise" | "aprovado" | "indeferido" | "inativo";
+  | "rascunho"
+  | "registrada"
+  | "submetido"
+  | "em_analise"
+  | "aprovado"
+  | "indeferido"
+  | "inativo";
 
 export type TipoTemplate = "preenchivel" | "download";
 
@@ -193,6 +199,9 @@ export type DocumentoPreenchido = {
   criadoEm: string;
   atualizadoEm: string;
   inativadoEm?: string;
+  /** Quem registrou o documento recebido já assinado (8.12). */
+  registradoPorId?: string;
+  registradoEm?: string;
 };
 
 export type TipoLancamento = "lancamento" | "correcao";

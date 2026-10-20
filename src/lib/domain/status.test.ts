@@ -67,7 +67,15 @@ describe("metadados de situação", () => {
 
   it("cobre todas as situações declaradas nos tipos", () => {
     expect(Object.keys(METADADOS_SITUACAO.documento).sort()).toEqual(
-      ["aprovado", "em_analise", "inativo", "indeferido", "rascunho", "submetido"].sort(),
+      [
+        "aprovado",
+        "em_analise",
+        "inativo",
+        "indeferido",
+        "rascunho",
+        "registrada",
+        "submetido",
+      ].sort(),
     );
   });
 });
@@ -89,12 +97,15 @@ describe("rótulo textual acompanha a cor", () => {
 describe("transições de documento", () => {
   it.each([
     ["rascunho", "submetido", true],
+    ["rascunho", "registrada", true],
     ["rascunho", "aprovado", false],
     ["submetido", "em_analise", true],
     ["submetido", "rascunho", false],
     ["em_analise", "aprovado", true],
     ["em_analise", "indeferido", true],
     ["em_analise", "rascunho", false],
+    ["registrada", "inativo", true],
+    ["registrada", "em_analise", false],
     ["aprovado", "em_analise", false],
     ["indeferido", "rascunho", true],
     ["inativo", "rascunho", false],
@@ -106,8 +117,12 @@ describe("transições de documento", () => {
     expect(transicoesDocumentoPermitidas("inativo")).toEqual([]);
   });
 
-  it("rascunho só avança para submetido ou inativo", () => {
-    expect(transicoesDocumentoPermitidas("rascunho").sort()).toEqual(["inativo", "submetido"]);
+  it("rascunho só avança para registro, submissão ou inativação", () => {
+    expect(transicoesDocumentoPermitidas("rascunho").sort()).toEqual([
+      "inativo",
+      "registrada",
+      "submetido",
+    ]);
   });
 });
 
