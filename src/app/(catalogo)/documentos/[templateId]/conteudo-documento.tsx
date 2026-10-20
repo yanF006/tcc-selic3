@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2Icon, DownloadIcon, ListChecksIcon, SaveIcon } from "lucide-react";
+import { CheckCircle2Icon, DownloadIcon, ListChecksIcon, PrinterIcon, SaveIcon } from "lucide-react";
 
 import {
   salvarDocumentoAction,
@@ -215,6 +215,12 @@ export function ConteudoDocumento({
         <Button type="button" variant="outline" onClick={() => baixar("pdf")}>
           <DownloadIcon aria-hidden="true" className="size-4" />
           Baixar pdf
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/documentos/${descriptor.templateId}/imprimir?documento=${documento.id}`}>
+            <PrinterIcon aria-hidden="true" className="size-4" />
+            Imprimir
+          </Link>
         </Button>
       </div>
 

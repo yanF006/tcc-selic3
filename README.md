@@ -139,6 +139,8 @@ registro ao aluno, curso ou campus.
   filas e o ciclo completo de parecer ainda estão pendentes.
 - Registro da Ficha de Frequência já assinada pela concedente, com lançamento
   de horas e avaliações, associado ao estágio como documento consultável.
+- Página de impressão do documento preenchido, com a folha isolada em fundo
+  claro nos dois temas e sem a interface ao redor.
 - Downloads fixos do Kit e geração de arquivos **demonstrativos** em DOCX/PDF.
   O download usa o último preenchimento salvo ou submetido.
 - Exclusão de usuários remove dados pessoais do cadastro e mantém referências
@@ -169,10 +171,9 @@ registro ao aluno, curso ou campus.
 ### Próximos incrementos planejados
 
 O estado detalhado e os critérios de aceitação estão em
-`openspec/changes/archive/2026-10-11-frontend-website/tasks.md`, com 47 das 143
+`openspec/changes/archive/2026-10-11-frontend-website/tasks.md`, com 46 das 143
 tarefas ainda abertas. Permanecem, entre outros:
 
-- Preview do documento preenchido e página de impressão integrada (8.13).
 - Filas de parecer, decisões, central de notificações e histórico de envios.
 - Gestão completa de convênios, cursos, turmas, orientadores e supervisores.
 - Gerenciamento/versionamento de templates e importação de matrículas por arquivo.

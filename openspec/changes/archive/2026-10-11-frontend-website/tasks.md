@@ -92,7 +92,7 @@
 - [x] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada
 - [x] 8.11 Aplicar as permissões de preenchimento por perfil vindas do descritor — verificação: teste E2E de aluno recusado na Ficha de Frequência e no Convênio
 - [x] 8.12 Criar o registro da Ficha de Frequência já assinada, com lançamento de horas e das avaliações — verificação: teste E2E do registro associado ao estágio
-- [ ] 8.13 Montar a página de impressão do preview, com a folha isolada em tokens de impressão e sem a interface ao redor — verificação: inspeção visual nos dois temas com a cliente e impressão sem áreas escuras (o isolamento em si é o 2.5)
+- [x] 8.13 Montar a página de impressão do preview, com a folha isolada em tokens de impressão e sem a interface ao redor — verificação: inspeção visual nos dois temas com a cliente e impressão sem áreas escuras (o isolamento em si é o 2.5)
 - [x] 8.14 Implementar o download em docx e pdf devolvendo arquivo de demonstração nesta entrega — verificação: teste E2E do download concluído
 - [x] 8.15 Recusar o download quando houver campo obrigatório pendente — verificação: teste E2E da recusa com a lista de pendências
 - [x] 8.16 Implementar o limite de palavras por seção com contador visível durante a digitação — verificação: teste E2E bloqueando a gravação acima do limite
@@ -201,5 +201,5 @@
 - `e2e/documentos-preenchimento.spec.ts`: endereço ausente (8.7), cálculo do conceito global (8.17) e submissão real recusada por comprovante pendente (8.18).
 - `src/lib/services/correcoes.test.ts`: somatório de múltiplos lançamentos, limites em correções, autorização por registro, proteção dos valores automáticos, vínculo da ficha ao aluno e integridade de edição.
 - `src/lib/templates/descriptors.test.ts`: matriz de parecer dos doze documentos (9.1).
-- A submissão inicial reutilizada em 8.18 está disponível; as tarefas restantes do fluxo completo de parecer continuam sujeitas aos seus próprios critérios de aceitação. O registro da ficha assinada (8.12) foi concluído com `e2e/ficha-frequencia.spec.ts` e `src/lib/services/frequencia.test.ts`; o preview integrado (8.13) permanece pendente.
+- A submissão inicial reutilizada em 8.18 está disponível; as tarefas restantes do fluxo completo de parecer continuam sujeitas aos seus próprios critérios de aceitação. O registro da ficha assinada (8.12) foi concluído com `e2e/ficha-frequencia.spec.ts` e `src/lib/services/frequencia.test.ts`; a página de impressão do preview (8.13) foi concluída com `e2e/documento-impressao.spec.ts`, `src/components/documentos/documento-impressao.tsx` e `src/lib/templates/valores-legiveis.ts`.
 - Validação desta reconciliação: typecheck e lint sem erros/avisos de código, 419 testes unitários, build sem avisos e 88 E2E aprovados contra o build compilado (`PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`). O teste do seletor, omitido por depender de flag na suíte principal, foi aprovado separadamente em `npm run test:e2e:seletor`.
