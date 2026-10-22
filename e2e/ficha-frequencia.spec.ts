@@ -88,4 +88,41 @@ test.describe("registro da Ficha de Frequência", () => {
     await expect(fichaNaLista).toHaveCount(1);
     await expect(fichaNaLista).toContainText("Registrado");
   });
+
+  test("cabe na largura do celular sem cortar nomes nem o selo de situação", async ({ page }) => {
+    // 375 px é a largura de celular comum: nomes longos de aluno e de
+    // concedente precisam quebrar linha em vez de empurrar a lista para fora.
+    await page.setViewportSize({ width: 375, height: 667 });
+    await entrar(page, "ana.correia@ifrj.edu.br");
+    await page.goto("/coordenacao/frequencia");
+
+    const opcoes = page.getByRole("link", { name: / — / });
+
+    await expect(opcoes.first()).toBeVisible();
+
+    const caixas = await opcoes.evaluateAll((links) =>
+      links.map((link) => {
+        const elemento = link as HTMLElement;
+
+        return {
+          direita: elemento.getBoundingClientRect().right,
+          largura: elemento.clientWidth,
+          conteudo: elemento.scrollWidth,
+        };
+      }),
+    );
+
+    expect(caixas.length).toBeGreaterThan(0);
+
+    for (const caixa of caixas) {
+      expect(caixa.conteudo).toBeLessThanOrEqual(caixa.largura + 1);
+      expect(caixa.direita).toBeLessThanOrEqual(375);
+    }
+
+    const rolagemHorizontal = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+
+    expect(rolagemHorizontal).toBe(false);
+  });
 });

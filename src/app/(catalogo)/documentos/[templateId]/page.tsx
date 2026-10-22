@@ -146,9 +146,13 @@ export default async function Page({
               <ul className="flex flex-col gap-2">
                 {estagios.map((estagio) => (
                   <li key={estagio.id}>
-                    <Button asChild variant="outline" className="w-full justify-between">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-auto w-full min-w-0 items-start justify-between gap-3 py-2.5 text-left whitespace-normal"
+                    >
                       <Link href={`/documentos/${templateId}?estagio=${estagio.id}`}>
-                        <span>Estágio #{estagio.id.slice(-6)}</span>
+                        <span className="min-w-0 break-words">Estágio #{estagio.id.slice(-6)}</span>
                         <span className="text-muted-foreground text-xs">
                           {estagio.dataInicio} a {estagio.dataFim}
                         </span>

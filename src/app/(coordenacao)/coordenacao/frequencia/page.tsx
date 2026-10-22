@@ -124,10 +124,14 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/fre
             <ul className="flex flex-col gap-2">
               {linhas.map(({ estagio, aluno, convenio, ficha }) => (
                 <li key={estagio.id}>
-                  <Button asChild variant="outline" className="w-full justify-between">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-auto w-full min-w-0 items-start justify-between gap-3 py-2.5 text-left whitespace-normal"
+                  >
                     <Link href={`/coordenacao/frequencia?estagio=${estagio.id}`}>
-                      <span className="flex flex-col items-start gap-0.5 text-left">
-                        <span>
+                      <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
+                        <span className="break-words">
                           {aluno?.nome ?? `Estágio #${estagio.id.slice(-6)}`}
                           {convenio ? ` — ${convenio.instituicao}` : ""}
                         </span>
@@ -205,7 +209,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/fre
     <PaginaArea titulo={TITULO} descricao={DESCRICAO}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">Estágio #{estagio.id.slice(-6)}</Badge>
-        <span className="text-muted-foreground text-sm">
+        <span className="text-muted-foreground min-w-0 text-sm break-words">
           {[aluno?.nome, convenio?.instituicao].filter(Boolean).join(" — ")}
         </span>
       </div>
