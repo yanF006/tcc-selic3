@@ -1,7 +1,6 @@
 # SELic — Transcrição dos diagramas de classes
 
  > **Importante:** diagramas são documentação de modelagem, **não** um esquema Prisma/SQL pronto nem a fonte exclusiva das regras de negócio.
- > Ainda precisa ser revisado. Não considerar esse diagrama
 
 ## 1. Convenções
 
@@ -19,23 +18,23 @@
 
 ```yaml
 classes:
-  Usuario: [email, senha, nome, perfil]
-  Aluno: [matricula, cpf, rg, dataNascimento, endereco, telefone, email, periodo]
-  CoordenadorCurso: []
-  CoordenadorEstagio: []
+  Usuario: [email, senha, nome, papel]
+  Aluno: [matricula, cpf, rg, dataNascimento, endereco, telefone, periodo]
+  CoordenadorCurso: [cpf, curso]
+  CoordenadorEstagio: [cpf]
   Administrador: []
   Curso: [nome, cargaHoraria, observacoes]
-  Estagio: [etapa, cargaHoraria, dataInicio, dataFim, semestre, ano, nivelEnsino, cargaHorariaSemanal, horario, bolsaBeneficios, totalHorasCumpridas]
+  Estagio: [etapa, cargaHoraria, dataInicio, dataFim, semestre, ano, nivelEnsino, cargaHorariaSemanal, horario, bolsaBeneficios, totalHorasCumpridas, nomeOrientador, nomeSupervisor, nomeInstituicaoConcedente]
   Orientador: [nome, email, telefone]
   Supervisor: [nome, email, telefone]
-  InstituicaoConcedente: [nome, cnpj, ramoAtividade, tipoEscola, endereco, telefone, ramal, email, site]
+  InstituicaoConcedente: [nome, cnpj, ramoAtividade, tipoEscola, endereco, telefone, ramal, email, site, nomeResponsavelInstituicao]
   ResponsavelInstituicao: [nome, rg, cpf, cargo]
   Convenio: [dataInicio, dataTermino, status]
   Documento: [tipo, dataEmissao]
   RecursoDocumental: [titulo, categoria, etapaAplicavel, tipoAcesso, link]
 ```
 
-**Total: 13 classes.** `CoordenadorCurso`, `CoordenadorEstagio` e `Administrador` não exibem atributos próprios.
+**Total: 13 classes.** `Administrador` não exibe atributos próprios.
 
 ### 2.2 Generalização
 
@@ -95,7 +94,6 @@ class Aluno <<entity>> {
   - cpf: String
   - rg: String
   - dataNascimento: Date
-  - email: String
   - telefone: String
   - periodo: int
   + obterAluno(matricula: String): Aluno
@@ -103,8 +101,14 @@ class Aluno <<entity>> {
   + atualizarContato(email: String, telefone: String): void
 }
 
-class CoordenadorCurso <<entity>> {}
-class CoordenadorEstagio <<entity>> {}
+class CoordenadorCurso <<entity>> {
+  - cpf: String
+  - curso: String
+  + editarEstagio
+}
+class CoordenadorEstagio <<entity>> {
+  - cpf: String
+}
 class Administrador <<entity>> {}
 
 class Curso <<entity>> {
@@ -128,6 +132,9 @@ class Estagio <<entity>> {
   - horario: String
   - bolsaBeneficios: String
   - totalHorasCumpridas: int
+  - nomeOrientador: String
+  - nomeSupervisor: String 
+  - nomeInstituicaoConcedente: String
   + gravarEstagio(estagio: Estagio): void
   + registrarHoras(horas: int): void
   + consultarPorCursoPeriodo(curso: Curso, periodo: String): List
