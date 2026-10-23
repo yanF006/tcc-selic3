@@ -169,4 +169,3 @@ O sistema SHALL exibir na navegação apenas as áreas permitidas ao papel do us
 
 - **WHEN** os acessos de um papel não cabem na linha principal da navegação
 - **THEN** o sistema SHALL agrupá-los em menus por área, mantendo cada acesso permitido alcançável a partir da navegação
-

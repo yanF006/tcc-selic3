@@ -171,7 +171,7 @@ registro ao aluno, curso ou campus.
 ### Próximos incrementos planejados
 
 O estado detalhado e os critérios de aceitação estão em
-`openspec/changes/archive/2026-10-11-frontend-website/tasks.md`, com 46 das 143
+`openspec/changes/frontend-website/tasks.md`, com 46 das 143
 tarefas ainda abertas. Permanecem, entre outros:
 
 - Filas de parecer, decisões, central de notificações e histórico de envios.
