@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -122,12 +122,15 @@ describe("FormularioDocumento", () => {
 
     render(<Controlado descriptor={descriptor} />);
 
-    for (const rotulo of ["CEP", "Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
+    for (const rotulo of ["Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
       expect(screen.getByText(rotulo)).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: rotulo })).toBeRequired();
     }
 
-    const cep = screen.getByRole("textbox", { name: "CEP" });
+    const grupo = within(screen.getByRole("group", { name: "Endereço do aluno" }));
+    expect(grupo.getByRole("textbox", { name: "CEP" })).toBeRequired();
+    await pessoa.click(grupo.getByRole("button", { name: "Alterar endereço" }));
+    const cep = grupo.getByRole("textbox", { name: "CEP" });
     await pessoa.type(cep, "23940000");
     expect(cep).toHaveValue("23940-000");
   });

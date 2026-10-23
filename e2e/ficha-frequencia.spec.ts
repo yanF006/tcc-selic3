@@ -30,7 +30,12 @@ test.describe("registro da Ficha de Frequência", () => {
     await page.getByRole("link", { name: /João Pedro Lima — Laboratório/ }).click();
     await expect(page.getByRole("button", { name: "Registrar ficha assinada" })).toBeVisible();
 
-    await page.getByLabel("Endereço", { exact: true }).fill("Rua das Bandeirantes, 45");
+    await page
+      .getByRole("group", { name: "Endereço da concedente" })
+      .getByRole("button", { name: "Alterar endereço" })
+      .click();
+    await page.getByLabel("Logradouro", { exact: true }).fill("Rua das Bandeirantes");
+    await page.getByLabel("Número", { exact: true }).fill("45");
     await page
       .getByLabel("Área de atuação do estágio", { exact: true })
       .fill("Automação industrial");
@@ -66,9 +71,10 @@ test.describe("registro da Ficha de Frequência", () => {
     await page.reload();
 
     await expect(page.getByText("Documento Registrado", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Endereço", { exact: true })).toHaveValue(
-      "Rua das Bandeirantes, 45",
+    await expect(page.getByLabel("Logradouro", { exact: true })).toHaveValue(
+      "Rua das Bandeirantes",
     );
+    await expect(page.getByLabel("Número", { exact: true })).toHaveValue("45");
     await expect(page.getByLabel("Mês — linha 1", { exact: true })).toHaveValue("Maio");
     await expect(page.getByLabel("Horas trabalhadas — linha 1", { exact: true })).toHaveValue(
       "160",

@@ -38,6 +38,7 @@ export function RegistroFrequencia({
   } | null>(null);
   const [fichaAtual, setFichaAtual] = React.useState<ResumoFicha | null>(ficha);
   const [registrando, iniciar] = React.useTransition();
+  const [revisaoEndereco, setRevisaoEndereco] = React.useState(0);
 
   function aoMudar(campoId: string, valor: unknown) {
     setValores((atual) => {
@@ -81,6 +82,7 @@ export function RegistroFrequencia({
         return;
       }
 
+      setRevisaoEndereco((r) => r + 1);
       if (resultado.valores) setValores(resultado.valores);
       setFichaAtual(resultado.ficha);
       setMensagem({
@@ -135,6 +137,8 @@ export function RegistroFrequencia({
         descriptor={descriptor}
         valores={valores}
         aoMudar={aoMudar}
+        aoMudarGrupo={(novos) => setValores((atual) => ({ ...atual, ...novos }))}
+        revisaoEndereco={revisaoEndereco}
         erros={erros}
       />
 

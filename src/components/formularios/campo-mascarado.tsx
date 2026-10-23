@@ -85,7 +85,7 @@ export function CampoMascarado({
         <Input
           id={id}
           name={name ?? id}
-          value={valor}
+          value={mascara === "cep" ? aplicarMascara(valor) : valor}
           onChange={(evento) => aoMudar(aplicarMascara(evento.target.value))}
           onBlur={aoSair}
           inputMode="numeric"
@@ -113,8 +113,10 @@ export function CampoMascarado({
   );
 }
 
-interface AdaptadorCampoMascaradoProps<TFieldValues extends FieldValues>
-  extends Omit<CampoMascaradoProps, "valor" | "aoMudar" | "aoSair" | "name"> {
+interface AdaptadorCampoMascaradoProps<TFieldValues extends FieldValues> extends Omit<
+  CampoMascaradoProps,
+  "valor" | "aoMudar" | "aoSair" | "name"
+> {
   control: Control<TFieldValues>;
   /** Nome do campo no formulário do React Hook Form. */
   name: FieldPath<TFieldValues>;

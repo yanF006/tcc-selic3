@@ -1,5 +1,6 @@
 import type { AssinaturaTemplate, Papel, TipoParecer } from "@/lib/domain/types";
 import type { NomeMascara } from "@/lib/mask";
+import { comGruposEndereco, type GrupoEndereco } from "./grupos-endereco";
 
 /**
  * Descritores dos documentos (D5). Os formulários são gerados a partir daqui:
@@ -132,6 +133,7 @@ export interface SecaoDescriptor {
 }
 
 export interface DescriptorDocumento {
+  gruposEndereco?: GrupoEndereco[];
   templateId: string;
   titulo: string;
   descricao: string;
@@ -468,7 +470,7 @@ const PESAGEM_FREQUENCIA = CRITERIOS_FICHA_FREQUENCIA.map((criterio, indice) => 
   ajuda: "Conceito de 0,0 a 10,0. Ver faixas de avaliação.",
 }));
 
-export const DESCRITORES: DescriptorDocumento[] = [
+export const DESCRITORES: DescriptorDocumento[] = comGruposEndereco([
   {
     templateId: "tpl-lei-estagio",
     titulo: "Lei de Estágio",
@@ -2260,7 +2262,7 @@ export const DESCRITORES: DescriptorDocumento[] = [
       },
     ],
   },
-];
+]);
 
 const POR_TEMPLATE = new Map(DESCRITORES.map((descriptor) => [descriptor.templateId, descriptor]));
 

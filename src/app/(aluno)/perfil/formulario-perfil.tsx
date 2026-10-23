@@ -26,7 +26,7 @@ import {
   esquemaCelular,
 } from "@/lib/domain/schemas";
 import { mensagemDeErro } from "@/lib/domain/validar-campo";
-import { CEP_NAO_ENCONTRADO, buscarEnderecoPorCep } from "@/lib/services/endereco";
+import { useConsultaEndereco } from "@/hooks/use-consulta-endereco";
 import type { Curso, DadosPessoais, Periodo, Turma, Usuario } from "@/lib/domain/types";
 
 export function FormularioPerfil({
@@ -67,6 +67,17 @@ export function FormularioPerfil({
   const [turmaId, setTurmaId] = React.useState(dadosIniciais?.turmaId ?? "");
   const [periodoId, setPeriodoId] = React.useState(dadosIniciais?.periodoId ?? "");
 
+  const consultaEndereco = useConsultaEndereco({
+    valores: { cep, logradouro, numero, complemento, bairro, cidade, estado: uf },
+    aoMudar: (valores) => {
+      if (valores.cep !== undefined) setCep(valores.cep);
+      if (valores.logradouro !== undefined) setLogradouro(valores.logradouro);
+      if (valores.bairro !== undefined) setBairro(valores.bairro);
+      if (valores.cidade !== undefined) setCidade(valores.cidade);
+      if (valores.estado !== undefined) setUf(valores.estado);
+    },
+  });
+
   const turmasDoCurso = turmas.filter((turma) => turma.cursoId === cursoId);
 
   function erroDoCampo(campo: string): string | null {
@@ -88,24 +99,6 @@ export function FormularioPerfil({
         delete proximo[campo];
       }
       return proximo;
-    });
-  }
-
-  function buscarEndereco() {
-    setErro(null);
-    setSucesso(null);
-
-    iniciar(async () => {
-      const encontrado = await buscarEnderecoPorCep(cep);
-      if (!encontrado) {
-        setErro({ campo: "cep", texto: CEP_NAO_ENCONTRADO });
-        return;
-      }
-      setLogradouro(encontrado.logradouro);
-      setBairro(encontrado.bairro);
-      setCidade(encontrado.cidade);
-      setUf(encontrado.estado);
-      setSucesso("Endereço preenchido pelo CEP.");
     });
   }
 
@@ -143,6 +136,7 @@ export function FormularioPerfil({
         return;
       }
 
+      consultaEndereco.invalidar();
       setSucesso(resultado.mensagem);
     });
   }
@@ -260,15 +254,14 @@ export function FormularioPerfil({
               obrigatorio
               mascara="cep"
               valor={cep}
-              aoMudar={setCep}
+              aoMudar={(valor) => consultaEndereco.mudar("cep", valor)}
               aoSair={() => conferirAoSair("cep", esquemaCep, cep)}
               erro={erroDoCampo("cep")}
               acao={
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={buscarEndereco}
-                  disabled={pendente}
+                  onClick={() => void consultaEndereco.consultar()}
                 >
                   Buscar
                 </Button>
@@ -276,12 +269,15 @@ export function FormularioPerfil({
             />
           </div>
 
+          <p role="status" aria-atomic="true" className="text-muted-foreground text-sm">
+            {consultaEndereco.mensagem}
+          </p>
           <CampoTexto
             id="perfil-logradouro"
             rotulo="Endereço"
             obrigatorio
             valor={logradouro}
-            aoMudar={setLogradouro}
+            aoMudar={(valor) => consultaEndereco.mudar("logradouro", valor)}
             erro={erroDoCampo("endereco.logradouro")}
           />
 
@@ -309,7 +305,7 @@ export function FormularioPerfil({
               rotulo="Bairro"
               obrigatorio
               valor={bairro}
-              aoMudar={setBairro}
+              aoMudar={(valor) => consultaEndereco.mudar("bairro", valor)}
               erro={erroDoCampo("endereco.bairro")}
             />
             <CampoTexto
@@ -317,7 +313,7 @@ export function FormularioPerfil({
               rotulo="Cidade"
               obrigatorio
               valor={cidade}
-              aoMudar={setCidade}
+              aoMudar={(valor) => consultaEndereco.mudar("cidade", valor)}
               erro={erroDoCampo("endereco.cidade")}
             />
             <CampoTexto
@@ -326,7 +322,7 @@ export function FormularioPerfil({
               obrigatorio
               maxLength={2}
               valor={uf}
-              aoMudar={(valor) => setUf(valor.toUpperCase().slice(0, 2))}
+              aoMudar={(valor) => consultaEndereco.mudar("estado", valor.toUpperCase().slice(0, 2))}
               erro={erroDoCampo("endereco.estado")}
             />
           </div>

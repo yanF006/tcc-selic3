@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./suporte/cep";
 
 /**
  * Cadastro público em duas etapas (5.2 a 5.5, 14.1): confirmação de senha,

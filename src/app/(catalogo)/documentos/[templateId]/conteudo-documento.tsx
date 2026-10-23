@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2Icon, DownloadIcon, ListChecksIcon, PrinterIcon, SaveIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  DownloadIcon,
+  ListChecksIcon,
+  PrinterIcon,
+  SaveIcon,
+} from "lucide-react";
 
 import {
   salvarDocumentoAction,
@@ -46,6 +52,7 @@ export function ConteudoDocumento({
   } | null>(null);
   const [salvando, iniciar] = React.useTransition();
   const [situacao, setSituacao] = React.useState(documento.situacao);
+  const [revisaoEndereco, setRevisaoEndereco] = React.useState(0);
   const editavel = situacao === "rascunho" && !consultaApenas;
 
   function aoMudar(campoId: string, valor: unknown) {
@@ -90,6 +97,7 @@ export function ConteudoDocumento({
         return;
       }
 
+      setRevisaoEndereco((r) => r + 1);
       if (resultado.valores) setValores(resultado.valores);
       setMensagem({ tipo: "sucesso", texto: "Rascunho salvo." });
     });
@@ -144,6 +152,7 @@ export function ConteudoDocumento({
         setMensagem({ tipo: "erro", texto: resultado.erro ?? "Não foi possível submeter." });
         return;
       }
+      setRevisaoEndereco((r) => r + 1);
       if (resultado.valores) setValores(resultado.valores);
       setSituacao("submetido");
       setMensagem({ tipo: "sucesso", texto: "Documento submetido a parecer." });
@@ -193,6 +202,8 @@ export function ConteudoDocumento({
         descriptor={descriptor}
         valores={valores}
         aoMudar={aoMudar}
+        aoMudarGrupo={(novos) => setValores((atual) => ({ ...atual, ...novos }))}
+        revisaoEndereco={revisaoEndereco}
         erros={erros}
         desabilitado={!editavel}
       />

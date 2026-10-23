@@ -37,7 +37,7 @@ import {
   esquemaCelular,
 } from "@/lib/domain/schemas";
 import { mensagemDeErro } from "@/lib/domain/validar-campo";
-import { CEP_NAO_ENCONTRADO, buscarEnderecoPorCep } from "@/lib/services/endereco";
+import { useConsultaEndereco } from "@/hooks/use-consulta-endereco";
 import type { Curso, Periodo, Turma } from "@/lib/domain/types";
 
 /**
@@ -92,6 +92,17 @@ export function FormularioCadastro({
   const [cursoId, setCursoId] = React.useState("");
   const [turmaId, setTurmaId] = React.useState("");
   const [periodoId, setPeriodoId] = React.useState("");
+
+  const consultaEndereco = useConsultaEndereco({
+    valores: { cep, logradouro, numero, complemento, bairro, cidade, estado: uf },
+    aoMudar: (valores) => {
+      if (valores.cep !== undefined) setCep(valores.cep);
+      if (valores.logradouro !== undefined) setLogradouro(valores.logradouro);
+      if (valores.bairro !== undefined) setBairro(valores.bairro);
+      if (valores.cidade !== undefined) setCidade(valores.cidade);
+      if (valores.estado !== undefined) setUf(valores.estado);
+    },
+  });
 
   const turmasDoCurso = turmas.filter((turma) => turma.cursoId === cursoId);
 
@@ -155,31 +166,6 @@ export function FormularioCadastro({
     setPeriodoId("");
   }
 
-  /**
-   * Consulta o endereço pelo CEP (6.4). O CEP encontrado preenche logradouro,
-   * bairro, cidade e estado, que continuam editáveis; o CEP não encontrado deixa
-   * os campos como estão, para o aluno preencher à mão.
-   */
-  function buscarEndereco() {
-    setErro(null);
-
-    iniciar(async () => {
-      const encontrado = await buscarEnderecoPorCep(cep);
-
-      if (!encontrado) {
-        setErro({ campo: "cep", texto: CEP_NAO_ENCONTRADO });
-
-        return;
-      }
-
-      setLogradouro(encontrado.logradouro);
-      setBairro(encontrado.bairro);
-      setCidade(encontrado.cidade);
-      setUf(encontrado.estado);
-      setAviso("Endereço preenchido pelo CEP. Você pode corrigir qualquer campo.");
-    });
-  }
-
   function enviarSegundaEtapa(evento: React.FormEvent) {
     evento.preventDefault();
     setErro(null);
@@ -214,6 +200,7 @@ export function FormularioCadastro({
         return;
       }
 
+      consultaEndereco.invalidar();
       setConcluido({ situacao: resultado.situacao });
     });
   }
@@ -413,15 +400,14 @@ export function FormularioCadastro({
                 mascara="cep"
                 autoComplete="postal-code"
                 valor={cep}
-                aoMudar={setCep}
+                aoMudar={(valor) => consultaEndereco.mudar("cep", valor)}
                 aoSair={() => conferirAoSair("cep", esquemaCep, cep)}
                 erro={erroDoCampo("cep")}
                 acao={
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={buscarEndereco}
-                    disabled={pendente}
+                    onClick={() => void consultaEndereco.consultar()}
                   >
                     Buscar
                   </Button>
@@ -429,13 +415,16 @@ export function FormularioCadastro({
               />
             </div>
 
+            <p role="status" aria-atomic="true" className="text-muted-foreground text-sm">
+              {consultaEndereco.mensagem}
+            </p>
             <CampoTexto
               id="cadastro-logradouro"
               rotulo="Endereço"
               obrigatorio
               autoComplete="street-address"
               valor={logradouro}
-              aoMudar={setLogradouro}
+              aoMudar={(valor) => consultaEndereco.mudar("logradouro", valor)}
               erro={erroDoCampo("endereco")}
             />
 
@@ -444,7 +433,6 @@ export function FormularioCadastro({
                 id="cadastro-numero"
                 rotulo="Número"
                 obrigatorio
-                inputMode="numeric"
                 valor={numero}
                 aoMudar={setNumero}
               />
@@ -464,14 +452,14 @@ export function FormularioCadastro({
                 rotulo="Bairro"
                 obrigatorio
                 valor={bairro}
-                aoMudar={setBairro}
+                aoMudar={(valor) => consultaEndereco.mudar("bairro", valor)}
               />
               <CampoTexto
                 id="cadastro-cidade"
                 rotulo="Cidade"
                 obrigatorio
                 valor={cidade}
-                aoMudar={setCidade}
+                aoMudar={(valor) => consultaEndereco.mudar("cidade", valor)}
               />
               <CampoTexto
                 id="cadastro-uf"
@@ -479,7 +467,9 @@ export function FormularioCadastro({
                 obrigatorio
                 maxLength={2}
                 valor={uf}
-                aoMudar={(valor) => setUf(valor.toUpperCase().slice(0, 2))}
+                aoMudar={(valor) =>
+                  consultaEndereco.mudar("estado", valor.toUpperCase().slice(0, 2))
+                }
               />
             </div>
 

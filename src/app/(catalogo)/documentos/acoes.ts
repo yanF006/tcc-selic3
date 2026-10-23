@@ -93,7 +93,7 @@ export async function salvarDocumentoAction(
       documento.templateId,
       aluno,
       documento.estagioId,
-      valores,
+      { ...documento.valores, ...valores },
     );
     const problemas = validarValores(documento.templateId, preparados);
 

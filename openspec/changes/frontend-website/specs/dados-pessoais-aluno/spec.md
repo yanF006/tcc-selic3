@@ -67,17 +67,22 @@ O sistema SHALL validar o formato do e-mail e SHALL validar telefone e celular c
 
 ### Requirement: Busca de endereço por CEP
 
-O sistema SHALL buscar logradouro, bairro, cidade e estado a partir do CEP informado, SHALL preencher esses campos automaticamente e SHALL manter os campos preenchidos editáveis pelo aluno.
+O sistema SHALL consultar o ViaCEP automaticamente quando o aluno informar um CEP válido de oito dígitos nos fluxos de entrada de endereço e SHALL permitir consulta explícita por botão. O sistema SHALL preencher logradouro, bairro, cidade e estado disponíveis e SHALL mantê-los editáveis, sem substituir número, complemento ou campos editados durante a consulta. Montagem e hidratação do perfil SHALL NOT iniciar consulta.
 
 #### Scenario: CEP encontrado
 
-- **WHEN** o aluno informa um CEP existente e confirma a consulta
-- **THEN** o sistema SHALL preencher logradouro, bairro, cidade e estado com os dados do CEP
+- **WHEN** o aluno informa um CEP válido existente durante a entrada de endereço ou solicita explicitamente sua consulta
+- **THEN** o sistema SHALL preencher os dados disponíveis de logradouro, bairro, cidade e estado, preservando campos não fornecidos e correções realizadas durante a espera
 
 #### Scenario: CEP não encontrado
 
 - **WHEN** o aluno informa um CEP inexistente
-- **THEN** o sistema SHALL sinalizar que o CEP não foi encontrado e manter os campos de endereço em branco para preenchimento manual
+- **THEN** o sistema SHALL sinalizar que o CEP não foi encontrado e preservar os campos já preenchidos para edição manual
+
+#### Scenario: Serviço externo indisponível
+
+- **WHEN** a consulta falha, excede o limite de espera ou retorna resposta inutilizável
+- **THEN** o sistema SHALL informar indisponibilidade, preservar os dados e permitir salvar o endereço manual quando válido
 
 #### Scenario: Correção do endereço preenchido
 
@@ -128,9 +133,9 @@ O sistema SHALL exibir a matrícula do aluno em modo somente leitura na tela de 
 
 ### Requirement: Uso dos dados para preenchimento automático
 
-O sistema SHALL utilizar os dados cadastrados do aluno para preencher automaticamente, em modo somente leitura, os campos correspondentes dos documentos que ele preencher.
+O sistema SHALL utilizar os dados cadastrados do aluno para preencher inicialmente os campos correspondentes dos documentos. A identificação SHALL permanecer somente para leitura, exceto os grupos de endereço, que SHALL permitir correção manual pelo usuário autorizado. Endereços já salvos no documento SHALL prevalecer sobre o cadastro e SHALL NOT ser substituídos na reabertura. A carga inicial SHALL NOT consultar o ViaCEP.
 
 #### Scenario: Documento com dados do aluno
 
 - **WHEN** o aluno abre o preenchimento de um documento que possui campos de identificação do estagiário
-- **THEN** o sistema SHALL preencher esses campos com os dados cadastrados e SHALL mantê-los somente para leitura
+- **THEN** o sistema SHALL preencher a identificação com os dados cadastrados e SHALL mantê-la somente para leitura, permitindo a edição autorizada dos endereços sem ampliar as permissões dos demais campos

@@ -120,13 +120,13 @@ registro ao aluno, curso ou campus.
 
 - Login, cadastro público em duas etapas, fila de autorização, recuperação e
   troca de senha simuladas.
-- Perfil com máscaras, validação e matrícula imutável; busca de CEP simulada.
+- Perfil com máscaras, validação e matrícula imutável; consulta real de CEP pelo ViaCEP.
 - Gestão administrativa de usuários e lançamento/listagem de matrículas.
 - Cadastro, histórico, detalhes, edição, seleção de documentos e solicitação
   de exclusão de estágio. A exclusão solicitada aguarda autorização superior.
 - Gestão de estágios com recorte por curso e autoria da edição registrada.
 - Catálogo dos 12 documentos, formulários dirigidos por descritor, rascunhos,
-  identificação automática somente leitura e aviso de dados ausentes.
+  identificação automática somente leitura, endereços corrigíveis e aviso de dados ausentes.
 - Limites de palavras, escalas de avaliação e conceito global calculado.
 - Lançamentos de horas: até 6 h por dia e 30 h por semana, com opção de descontar
   1 h de almoço. Múltiplos lançamentos por data respeitam a soma diária.
@@ -146,6 +146,47 @@ registro ao aluno, curso ou campus.
 - Exclusão de usuários remove dados pessoais do cadastro e mantém referências
   necessárias aos documentos, estágios e pareceres históricos.
 
+## Consulta de endereço por CEP
+
+Cadastro, perfil e os sete grupos de endereço dos documentos usam
+`GET /api/enderecos/cep?cep=<oito-digitos>`. O servidor consulta o ViaCEP com
+timeout de cinco segundos; o cliente limita a espera a sete segundos. A busca
+não usa chave de API, cache ou tentativas automáticas.
+
+No cadastro e no perfil, informar um CEP válido inicia a consulta. Nos documentos,
+o endereço do aluno vem primeiro do cadastro hidratado pelo banco; abrir o
+formulário não consulta o ViaCEP. Use **Alterar endereço** e mude o CEP, ou
+**Consultar CEP** para consultar o valor atual. Os endereços da concedente ficam
+independentes; na ausência de fonte cadastrada vinculada, usam o preenchimento
+salvo ou começam vazios.
+
+Logradouro, bairro, cidade e UF continuam editáveis. Número e complemento são
+sempre manuais. Falha externa, CEP inexistente ou resposta parcial preservam os
+valores existentes e permitem salvar um preenchimento manual válido. Respostas
+atrasadas não substituem um CEP mais recente nem campos editados durante a busca.
+Correções no documento não alteram o perfil e prevalecem ao salvar/reabrir.
+
+Registros antigos com endereço em texto livre mantêm esse texto até que
+logradouro e número sejam reconstruídos. Transcreva manualmente número e
+complemento: o sistema não tenta separar texto legado por vírgulas.
+
+A consulta real não altera a persistência híbrida: endereços do cadastro usam
+o JSON de dados pessoais do usuário; documentos continuam em memória e não
+ganham durabilidade após reinício do servidor. Publique cliente, rota e adaptador
+juntos. Em rollback, preserve os valores dos documentos, pois a versão anterior
+pode reaplicar o endereço do perfil sobre rascunhos corrigidos.
+
+Os testes do adaptador/rota usam rede controlada; os testes de integração
+cobrem os nove grupos (cadastro, perfil, liberação/aluno e local, convênio,
+termo, ficha, relatório/aluno e instituição). `e2e/suporte/cep.ts` intercepta
+as consultas de navegador e `e2e/consulta-cep.spec.ts` cobre salvar/reabrir,
+falhas e respostas atrasadas. Para executar os E2E com o banco de produção
+desligado e sem depender do ViaCEP, use um servidor recém-iniciado:
+
+```bash
+DATABASE_URL= npm run test:e2e
+```
+
 ## O que é simulado e o que ainda falta
 
 ### Simulação prevista nesta entrega
@@ -161,8 +202,8 @@ registro ao aluno, curso ou campus.
 - **Autenticação:** o cookie HTTP-only contém o identificador do usuário. As
   credenciais ficam em memória como sal e digest SHA-256; Better Auth ainda não
   está integrado.
-- **CEP e matrícula:** dados de demonstração, sem consulta oficial ao SIGAA ou
-  a um serviço externo de endereço. A importação por arquivo ainda não tem UI.
+- **Matrícula:** sem consulta oficial ao SIGAA. A consulta de CEP já usa o
+  ViaCEP real; a importação de matrículas por arquivo ainda não tem UI.
 - **E-mail:** recuperação mostra um link de demonstração. Não há envio real,
   Nodemailer ou integração com assinantes externos.
 - **Documentos:** DOCX/PDF demonstrativos contêm valores do preenchimento, mas

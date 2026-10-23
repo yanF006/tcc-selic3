@@ -27,6 +27,13 @@ import {
 } from "@/lib/templates/descriptors";
 
 import { PAPEL_COM_TODAS_AS_PERMISSOES } from "@/lib/auth/permissions";
+import {
+  enderecoDoGrupo,
+  estruturaSuficiente,
+  formatarEndereco,
+  idsDoGrupo,
+} from "@/lib/templates/grupos-endereco";
+import { usuarioPorId } from "./administracao";
 
 import { cursoPorId, turmaPorId, periodoPorId, pessoaPorId, convenioPorId } from "./catalogo";
 import {
@@ -289,9 +296,7 @@ export async function criarRascunho(
   }
 
   const estagio = estagioId ? await exigirAcessoEstagio(aluno, estagioId) : null;
-  const titular = estagio
-    ? obterEstado().usuarios.find((usuario) => usuario.id === estagio.alunoId)
-    : aluno;
+  const titular = await usuarioPorId(estagio?.alunoId ?? aluno.id);
   if (!titular) throw new Error("Cadastro do aluno não encontrado.");
 
   const existente = obterEstado().documentos.find(
@@ -415,7 +420,7 @@ export async function valoresAutomaticos(
     });
   }
 
-  return Object.fromEntries(
+  const automaticos = Object.fromEntries(
     camposDoTemplate(templateId)
       .filter(
         (campo) =>
@@ -428,6 +433,17 @@ export async function valoresAutomaticos(
         campo.origem === "literal" ? campo.ajuda : (base[campo.id] ?? ""),
       ]),
   );
+  for (const grupo of descritorPorTemplate(templateId)?.gruposEndereco ?? []) {
+    for (const id of idsDoGrupo(grupo)) delete automaticos[id];
+    if (grupo.origemInicial !== "aluno") continue;
+    for (const [chave, id] of Object.entries(grupo.campos)) {
+      automaticos[id] = endereco?.[chave as keyof typeof endereco] ?? "";
+    }
+    automaticos[grupo.composto] = estruturaSuficiente(endereco ?? {})
+      ? formatarEndereco(endereco!)
+      : "";
+  }
+  return automaticos;
 }
 
 /** Valores de origem nunca vêm do cliente; conceitos derivados também são recalculados. */
@@ -437,7 +453,21 @@ export async function valoresDoPreenchimento(
   estagioId: string | undefined,
   valores: Record<string, unknown>,
 ) {
-  const resultado = { ...valores, ...(await valoresAutomaticos(templateId, aluno, estagioId)) };
+  const automaticos = await valoresAutomaticos(templateId, aluno, estagioId);
+  const grupos = descritorPorTemplate(templateId)?.gruposEndereco ?? [];
+  const enderecos = new Set(grupos.flatMap(idsDoGrupo));
+  const protegidos = Object.fromEntries(
+    Object.entries(automaticos).filter(([id]) => !enderecos.has(id)),
+  );
+  const resultado = { ...valores, ...protegidos };
+  for (const grupo of grupos) {
+    const salvo = idsDoGrupo(grupo).some((id) => Object.hasOwn(valores, id));
+    if (!salvo) {
+      for (const id of idsDoGrupo(grupo)) resultado[id] = automaticos[id] ?? "";
+    }
+    const endereco = enderecoDoGrupo(grupo, resultado);
+    if (estruturaSuficiente(endereco)) resultado[grupo.composto] = formatarEndereco(endereco);
+  }
   if (templateId === "tpl-ficha-frequencia") {
     const notas = camposDoTemplate(templateId)
       .filter((campo) => /^criterio_\d+$/.test(campo.id))
@@ -463,7 +493,7 @@ export async function salvarRascunho(
     throw new Error("Somente rascunhos podem ser editados.");
   }
 
-  const aluno = obterEstado().usuarios.find((usuario) => usuario.id === documento.alunoId);
+  const aluno = await usuarioPorId(documento.alunoId);
   if (!aluno) throw new Error("Cadastro do aluno não encontrado.");
   if (aluno.situacao !== "ativo")
     throw new Error("Documento de cadastro inativo: apenas consulta.");

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./suporte/cep";
 
 /**
  * Preenchimento dos documentos dirigido por descritor (D5, 8.6–8.15). Os testes
@@ -25,14 +26,17 @@ async function entrar(page: Page, email: string) {
 test.describe("preenchimento de documentos", () => {
   test("não duplica os rótulos dos campos com máscara na liberação", async ({ page }) => {
     await entrar(page, "maria.souza@aluno.ifrj.edu.br");
-    await page.goto("/documentos/tpl-formulario-liberacao?estagio=est-maria-tecnoweb");
+    await page.goto("/documentos/tpl-formulario-liberacao?estagio=est-maria-hospital");
 
-    for (const rotulo of ["CEP", "Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
+    for (const rotulo of ["Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
       await expect(page.getByText(rotulo, { exact: true })).toHaveCount(1);
       await expect(page.getByLabel(rotulo, { exact: true })).toBeEditable();
     }
 
-    const cep = page.getByLabel("CEP", { exact: true });
+    const grupo = page.getByRole("group", { name: "Endereço do aluno", exact: true });
+    await expect(grupo.getByLabel("CEP", { exact: true })).toHaveCount(1);
+    await grupo.getByRole("button", { name: "Alterar endereço" }).click();
+    const cep = grupo.getByLabel("CEP", { exact: true });
     await cep.fill("23940000");
     await expect(cep).toHaveValue("23940-000");
   });
@@ -112,8 +116,8 @@ test.describe("preenchimento de documentos", () => {
   test("recusa o download enquanto houver pendência e aponta os campos (8.15)", async ({
     page,
   }) => {
-    await entrar(page, "maria.souza@aluno.ifrj.edu.br");
-    await page.goto("/documentos/tpl-formulario-liberacao?estagio=est-maria-hospital");
+    await entrar(page, "luiza.santos@aluno.ifrj.edu.br");
+    await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
 
     await page.getByRole("button", { name: "Baixar docx" }).click();
 
@@ -164,17 +168,17 @@ test.describe("preenchimento de documentos", () => {
     expect(download.suggestedFilename()).toContain("Requerimento");
   });
 
-  test("orienta completar o endereço ausente e bloqueia a geração (8.7)", async ({ page }) => {
+  test("permite completar o endereço ausente no documento e bloqueia geração incompleta (8.7)", async ({
+    page,
+  }) => {
     await entrar(page, "luiza.santos@aluno.ifrj.edu.br");
     await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
-    await expect(page.locator("#endereco-mensagem")).toContainText(
-      "este dado não consta no seu cadastro",
-    );
-    await expect(
-      page.locator("#endereco-mensagem").getByRole("link", { name: "Complete o cadastro" }),
-    ).toHaveAttribute("href", "/perfil");
+    const grupo = page.getByRole("group", { name: "Endereço do aluno", exact: true });
+    await grupo.getByRole("button", { name: "Alterar endereço" }).click();
+    await expect(grupo.getByLabel("Logradouro")).toBeEditable();
+    await expect(grupo.getByLabel("Logradouro")).toHaveValue("");
     await page.getByRole("button", { name: "Baixar docx" }).click();
-    await expect(page.locator("#endereco-mensagem")).toContainText("Endereço é obrigatório");
+    await expect(grupo.getByText("Endereço é obrigatório.")).toBeVisible();
   });
 
   test("mostra a faixa e recalcula o conceito global das avaliações (8.17)", async ({ page }) => {

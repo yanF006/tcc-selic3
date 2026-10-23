@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./suporte/cep";
 
 /**
  * Fila de cadastros pendentes (5.6) e bloqueio do cadastro pendente nas áreas

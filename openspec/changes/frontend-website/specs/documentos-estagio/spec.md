@@ -48,7 +48,7 @@ O sistema SHALL definir os campos de preenchimento de cada documento a partir da
 
 ### Requirement: Preenchimento automático com dados do aluno
 
-O sistema SHALL preencher automaticamente, em modo somente leitura, os campos dos documentos que correspondem aos dados cadastrados do aluno e do estágio selecionado.
+O sistema SHALL preencher inicialmente os campos dos documentos com os dados cadastrados do aluno e do estágio selecionado, mantendo os campos de identificação somente para leitura. Os grupos de endereço SHALL permitir correção manual no fluxo autorizado de edição, inclusive quando preenchidos pelo cadastro, e seus valores salvos SHALL prevalecer na reabertura. Abrir o formulário SHALL NOT consultar o ViaCEP; durante a edição de endereço, somente alterar/informar CEP válido ou solicitar explicitamente sua consulta SHALL iniciar a busca. Editar apenas outro campo SHALL NOT consultar.
 
 #### Scenario: Campos de identificação preenchidos
 
@@ -62,8 +62,18 @@ O sistema SHALL preencher automaticamente, em modo somente leitura, os campos do
 
 #### Scenario: Dado cadastrado ausente
 
-- **WHEN** um campo de preenchimento automático corresponde a um dado do aluno que não está preenchido no cadastro
+- **WHEN** um campo de identificação protegido corresponde a um dado do aluno que não está preenchido no cadastro
 - **THEN** o sistema SHALL sinalizar a pendência e orientar o aluno a completar o cadastro antes de gerar o documento
+
+#### Scenario: Endereço cadastrado ausente ou incompleto
+
+- **WHEN** um grupo de endereço não possui todos os dados cadastrados necessários
+- **THEN** o sistema SHALL exibir os dados disponíveis e permitir completar o endereço na edição autorizada do documento, sem consulta externa na carga inicial
+
+#### Scenario: Endereço corrigido e salvo
+
+- **WHEN** o usuário autorizado corrige um endereço do documento, salva e reabre o registro
+- **THEN** o sistema SHALL preservar os valores finais informados, sem reaplicar o endereço original do cadastro nem consultar o ViaCEP
 
 ### Requirement: Gravação e consulta de documento preenchido
 

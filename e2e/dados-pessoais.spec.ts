@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./suporte/cep";
 
 /**
  * Dados pessoais do aluno (6.1 a 6.3): máscaras de entrada, validação de CPF com
@@ -139,7 +139,7 @@ test.describe("máscaras e validação dos dados pessoais", () => {
     await page.getByLabel("CEP", { exact: true }).fill("99999-999");
     await page.getByRole("button", { name: "Buscar" }).click();
 
-    await expect(mensagem(page, "cadastro-cep-mensagem")).toHaveText(
+    await expect(page.getByRole("status")).toHaveText(
       "CEP não encontrado. Confira o número ou preencha o endereço.",
     );
 

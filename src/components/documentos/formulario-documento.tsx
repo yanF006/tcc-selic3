@@ -7,6 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { classificacaoDoCampo, type CampoDescriptor } from "@/lib/templates/descriptors";
 import type { DescriptorDocumento } from "@/lib/templates/descriptors";
+import { idsDoGrupo } from "@/lib/templates/grupos-endereco";
+import { GrupoEnderecoFormulario } from "./grupo-endereco-formulario";
 
 /**
  * Formulário dirigido pelo descritor (8.5). Recebe os valores como estado
@@ -20,6 +22,8 @@ export interface FormularioDocumentoProps {
   descriptor: DescriptorDocumento;
   valores: Record<string, unknown>;
   aoMudar: (campoId: string, valor: unknown) => void;
+  aoMudarGrupo?: (alteracoes: Record<string, unknown>) => void;
+  revisaoEndereco?: number;
   /** Erros de validação por campo, exibidos sob o respectivo controle. */
   erros?: Record<string, string>;
   desabilitado?: boolean;
@@ -33,10 +37,15 @@ export function FormularioDocumento({
   descriptor,
   valores,
   aoMudar,
+  aoMudarGrupo,
+  revisaoEndereco = 0,
   erros = {},
   desabilitado = false,
 }: FormularioDocumentoProps) {
-  const automaticos = descriptor.auto ?? [];
+  const grupos = descriptor.gruposEndereco ?? [];
+  const idsEndereco = new Set(grupos.flatMap(idsDoGrupo));
+  const automaticos = (descriptor.auto ?? []).filter((campo) => !idsEndereco.has(campo.id));
+  const todos = [...(descriptor.auto ?? []), ...descriptor.secoes.flatMap((s) => s.campos)];
 
   return (
     <div className="flex flex-col gap-8">
@@ -64,18 +73,37 @@ export function FormularioDocumento({
         </SecaoFormulario>
       ) : null}
 
+      {grupos.map((grupo) => (
+        <GrupoEnderecoFormulario
+          key={`${descriptor.templateId}-${grupo.id}-${revisaoEndereco}`}
+          grupo={grupo}
+          campos={todos}
+          valores={valores}
+          erros={erros}
+          desabilitado={desabilitado}
+          aoMudar={
+            aoMudarGrupo ??
+            ((novos) => {
+              for (const [id, valor] of Object.entries(novos)) aoMudar(id, valor);
+            })
+          }
+        />
+      ))}
+
       {descriptor.secoes.map((secao) => (
         <SecaoFormulario key={secao.id} titulo={secao.titulo} descricao={secao.descricao}>
-          {secao.campos.map((campo) => (
-            <TrechoDaSecao
-              key={campo.id}
-              campo={campo}
-              valor={valores[campo.id]}
-              aoMudar={aoMudar}
-              erro={erros[campo.id]}
-              desabilitado={desabilitado}
-            />
-          ))}
+          {secao.campos
+            .filter((campo) => !idsEndereco.has(campo.id))
+            .map((campo) => (
+              <TrechoDaSecao
+                key={campo.id}
+                campo={campo}
+                valor={valores[campo.id]}
+                aoMudar={aoMudar}
+                erro={erros[campo.id]}
+                desabilitado={desabilitado}
+              />
+            ))}
         </SecaoFormulario>
       ))}
     </div>
