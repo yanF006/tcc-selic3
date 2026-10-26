@@ -28,9 +28,18 @@ interface Props {
   cursos: { id: string; nome: string }[];
   turmas: { id: string; nome: string }[];
   periodos: { id: string; rotulo: string }[];
+  gatilhoRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function PerfilUsuario({ usuario, aberto, aoFechar, cursos, turmas, periodos }: Props) {
+export function PerfilUsuario({
+  usuario,
+  aberto,
+  aoFechar,
+  cursos,
+  turmas,
+  periodos,
+  gatilhoRef,
+}: Props) {
   const nome = (lista: { id: string; nome: string }[], id?: string) =>
     lista.find((item) => item.id === id)?.nome ?? "—";
   const rotulo = (lista: { id: string; rotulo: string }[], id?: string) =>
@@ -38,7 +47,14 @@ export function PerfilUsuario({ usuario, aberto, aoFechar, cursos, turmas, perio
 
   return (
     <Dialog open={aberto} onOpenChange={(estado) => (estado ? null : aoFechar())}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent
+        className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl"
+        onCloseAutoFocus={(evento) => {
+          if (!gatilhoRef?.current) return;
+          evento.preventDefault();
+          gatilhoRef.current.focus();
+        }}
+      >
         {usuario ? (
           <>
             <DialogHeader>

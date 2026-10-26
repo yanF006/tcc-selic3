@@ -6,6 +6,8 @@
  * de `src/lib/services`, que expõem estes tipos.
  */
 
+import type { DescriptorDocumento } from "@/lib/templates/descriptors";
+
 export type Papel = "aluno" | "coordenador_estagio" | "coordenador_curso" | "administrador";
 
 export const PAPEIS: readonly Papel[] = [
@@ -74,6 +76,7 @@ export interface Turma {
   id: string;
   nome: string;
   cursoId: string;
+  periodoIds?: string[];
   situacao: SituacaoUsuario;
 }
 
@@ -117,7 +120,7 @@ export interface Pessoa {
   };
 }
 
-export type SituacaoEstagio = "em_andamento" | "concluido";
+export type SituacaoEstagio = "em_preparacao" | "em_andamento" | "concluido";
 
 export interface Estagio {
   id: string;
@@ -130,6 +133,16 @@ export interface Estagio {
   situacao: SituacaoEstagio;
   /** Templates que o aluno escolheu preencher naquele estágio. */
   documentosSelecionados: string[];
+  cargaHorariaPrevista?: number;
+  encaminhadoEm?: string;
+  encaminhadoPorId?: string;
+  liberadoEm?: string;
+  liberadoPorId?: string;
+  canceladoEm?: string;
+  excluidoEm?: string;
+  /** Identificação mínima preservada no histórico, inclusive após exclusão. */
+  nomeAlunoHistorico?: string;
+  cursoIdHistorico?: string;
   /** Registro de quem fez a última edição, quando não foi o próprio aluno. */
   editadoPorId?: string;
   editadoEm?: string;
@@ -137,13 +150,7 @@ export interface Estagio {
 }
 
 export type SituacaoDocumento =
-  | "rascunho"
-  | "registrada"
-  | "submetido"
-  | "em_analise"
-  | "aprovado"
-  | "indeferido"
-  | "inativo";
+  "rascunho" | "registrada" | "submetido" | "em_analise" | "aprovado" | "indeferido" | "inativo";
 
 export type TipoTemplate = "preenchivel" | "download";
 
@@ -154,6 +161,8 @@ export interface VersaoTemplate {
   arquivo: string;
   registradaEm: string;
   vigente: boolean;
+  descritor?: DescriptorDocumento;
+  conteudoBase64?: string;
 }
 
 export interface TemplateDocumento {
@@ -202,7 +211,19 @@ export type DocumentoPreenchido = {
   /** Quem registrou o documento recebido já assinado (8.12). */
   registradoPorId?: string;
   registradoEm?: string;
+  assinaturasConfirmadasPorId?: string;
+  assinaturasConfirmadasEm?: string;
+  /** Uma correção de indeferimento fica aberta até a nova submissão. */
+  correcaoAberta?: boolean;
 };
+
+export interface ObservacaoDocumento {
+  id: string;
+  documentoId: string;
+  conteudo: string;
+  autorId: string;
+  data: string;
+}
 
 export type TipoLancamento = "lancamento" | "correcao";
 
@@ -251,6 +272,7 @@ export interface EnvioExterno {
   documentoId: string;
   destinatario: string;
   destinatarioEmail: string;
+  destinatarioPapel?: string;
   autorId: string;
   status: StatusEnvioExterno;
   erro?: string;

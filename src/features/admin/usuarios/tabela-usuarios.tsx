@@ -94,6 +94,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
   const [pagina, setPagina] = React.useState(1);
   const [formularioAberto, setFormularioAberto] = React.useState(false);
   const [editando, setEditando] = React.useState<Usuario | null>(null);
+  const ultimoGatilho = React.useRef<HTMLElement | null>(null);
   const [perfil, setPerfil] = React.useState<Usuario | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
@@ -237,6 +238,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
           type="button"
           className="ml-auto"
           onClick={() => {
+            ultimoGatilho.current = document.activeElement as HTMLElement;
             setEditando(null);
             setFormularioAberto(true);
           }}
@@ -309,12 +311,18 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setPerfil(usuario)}>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          ultimoGatilho.current = document.activeElement as HTMLElement;
+                          setPerfil(usuario);
+                        }}
+                      >
                         <EyeIcon className="size-4 shrink-0" aria-hidden="true" />
                         Ver perfil completo
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() => {
+                          ultimoGatilho.current = document.activeElement as HTMLElement;
                           setEditando(usuario);
                           setFormularioAberto(true);
                         }}
@@ -405,6 +413,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         aoFechar={() => setFormularioAberto(false)}
         usuario={editando}
         cursos={cursos}
+        gatilhoRef={ultimoGatilho}
       />
 
       <PerfilUsuario
@@ -414,6 +423,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         cursos={cursos}
         turmas={turmas}
         periodos={periodos}
+        gatilhoRef={ultimoGatilho}
       />
     </div>
   );
@@ -424,11 +434,13 @@ function FormularioUsuario({
   aoFechar,
   usuario,
   cursos,
+  gatilhoRef,
 }: {
   aberto: boolean;
   aoFechar: () => void;
   usuario: Usuario | null;
   cursos: { id: string; nome: string }[];
+  gatilhoRef: React.RefObject<HTMLElement | null>;
 }) {
   const editando = Boolean(usuario);
   const [nome, setNome] = React.useState(usuario?.nome ?? "");
@@ -476,7 +488,13 @@ function FormularioUsuario({
 
   return (
     <Dialog open={aberto} onOpenChange={(estado) => (estado ? null : aoFechar())}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onCloseAutoFocus={(evento) => {
+          evento.preventDefault();
+          gatilhoRef.current?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{editando ? "Editar usuário" : "Novo usuário"}</DialogTitle>
           <DialogDescription>

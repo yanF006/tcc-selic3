@@ -76,6 +76,12 @@ const situacoesDocumento: Record<SituacaoDocumento, MetadadoSituacao> = {
 };
 
 const situacoesEstagio: Record<SituacaoEstagio, MetadadoSituacao> = {
+  em_preparacao: {
+    rotulo: "Em preparação",
+    variante: "warning",
+    Icone: ClockIcon,
+    descricao: "Solicitação aguardando parecer e conferência das assinaturas iniciais.",
+  },
   em_andamento: {
     rotulo: "Em andamento",
     variante: "info",
@@ -221,6 +227,7 @@ export function transicaoDocumentoPermitida(
 }
 
 const transicoesEstagio: Record<SituacaoEstagio, SituacaoEstagio[]> = {
+  em_preparacao: ["em_andamento"],
   em_andamento: ["concluido"],
   concluido: ["em_andamento"],
 };

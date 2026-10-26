@@ -71,7 +71,9 @@ export async function atualizarDadosPessoais(
 
   const payload = { ...dados } as DadosPessoais & { matricula?: string };
   delete payload.matricula;
-  const validado = esquemaDadosPessoais(await opcoesSelecao()).safeParse(payload);
+  const validado = esquemaDadosPessoais(await opcoesSelecao(registro.dadosPessoais)).safeParse(
+    payload,
+  );
 
   if (!validado.success) {
     return {
@@ -100,10 +102,13 @@ export async function atualizarDadosPessoais(
     await moverCredencial(emailAnterior, validado.data.email);
   }
 
+  const anterior = structuredClone(registro);
   registro.nome = validado.data.nomeCompleto;
   registro.email = validado.data.email;
   registro.dadosPessoais = validado.data;
   await gravarUsuario(registro);
+  const { sincronizarDadosDoPerfil } = await import("./documentos");
+  await sincronizarDadosDoPerfil(anterior, registro);
 
   return {
     ok: true,

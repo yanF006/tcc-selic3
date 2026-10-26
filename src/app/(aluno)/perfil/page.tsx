@@ -16,9 +16,9 @@ export default async function Page() {
   const usuario = await usuarioDaRequisicaoObrigatorio();
   const [dados, cursos, turmas, periodos] = await Promise.all([
     dadosDoAluno(usuario),
-    listarCursos("ativo"),
-    listarTurmas(),
-    listarPeriodos(),
+    listarCursos(),
+    listarTurmas(undefined, true),
+    listarPeriodos(true),
   ]);
 
   return (

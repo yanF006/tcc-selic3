@@ -17,6 +17,7 @@ import {
 } from "@/lib/services/documentos";
 import { ErroDeRegra } from "@/lib/services/erros";
 import { usuarioPorId } from "@/lib/services/administracao";
+import { solicitarEncaminhamento } from "@/lib/services/fluxo-estagio";
 
 export interface ResultadoDocumento {
   ok: boolean;
@@ -45,7 +46,9 @@ export async function submeterDocumentoAction(
   const salvo = await salvarDocumentoAction(documentoId, valores);
   if (!salvo.ok) return salvo;
   try {
-    await submeter(documentoId);
+    if (documento.templateId === "tpl-formulario-liberacao" && documento.estagioId)
+      await solicitarEncaminhamento(documento.estagioId, usuario);
+    else await submeter(documentoId);
     revalidatePath(`/documentos/${documento.templateId}`);
     return salvo;
   } catch (erro) {
@@ -94,17 +97,18 @@ export async function salvarDocumentoAction(
       aluno,
       documento.estagioId,
       { ...documento.valores, ...valores },
+      documento.versaoTemplate,
     );
-    const problemas = validarValores(documento.templateId, preparados);
+    const problemas = validarValores(documento.templateId, preparados, documento.versaoTemplate);
 
     if (problemas.length > 0) {
       return { ok: false, erro: problemas[0].mensagem, problemas };
     }
 
-    await salvarRascunho(documentoId, preparados);
+    const salvo = await salvarRascunho(documentoId, preparados);
     revalidatePath(`/documentos/${documento.templateId}`);
 
-    return { ok: true, valores: preparados };
+    return { ok: true, valores: salvo.valores };
   } catch (erro) {
     if (erro instanceof ErroDeRegra) {
       return { ok: false, erro: erro.message };
@@ -150,7 +154,13 @@ export async function baixarDocumentoAction(
     const aluno = await usuarioPorId(documento.alunoId);
     const valores =
       documento.situacao === "rascunho" && aluno?.situacao === "ativo"
-        ? await valoresDoPreenchimento(templateId, aluno, documento.estagioId, documento.valores)
+        ? await valoresDoPreenchimento(
+            templateId,
+            aluno,
+            documento.estagioId,
+            documento.valores,
+            documento.versaoTemplate,
+          )
         : documento.valores;
     const resultado = arquivoDoDocumento({ ...documento, valores }, templateId, formato);
 

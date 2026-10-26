@@ -1,6 +1,6 @@
 ## Purpose
 
-Reúne o catálogo dos documentos do Kit de Estágio, a tela de preenchimento dos templates com os dados do aluno, o preview no navegador, o download e o registro de horas do estágio, respeitando quem pode preencher cada documento.
+Reúne o catálogo do Kit de Estágio, o preenchimento automático da documentação inicial, a liberação dos demais documentos, as observações da coordenação, o preview, o download e o registro de horas, respeitando as permissões de cada perfil.
 
 ## ADDED Requirements
 
@@ -16,7 +16,7 @@ O sistema SHALL apresentar, em uma tela acessível a todos os cargos, a lista de
 #### Scenario: Documento preenchível
 
 - **WHEN** o usuário seleciona um documento marcado como preenchível
-- **THEN** o sistema SHALL abrir a tela de preenchimento daquele documento
+- **THEN** o sistema SHALL abrir a tela de preenchimento quando o perfil e a etapa do estágio permitirem, ou informar a condição pendente sem criar um preenchimento não autorizado
 
 #### Scenario: Documento apenas para download
 
@@ -57,8 +57,8 @@ O sistema SHALL preencher inicialmente os campos dos documentos com os dados cad
 
 #### Scenario: Duração declarada do estágio
 
-- **WHEN** o aluno abre o Termo de Compromisso, que exige a duração do estágio em horas
-- **THEN** o sistema SHALL preencher o campo de duração com o total de horas registrado no estágio e SHALL permitir que o aluno ajuste o valor
+- **WHEN** o aluno informa os dados necessários à preparação do Termo de Compromisso, incluindo a duração prevista em horas
+- **THEN** o sistema SHALL utilizar a duração declarada no preenchimento automático, sem exigir lançamentos de horas de um estágio ainda não liberado
 
 #### Scenario: Dado cadastrado ausente
 
@@ -74,6 +74,68 @@ O sistema SHALL preencher inicialmente os campos dos documentos com os dados cad
 
 - **WHEN** o usuário autorizado corrige um endereço do documento, salva e reabre o registro
 - **THEN** o sistema SHALL preservar os valores finais informados, sem reaplicar o endereço original do cadastro nem consultar o ViaCEP
+
+### Requirement: Preparação automática da documentação inicial
+
+O sistema SHALL preencher automaticamente o Termo de Compromisso, o Formulário de Liberação e o Plano de Atividades a partir dos dados cadastrados do aluno e dos dados informados na solicitação do estágio. Os três documentos SHALL permanecer distintos, obrigatórios e vinculados à mesma solicitação.
+
+#### Scenario: Dados da solicitação completos
+
+- **WHEN** o aluno conclui os dados necessários para a criação do estágio
+- **THEN** o sistema SHALL disponibilizar os três documentos iniciais preenchidos para conferência e solicitação de encaminhamento, sem exigir que o aluno selecione ou redigite os dados compartilhados em cada documento
+
+#### Scenario: Dado necessário ausente
+
+- **WHEN** falta um dado exigido por um dos três documentos iniciais
+- **THEN** o sistema SHALL identificar o dado pendente e impedir o encaminhamento até sua complementação, reaproveitando o preenchimento já informado
+
+### Requirement: Liberação dos documentos por etapa do estágio
+
+O sistema SHALL permitir ao aluno preparar somente os três documentos iniciais enquanto o estágio não estiver liberado. O registro dos demais documentos e dos lançamentos de horas SHALL depender da liberação inicial pelo Coordenador de Estágio; o catálogo e o download dos documentos fixos SHALL continuar acessíveis.
+
+#### Scenario: Acesso direto antes da liberação
+
+- **WHEN** o aluno tenta abrir ou salvar um documento adicional por URL ou requisição direta em um estágio em preparação
+- **THEN** o sistema SHALL bloquear o preenchimento e informar que o estágio aguarda liberação, sem criar ou gravar o documento
+
+#### Scenario: Continuidade após conferência
+
+- **WHEN** o Coordenador de Estágio confirma as assinaturas iniciais de um estágio com parecer favorável no Formulário de Liberação
+- **THEN** o sistema SHALL disponibilizar os demais documentos daquele estágio conforme as permissões de preenchimento de cada perfil
+
+#### Scenario: Liberação não se estende a outro estágio
+
+- **WHEN** o aluno possui um estágio liberado e outro ainda em preparação
+- **THEN** o sistema SHALL manter os documentos adicionais bloqueados apenas no estágio em preparação
+
+#### Scenario: Registro de horas antes da liberação
+
+- **WHEN** o aluno tenta registrar horas em um estágio ainda não liberado
+- **THEN** o sistema SHALL recusar o lançamento e informar a necessidade de liberação inicial
+
+### Requirement: Observações da coordenação por documento
+
+O sistema SHALL disponibilizar, em cada documento registrado, observações com conteúdo, autor e data. Apenas o Coordenador de Curso e o Coordenador de Estágio com acesso ao documento SHALL acrescentar observações, ao emitir parecer, ao confirmar assinaturas ou a qualquer momento, independentemente dessas ações. Cada acréscimo SHALL preservar as observações anteriores e não SHALL alterar por si só o parecer, a conferência das assinaturas ou a situação do estágio.
+
+#### Scenario: Observação durante o parecer
+
+- **WHEN** o Coordenador de Curso acrescenta uma observação ao emitir o parecer do Formulário de Liberação
+- **THEN** o sistema SHALL vinculá-la ao documento com o conteúdo, o autor e a data, preservando as observações anteriores
+
+#### Scenario: Observação durante a conferência
+
+- **WHEN** o Coordenador de Estágio acrescenta observações ao confirmar as assinaturas dos documentos iniciais
+- **THEN** o sistema SHALL registrar cada observação no documento correspondente com autor e data, sem substituir as observações do parecer
+
+#### Scenario: Observação independente da etapa
+
+- **WHEN** um dos dois coordenadores com acesso acrescenta uma observação fora das ações de parecer e conferência, inclusive em documento sem parecer ou de estágio já concluído
+- **THEN** o sistema SHALL acrescentar o registro ao histórico do documento sem exigir nova emissão de parecer ou confirmação de assinaturas
+
+#### Scenario: Tentativa por perfil não autorizado
+
+- **WHEN** um usuário sem papel de Coordenador de Curso ou Coordenador de Estágio tenta acrescentar uma observação, inclusive por requisição direta
+- **THEN** o sistema SHALL recusar a operação e preservar os registros existentes
 
 ### Requirement: Gravação e consulta de documento preenchido
 
@@ -107,6 +169,20 @@ O sistema SHALL preencher documentos vinculados a um estágio apenas a partir do
 
 - **WHEN** o aluno tenta preencher um documento que exige estágio sem informar qual é
 - **THEN** o sistema SHALL bloquear a conclusão e exigir a seleção do estágio
+
+### Requirement: Data preenchida no ato da assinatura externa
+
+O sistema SHALL manter em branco, no documento, a Data do Termo de Compromisso apresentada no Termo Aditivo para preenchimento no ato da assinatura fora do sistema. O sistema SHALL NOT solicitar, preencher automaticamente, validar como dado obrigatório ou registrar esse valor no formulário, no cadastro do estágio ou na confirmação das assinaturas.
+
+#### Scenario: Preenchimento do Termo Aditivo
+
+- **WHEN** o aluno abre ou salva o Termo Aditivo
+- **THEN** o sistema SHALL permitir a operação sem informar essa data e SHALL apresentar apenas a indicação de preenchimento externo, sem controle de entrada para o valor
+
+#### Scenario: Preview e download para assinatura
+
+- **WHEN** um usuário visualiza ou baixa o Termo Aditivo para assinatura
+- **THEN** o sistema SHALL preservar o espaço em branco da data para preenchimento fora do sistema, sem usar a data de criação, de início do estágio ou de conferência das assinaturas
 
 ### Requirement: Quem pode preencher cada documento
 

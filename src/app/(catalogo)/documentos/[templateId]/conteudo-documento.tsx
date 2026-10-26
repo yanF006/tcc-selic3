@@ -171,7 +171,7 @@ export function ConteudoDocumento({
           </AlertTitle>
           <AlertDescription>
             {consultaApenas
-              ? "O cadastro de origem está inativo; o preenchimento histórico foi preservado para consulta e download."
+              ? "O preenchimento está bloqueado nesta etapa ou para este perfil. Os dados iniciais só podem ser corrigidos pelo aluno após indeferimento."
               : "Um documento fora de rascunho não pode mais ser editado; o conteúdo fica disponível para consulta e download."}
           </AlertDescription>
         </Alert>
@@ -197,6 +197,12 @@ export function ConteudoDocumento({
         </Badge>
         <span className="text-muted-foreground text-xs">Versão {documento.versaoTemplate}</span>
       </div>
+      {descriptor.metadados?.tipoParecer === "nenhum" && (
+        <p className="text-muted-foreground text-sm">
+          Este documento não está sujeito a parecer. As assinaturas previstas são obtidas fora do
+          sistema.
+        </p>
+      )}
 
       <FormularioDocumento
         descriptor={descriptor}

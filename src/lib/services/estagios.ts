@@ -1,6 +1,16 @@
 import { esquemaEstagio } from "@/lib/domain/schemas";
 import { lancamentosEfetivos } from "@/lib/domain/horas";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
+import {
+  DOCUMENTOS_INICIAIS,
+  documentoInicial,
+  estagioEncerrado,
+  estagioLiberado,
+} from "@/lib/domain/fluxo-estagio";
+import { camposDoTemplate } from "@/lib/templates/descriptors";
+import { idsDoGrupo } from "@/lib/templates/grupos-endereco";
+import { ZodError } from "zod";
+import { descritorDaVersao } from "./templates";
 import type {
   Convenio,
   Estagio,
@@ -43,6 +53,8 @@ export interface NovoEstagio {
   dataFim: string;
   situacao?: Estagio["situacao"];
   documentosSelecionados?: string[];
+  cargaHorariaPrevista?: number;
+  valoresDocumentos?: Record<string, Record<string, unknown>>;
 }
 
 function sobrepoe(inicioA: string, fimA: string, inicioB: string, fimB: string): boolean {
@@ -84,7 +96,8 @@ export function podeConsultarEstagio(usuario: Usuario, estagio: Estagio): boolea
   }
   if (usuario.papeis.includes("coordenador_curso") && usuario.cursoId) {
     const aluno = obterEstado().usuarios.find((registro) => registro.id === estagio.alunoId);
-    if (aluno && cursoDoUsuario(aluno) === usuario.cursoId) return true;
+    const cursoId = estagio.excluidoEm ? estagio.cursoIdHistorico : aluno && cursoDoUsuario(aluno);
+    if (cursoId === usuario.cursoId) return true;
   }
   return usuario.papeis.includes("aluno") && estagio.alunoId === usuario.id;
 }
@@ -133,8 +146,19 @@ export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<
   if (aluno.situacao !== "ativo" || !aluno.papeis.includes("aluno")) {
     throw new ErroDeRegra("Apenas alunos cadastram estágios.", "papel_invalido");
   }
-
-  const parsed = esquemaEstagio().parse({ ...dados, situacao: dados.situacao ?? "em_andamento" });
+  if (dados.situacao !== undefined && dados.situacao !== "em_preparacao") {
+    throw new ErroDeRegra(
+      "A situação inicial não pode ser escolhida pelo aluno.",
+      "situacao_nao_permitida",
+    );
+  }
+  if (dados.documentosSelecionados?.some((id) => !documentoInicial(id))) {
+    throw new ErroDeRegra(
+      "Os demais documentos dependem da liberação do estágio.",
+      "liberacao_pendente",
+    );
+  }
+  const parsed = esquemaEstagio().parse({ ...dados, situacao: "em_preparacao" });
 
   const convenio = await convenioPorId(parsed.convenioId);
 
@@ -157,12 +181,14 @@ export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<
 
   const orientador = await pessoaPorId(parsed.orientadorId);
 
-  if (!orientador || orientador.papel !== "orientador") {
+  if (!orientador || orientador.papel !== "orientador" || orientador.situacao !== "ativo") {
     throw new ErroDeRegra("Orientador não cadastrado.", "orientador_invalido");
   }
 
-  const conflito = (await estagiosDoAluno(aluno.id)).find((estagio) =>
-    sobrepoe(parsed.dataInicio, parsed.dataFim, estagio.dataInicio, estagio.dataFim),
+  const conflito = (await estagiosDoAluno(aluno.id)).find(
+    (estagio) =>
+      !estagioEncerrado(estagio) &&
+      sobrepoe(parsed.dataInicio, parsed.dataFim, estagio.dataInicio, estagio.dataFim),
   );
 
   if (conflito) {
@@ -181,11 +207,35 @@ export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<
     dataInicio: parsed.dataInicio,
     dataFim: parsed.dataFim,
     situacao: parsed.situacao,
-    documentosSelecionados: documentosValidos(dados.documentosSelecionados ?? [], "aluno"),
+    documentosSelecionados: [...DOCUMENTOS_INICIAIS],
+    cargaHorariaPrevista: dados.cargaHorariaPrevista,
+    nomeAlunoHistorico: aluno.nome,
+    cursoIdHistorico: cursoDoUsuario(aluno),
     criadoEm: agora(),
   };
 
   obterEstado().estagios.push(estagio);
+  try {
+    const { prepararDocumentosIniciais } = await import("./fluxo-estagio");
+    const documentos = await prepararDocumentosIniciais(estagio.id, aluno, dados.valoresDocumentos);
+    const { validarValores } = await import("./documentos");
+    const problemas = documentos.flatMap((doc) =>
+      validarValores(doc.templateId, doc.valores, doc.versaoTemplate).map((problema) => ({
+        code: "custom" as const,
+        path: ["valoresDocumentos", doc.templateId, problema.campo],
+        message: `${obterEstado().templates.find((template) => template.id === doc.templateId)?.nome}: ${problema.mensagem}`,
+      })),
+    );
+    if (problemas.length) throw new ZodError(problemas);
+  } catch (erro) {
+    obterEstado().estagios = obterEstado().estagios.filter(
+      (registro) => registro.id !== estagio.id,
+    );
+    obterEstado().documentos = obterEstado().documentos.filter(
+      (doc) => doc.estagioId !== estagio.id,
+    );
+    throw erro;
+  }
 
   return estagio;
 }
@@ -213,14 +263,13 @@ export async function selecionarDocumentos(
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
 
-  if (estagio.situacao !== "em_andamento") {
-    throw new ErroDeRegra(
-      "Estágio concluído não permite alteração de documentos.",
-      "estagio_concluido",
-    );
+  if (!estagioLiberado(estagio) || estagio.situacao !== "em_andamento") {
+    throw new ErroDeRegra("A seleção exige estágio liberado e em andamento.", "estagio_concluido");
   }
 
-  estagio.documentosSelecionados = documentosValidos(templateIds, "aluno");
+  estagio.documentosSelecionados = [
+    ...new Set([...DOCUMENTOS_INICIAIS, ...documentosValidos(templateIds, "aluno")]),
+  ];
 
   return estagio;
 }
@@ -233,7 +282,9 @@ export async function removerDocumentoEstagio(
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
 
-  if (estagio.situacao !== "em_andamento") {
+  if (documentoInicial(templateId))
+    throw new ErroDeRegra("Os documentos iniciais são obrigatórios.", "documento_obrigatorio");
+  if (!estagioLiberado(estagio) || estagio.situacao !== "em_andamento") {
     throw new ErroDeRegra(
       "Estágio concluído não permite alteração de documentos.",
       "estagio_concluido",
@@ -259,10 +310,10 @@ export async function concluirEstagio(estagioId: string, editorId?: string): Pro
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
-
-  if (estagio.situacao === "concluido") {
-    throw new ErroDeRegra("Estágio já está concluído.", "ja_concluido");
-  }
+  exigirCoordenacao(estagio, editorId);
+  if (!estagioLiberado(estagio) || estagio.situacao !== "em_andamento")
+    throw new ErroDeRegra("O estágio precisa estar liberado e em andamento.", "liberacao_pendente");
+  esquemaEstagio().parse({ ...estagio, situacao: "concluido" });
 
   estagio.situacao = "concluido";
   estagio.editadoPorId = editorId;
@@ -277,6 +328,9 @@ export async function reabrirEstagio(estagioId: string, editorId?: string): Prom
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
 
+  exigirCoordenacao(estagio, editorId);
+  if (!estagioLiberado(estagio) || estagio.situacao !== "concluido")
+    throw new ErroDeRegra("A reabertura exige estágio liberado e concluído.", "liberacao_pendente");
   estagio.situacao = "em_andamento";
   estagio.editadoPorId = editorId;
   estagio.editadoEm = agora();
@@ -292,6 +346,21 @@ export async function editarEstagio(
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
+  const editor = obterEstado().usuarios.find((usuario) => usuario.id === editorId);
+  if (!editor || !podeConsultarEstagio(editor, estagio) || estagioEncerrado(estagio))
+    throw new ErroDeRegra("Edição não disponível.", "acesso_negado");
+  if (dados.situacao !== undefined && dados.situacao !== estagio.situacao) {
+    throw new ErroDeRegra(
+      "Use a ação da coordenação para alterar a situação.",
+      "situacao_nao_permitida",
+    );
+  }
+  if (editor.id === estagio.alunoId && !correcaoInicialPermitida(estagio)) {
+    throw new ErroDeRegra(
+      "Os dados iniciais só podem ser corrigidos após indeferimento.",
+      "dados_iniciais_bloqueados",
+    );
+  }
   const validado = esquemaEstagio().parse({ ...estagio, ...dados });
   const convenio = await convenioPorId(validado.convenioId);
   if (
@@ -319,6 +388,7 @@ export async function editarEstagio(
     (await estagiosDoAluno(estagio.alunoId)).some(
       (outro) =>
         outro.id !== estagio.id &&
+        !estagioEncerrado(outro) &&
         sobrepoe(validado.dataInicio, validado.dataFim, outro.dataInicio, outro.dataFim),
     )
   ) {
@@ -338,10 +408,143 @@ export async function editarEstagio(
     );
   }
   Object.assign(estagio, validado);
+  if (dados.cargaHorariaPrevista !== undefined)
+    estagio.cargaHorariaPrevista = dados.cargaHorariaPrevista;
+  const { valoresDigitadosPermitidos, valoresDoPreenchimento } = await import("./documentos");
+  const titular = obterEstado().usuarios.find((usuario) => usuario.id === estagio.alunoId)!;
+  for (const documento of obterEstado().documentos.filter(
+    (doc) =>
+      doc.estagioId === estagioId && documentoInicial(doc.templateId) && doc.situacao !== "inativo",
+  )) {
+    if (editor.id === estagio.alunoId && documento.situacao === "indeferido") {
+      documento.situacao = "rascunho";
+      documento.correcaoAberta = true;
+    }
+    documento.valores = await valoresDoPreenchimento(
+      documento.templateId,
+      titular,
+      estagioId,
+      {
+        ...documento.valores,
+        ...valoresDigitadosPermitidos(
+          documento.templateId,
+          dados.valoresDocumentos?.[documento.templateId] ?? {},
+          documento.versaoTemplate,
+        ),
+      },
+      documento.versaoTemplate,
+    );
+    if (
+      documento.templateId === "tpl-termo-compromisso" &&
+      dados.cargaHorariaPrevista !== undefined
+    )
+      documento.valores.cargaHorariaTotal = dados.cargaHorariaPrevista;
+    documento.atualizadoEm = agora();
+  }
 
   estagio.editadoPorId = editorId;
   estagio.editadoEm = agora();
 
+  return estagio;
+}
+
+function exigirCoordenacao(estagio: Estagio, editorId?: string) {
+  const editor = obterEstado().usuarios.find((usuario) => usuario.id === editorId);
+  if (
+    !editor ||
+    !editor.papeis.some(
+      (papel) => papel === "coordenador_curso" || papel === "coordenador_estagio",
+    ) ||
+    !podeConsultarEstagio(editor, estagio)
+  ) {
+    throw new ErroDeRegra("A alteração da situação cabe à coordenação.", "acesso_negado");
+  }
+}
+
+export function correcaoInicialPermitida(estagio: Estagio): boolean {
+  if (estagio.situacao !== "em_preparacao" || estagioEncerrado(estagio)) return false;
+  return obterEstado().documentos.some(
+    (doc) =>
+      doc.estagioId === estagio.id &&
+      doc.templateId === DOCUMENTOS_INICIAIS[0] &&
+      (doc.situacao === "indeferido" ||
+        (doc.situacao === "rascunho" && doc.correcaoAberta === true)),
+  );
+}
+
+export async function excluirEstagio(estagioId: string, aluno: Usuario) {
+  const estagio = await exigirAcessoEstagio(aluno, estagioId);
+  if (aluno.id !== estagio.alunoId)
+    throw new ErroDeRegra("A exclusão cabe ao aluno titular.", "acesso_negado");
+  if (estagio.excluidoEm) return estagio;
+  estagio.nomeAlunoHistorico = aluno.nome;
+  estagio.cursoIdHistorico = cursoDoUsuario(aluno);
+  estagio.excluidoEm = agora();
+  for (const documento of obterEstado().documentos.filter((doc) => doc.estagioId === estagioId)) {
+    const valores = { ...documento.valores };
+    const descriptor = descritorDaVersao(documento.templateId, documento.versaoTemplate);
+    for (const campo of camposDoTemplate(documento.templateId, descriptor)) {
+      if (
+        campo.origem === "aluno" &&
+        ![
+          "nomeCompleto",
+          "aluno",
+          "curso",
+          "turma",
+          "periodo",
+          "ano",
+          "semestre",
+          "anoSemestre",
+          "turmaSemestreAno",
+          "campus",
+        ].includes(campo.fonte || campo.id)
+      )
+        delete valores[campo.id];
+    }
+    for (const id of [
+      "cpf",
+      "rg",
+      "dataNascimento",
+      "matricula",
+      "enderecoAluno",
+      "cepAluno",
+      "telefoneAluno",
+      "celularAluno",
+      "emailAluno",
+    ])
+      delete valores[id];
+    for (const grupo of descriptor?.gruposEndereco ?? []) {
+      if (grupo.origemInicial === "aluno") for (const id of idsDoGrupo(grupo)) delete valores[id];
+    }
+    documento.valores = valores;
+    documento.situacao = "inativo";
+    documento.inativadoEm = estagio.excluidoEm;
+    documento.atualizadoEm = estagio.excluidoEm;
+  }
+  const idsDocumentos = new Set(
+    obterEstado()
+      .documentos.filter((doc) => doc.estagioId === estagioId)
+      .map((doc) => doc.id),
+  );
+  for (const envio of obterEstado().envios) {
+    if (
+      idsDocumentos.has(envio.documentoId) &&
+      (envio.destinatarioPapel === "aluno" || envio.destinatarioEmail === aluno.email)
+    )
+      envio.destinatarioEmail = "";
+  }
+  return estagio;
+}
+
+export async function cancelarSolicitacao(estagioId: string, aluno: Usuario) {
+  const estagio = await exigirAcessoEstagio(aluno, estagioId);
+  if (estagio.situacao !== "em_preparacao" || estagioLiberado(estagio))
+    throw new ErroDeRegra(
+      "Somente solicitações aguardando liberação podem ser canceladas.",
+      "cancelamento_indisponivel",
+    );
+  await excluirEstagio(estagioId, aluno);
+  estagio.canceladoEm = estagio.excluidoEm;
   return estagio;
 }
 

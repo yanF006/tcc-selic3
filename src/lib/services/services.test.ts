@@ -25,7 +25,8 @@ import {
 
 import {
   concluirEstagio,
-  criarEstagio,
+  criarEstagio as criarEstagioReal,
+  type NovoEstagio,
   editarEstagio,
   estagioComContexto,
   estagiosDoAluno,
@@ -37,6 +38,11 @@ import {
 import { corrigirLancamento, horasDaSemana, lancarHoras, resumoDaSemana } from "./lancamentos";
 import { entrar, membroComissaoEstagio, sair, temPapel, usuarioAtual } from "./sessao";
 import { obterEstado, reiniciarEstado } from "./store";
+import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
+
+function criarEstagio(aluno: Usuario, dados: NovoEstagio) {
+  return criarEstagioReal(aluno, { ...dadosSolicitacaoTeste(), ...dados });
+}
 
 const HOJE = "2026-06-01";
 
@@ -166,18 +172,13 @@ describe("cadastro de estágio", () => {
       orientadorId: "ori-carla",
       dataInicio: "01/09/2026",
       dataFim: "30/11/2026",
-      documentosSelecionados: [
-        "tpl-termo-compromisso",
-        "tpl-ficha-frequencia",
-        "tpl-proposta-atuacao-pedagogica",
-      ],
     });
 
-    expect(estagio.situacao).toBe("em_andamento");
-    // A ficha de frequência é preenchida pela coordenação, não pelo aluno.
+    expect(estagio.situacao).toBe("em_preparacao");
     expect(estagio.documentosSelecionados).toEqual([
+      "tpl-formulario-liberacao",
       "tpl-termo-compromisso",
-      "tpl-proposta-atuacao-pedagogica",
+      "tpl-plano-atividades",
     ]);
   });
 
@@ -263,7 +264,7 @@ describe("cadastro de estágio", () => {
 
   it("encerra o estágio bloqueando novos lançamentos", async () => {
     await login("maria.souza@aluno.ifrj.edu.br");
-    await concluirEstagio("est-maria-tecnoweb");
+    await concluirEstagio("est-maria-tecnoweb", "usr-ana");
 
     await expect(
       lancarHoras({
@@ -331,6 +332,10 @@ describe("lançamento de horas", () => {
     });
 
     // Segunda a sábado de 02/02 a 07/02/2026: 5 dias de 6 h fecham as 30 h.
+    // Este teste isola os limites de horas; a autorização completa é coberta em fluxo-estagio.test.ts.
+    estagio.situacao = "em_andamento";
+    estagio.liberadoEm = "2026-02-01T00:00:00Z";
+    estagio.liberadoPorId = "usr-ana";
     for (const dia of ["2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06"]) {
       await lancarHoras({
         estagioId: estagio.id,
@@ -419,10 +424,29 @@ describe("lançamento de horas", () => {
 
 describe("documentos", () => {
   beforeEach(() => {
-    // Os testes de fluxo partem dos documentos zerados, sem os das fixtures.
+    // Cenário de correção após indeferimento, no qual a edição inicial é permitida.
+    const estagio = obterEstado().estagios.find(
+      (registro) => registro.id === "est-maria-tecnoweb",
+    )!;
+    estagio.situacao = "em_preparacao";
+    estagio.liberadoEm = undefined;
+    estagio.encaminhadoEm = undefined;
+    // Sem documentos gerados anteriormente, além do formulário devolvido para correção.
     obterEstado().documentos.length = 0;
     obterEstado().pareceres.length = 0;
     obterEstado().notificacoes.length = 0;
+    obterEstado().documentos.push({
+      id: "formulario-devolvido",
+      templateId: "tpl-formulario-liberacao",
+      estagioId: estagio.id,
+      alunoId: "usr-maria",
+      versaoTemplate: 1,
+      valores: {},
+      situacao: "rascunho",
+      correcaoAberta: true,
+      criadoEm: "2026-01-01T00:00:00Z",
+      atualizadoEm: "2026-01-01T00:00:00Z",
+    });
   });
 
   it("cria rascunho e reaproveita o documento aberto", async () => {
@@ -535,10 +559,12 @@ describe("documentos", () => {
     const submetido = await submeter(documento.id);
 
     expect(submetido.situacao).toBe("submetido");
-    // Ainda não está em análise: a fila só recebe o documento após o encaminhamento.
-    const fila = await documentosParaParecer("coordenador_curso", usuarioAtual() as Usuario);
+    const fila = await documentosParaParecer(
+      "coordenador_curso",
+      await login("carla.menezes@ifrj.edu.br"),
+    );
 
-    expect(fila.itens).toEqual([]);
+    expect(fila.itens.map((item) => item.id)).toContain(documento.id);
   });
 
   it("registra parecer depois da análise", async () => {
@@ -562,7 +588,7 @@ describe("documentos", () => {
     const coordenador = await login("carla.menezes@ifrj.edu.br");
     const antesDaAnalise = await documentosParaParecer("coordenador_curso", coordenador);
 
-    expect(antesDaAnalise.itens).toEqual([]);
+    expect(antesDaAnalise.itens.map((item) => item.id)).toContain(documento.id);
 
     await iniciarAnalise(documento.id);
 
@@ -585,7 +611,7 @@ describe("documentos", () => {
     ).toHaveLength(1);
   });
 
-  it("aprova documento em análise e notifica o aluno", async () => {
+  it("não submete o Termo de Compromisso a parecer", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
     const documento = await criarRascunho(aluno, "tpl-termo-compromisso", "est-maria-tecnoweb");
 
@@ -600,14 +626,13 @@ describe("documentos", () => {
       cargaHorariaSemanal: 30,
       horario: "09:00 às 16:00",
     });
-    await submeter(documento.id);
+    await expect(submeter(documento.id)).rejects.toThrow(/não está sujeito a parecer/);
 
     const fila = await documentosParaParecer("externo", aluno);
 
     expect(fila.itens).toEqual([]);
 
-    // Sem parecer externo, o documento fica submetido até a assinatura externa.
-    expect(documento.situacao).toBe("submetido");
+    expect(documento.situacao).toBe("rascunho");
   });
 
   it("impede editar documento que não é rascunho", async () => {
@@ -628,7 +653,7 @@ describe("documentos", () => {
     );
   });
 
-  it("não registra parecer em documento submetido fora da fila", async () => {
+  it("não registra parecer por coordenador de outro curso", async () => {
     const aluno = await login("maria.souza@aluno.ifrj.edu.br");
     const documento = await criarRascunho(aluno, "tpl-formulario-liberacao", "est-maria-tecnoweb");
 
@@ -641,10 +666,10 @@ describe("documentos", () => {
     });
     await submeter(documento.id);
 
-    const coordenador = await login("carla.menezes@ifrj.edu.br");
+    const coordenador = obterEstado().usuarios.find((usuario) => usuario.id === "usr-bruno")!;
 
     await expect(registrarParecer(documento.id, "aprovado", coordenador)).rejects.toThrow(
-      /possível emitir parecer/,
+      /não disponível/,
     );
   });
 
@@ -666,15 +691,16 @@ describe("documentos", () => {
       dataFim: "2027-02-28",
       documentosSelecionados: ["tpl-termo-compromisso"],
     });
-
-    const doc = await criarRascunho(aluno, "tpl-termo-compromisso", estagio.id);
-
-    expect(estagio.documentosSelecionados).toContain("tpl-termo-compromisso");
+    estagio.situacao = "em_andamento";
+    estagio.liberadoEm = "2026-09-01T00:00:00Z";
+    const doc = await criarRascunho(aluno, "tpl-ficha-acompanhamento", estagio.id);
+    estagio.documentosSelecionados.push("tpl-ficha-acompanhamento");
+    expect(estagio.documentosSelecionados).toContain("tpl-ficha-acompanhamento");
     expect(doc.situacao).toBe("rascunho");
 
-    await removerDocumentoEstagio(estagio.id, "tpl-termo-compromisso");
+    await removerDocumentoEstagio(estagio.id, "tpl-ficha-acompanhamento");
 
-    expect(estagio.documentosSelecionados).not.toContain("tpl-termo-compromisso");
+    expect(estagio.documentosSelecionados).not.toContain("tpl-ficha-acompanhamento");
     expect((await documentoPorId(doc.id))?.situacao).toBe("inativo");
   });
 
@@ -688,14 +714,10 @@ describe("documentos", () => {
       dataFim: "2027-02-28",
     });
 
-    const editado = await editarEstagio(
-      estagio.id,
-      { dataFim: "2027-03-01" },
-      "usr-coordenador-curso",
-    );
+    const editado = await editarEstagio(estagio.id, { dataFim: "2027-03-01" }, "usr-carla");
 
     expect(editado.dataFim).toBe("2027-03-01");
-    expect(editado.editadoPorId).toBe("usr-coordenador-curso");
+    expect(editado.editadoPorId).toBe("usr-carla");
   });
 
   it("registra pedido de exclusão de estágio como pendente", async () => {

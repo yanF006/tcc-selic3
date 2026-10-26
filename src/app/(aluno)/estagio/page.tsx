@@ -19,6 +19,10 @@ import { documentosDoAluno } from "@/lib/services/documentos";
 import type { LancamentoHoras } from "@/lib/domain/types";
 
 import { ConteudoEstagios } from "./conteudo-estagios";
+import { dadosDoPainelFluxo } from "@/lib/services/fluxo-estagio";
+import { DOCUMENTOS_INICIAIS } from "@/lib/domain/fluxo-estagio";
+import { descritorDoDocumento, valoresAutomaticos } from "@/lib/services/documentos";
+import { descritorDaVersao } from "@/lib/services/templates";
 
 export const metadata: Metadata = {
   title: "Estágio",
@@ -38,6 +42,23 @@ export default async function Page({ searchParams }: PageProps<"/estagio">) {
 
   const resumosHoras: Record<string, { total: number; lancamentos: LancamentoHoras[] }> = {};
   const documentos = await documentosDoAluno(usuario.id);
+  const dadosFluxo = await dadosDoPainelFluxo(
+    usuario,
+    estagios.map((estagio) => estagio.id),
+  );
+  const valoresIniciaisDocumentos = Object.fromEntries(
+    await Promise.all(
+      DOCUMENTOS_INICIAIS.map(async (id) => [
+        id,
+        {
+          ...(await valoresAutomaticos(id, usuario)),
+          telefoneAluno: usuario.dadosPessoais?.telefone ?? "",
+          celularAluno: usuario.dadosPessoais?.celular ?? "",
+          emailAluno: usuario.email,
+        },
+      ]),
+    ),
+  );
   const exclusoesPendentes = (
     await Promise.all(
       estagios.map(async (estagio) =>
@@ -69,7 +90,15 @@ export default async function Page({ searchParams }: PageProps<"/estagio">) {
         supervisores={supervisores}
         templates={templates}
         resumosHoras={resumosHoras}
-        documentos={documentos}
+        documentos={documentos.map((documento) => ({
+          ...documento,
+          descritor: descritorDoDocumento(documento),
+        }))}
+        dadosFluxo={dadosFluxo}
+        valoresIniciaisDocumentos={valoresIniciaisDocumentos}
+        descritoresIniciais={Object.fromEntries(
+          DOCUMENTOS_INICIAIS.map((id) => [id, descritorDaVersao(id)]),
+        )}
         exclusoesPendentes={exclusoesPendentes}
       />
     </PaginaArea>

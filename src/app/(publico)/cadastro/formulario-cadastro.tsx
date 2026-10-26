@@ -105,6 +105,9 @@ export function FormularioCadastro({
   });
 
   const turmasDoCurso = turmas.filter((turma) => turma.cursoId === cursoId);
+  const periodosDisponiveis = periodos.filter((periodo) =>
+    turmasDoCurso.some((turma) => !turma.periodoIds || turma.periodoIds.includes(periodo.id)),
+  );
 
   /** Mensagem do servidor para o campo correspondente, quando houver. */
   function erroDoCampo(campo: string): string | null {
@@ -524,7 +527,7 @@ export function FormularioCadastro({
                     <SelectValue placeholder="Selecione o período" />
                   </SelectTrigger>
                   <SelectContent>
-                    {periodos.map((periodo) => (
+                    {periodosDisponiveis.map((periodo) => (
                       <SelectItem key={periodo.id} value={periodo.id}>
                         {periodo.rotulo}
                       </SelectItem>

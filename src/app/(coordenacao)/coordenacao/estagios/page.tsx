@@ -17,7 +17,12 @@ import {
   listarOrientadores,
   listarSupervisores,
 } from "@/lib/services/catalogo";
-import { documentosDoEstagio, listarTemplates } from "@/lib/services/documentos";
+import {
+  descritorDoDocumento,
+  documentosDoEstagio,
+  listarTemplates,
+} from "@/lib/services/documentos";
+import { dadosDoPainelFluxo } from "@/lib/services/fluxo-estagio";
 
 export const metadata: Metadata = {
   title: "Estágios",
@@ -50,6 +55,10 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
   const documentos = (
     await Promise.all(estagios.map((estagio) => documentosDoEstagio(estagio.id)))
   ).flat();
+  const dadosFluxo = await dadosDoPainelFluxo(
+    usuario,
+    estagios.map((estagio) => estagio.id),
+  );
   const exclusoesPendentes = (
     await Promise.all(
       estagios.map(async (estagio) =>
@@ -92,7 +101,11 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
         supervisores={supervisores}
         templates={templates}
         resumosHoras={resumosHoras}
-        documentos={documentos}
+        documentos={documentos.map((documento) => ({
+          ...documento,
+          descritor: descritorDoDocumento(documento),
+        }))}
+        dadosFluxo={dadosFluxo}
         exclusoesPendentes={exclusoesPendentes}
       />
     </PaginaArea>

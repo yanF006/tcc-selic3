@@ -5,7 +5,11 @@ import { InfoIcon } from "lucide-react";
 import { CampoDescritor, LarguraCampo } from "@/components/documentos/campo-descritor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { classificacaoDoCampo, type CampoDescriptor } from "@/lib/templates/descriptors";
+import {
+  classificacaoDoCampo,
+  fonteParecer,
+  type CampoDescriptor,
+} from "@/lib/templates/descriptors";
 import type { DescriptorDocumento } from "@/lib/templates/descriptors";
 import { idsDoGrupo } from "@/lib/templates/grupos-endereco";
 import { GrupoEnderecoFormulario } from "./grupo-endereco-formulario";
@@ -44,7 +48,9 @@ export function FormularioDocumento({
 }: FormularioDocumentoProps) {
   const grupos = descriptor.gruposEndereco ?? [];
   const idsEndereco = new Set(grupos.flatMap(idsDoGrupo));
-  const automaticos = (descriptor.auto ?? []).filter((campo) => !idsEndereco.has(campo.id));
+  const automaticos = (descriptor.auto ?? []).filter(
+    (campo) => !idsEndereco.has(campo.id) && !fonteParecer(descriptor.templateId, campo),
+  );
   const todos = [...(descriptor.auto ?? []), ...descriptor.secoes.flatMap((s) => s.campos)];
 
   return (
@@ -90,22 +96,29 @@ export function FormularioDocumento({
         />
       ))}
 
-      {descriptor.secoes.map((secao) => (
-        <SecaoFormulario key={secao.id} titulo={secao.titulo} descricao={secao.descricao}>
-          {secao.campos
-            .filter((campo) => !idsEndereco.has(campo.id))
-            .map((campo) => (
-              <TrechoDaSecao
-                key={campo.id}
-                campo={campo}
-                valor={valores[campo.id]}
-                aoMudar={aoMudar}
-                erro={erros[campo.id]}
-                desabilitado={desabilitado}
-              />
-            ))}
-        </SecaoFormulario>
-      ))}
+      {descriptor.secoes
+        .filter(
+          (secao) => descriptor.templateId !== "tpl-formulario-liberacao" || secao.id !== "parecer",
+        )
+        .map((secao) => (
+          <SecaoFormulario key={secao.id} titulo={secao.titulo} descricao={secao.descricao}>
+            {secao.campos
+              .filter(
+                (campo) =>
+                  !idsEndereco.has(campo.id) && !fonteParecer(descriptor.templateId, campo),
+              )
+              .map((campo) => (
+                <TrechoDaSecao
+                  key={campo.id}
+                  campo={campo}
+                  valor={valores[campo.id]}
+                  aoMudar={aoMudar}
+                  erro={erros[campo.id]}
+                  desabilitado={desabilitado}
+                />
+              ))}
+          </SecaoFormulario>
+        ))}
     </div>
   );
 }

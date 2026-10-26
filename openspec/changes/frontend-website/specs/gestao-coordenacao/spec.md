@@ -1,12 +1,12 @@
 ## Purpose
 
-Reúne as telas dos Coordenadores de Estágio e de Coordenadores de Curso para gerenciar convênios, cursos, turmas, orientadores, supervisores, estágios de alunos do curso, pareceres e o acesso aos documentos preenchidos.
+Reúne as telas das coordenações para gerir cadastros, avaliar o Formulário de Liberação, conferir assinaturas e liberar estágios, controlar sua situação e registrar observações nos documentos acessíveis ao seu papel.
 
 ## ADDED Requirements
 
 ### Requirement: Permissões do Coordenador de Estágio
 
-O sistema SHALL conceder ao Coordenador de Estágio o cadastro e a gestão de convênios, cursos, orientadores, supervisores e templates de documento, além do acesso a todos os documentos preenchidos e às estatísticas extraídas desses documentos.
+O sistema SHALL conceder ao Coordenador de Estágio o cadastro e a gestão de convênios, cursos, orientadores, supervisores e templates de documento, além do acesso a todos os documentos preenchidos e às estatísticas extraídas desses documentos, à conferência das assinaturas iniciais e à liberação dos estágios do campus.
 
 #### Scenario: Acesso do Coordenador de Estágio
 
@@ -17,6 +17,58 @@ O sistema SHALL conceder ao Coordenador de Estágio o cadastro e a gestão de co
 
 - **WHEN** o Coordenador de Estágio abre um documento preenchido de qualquer aluno
 - **THEN** o sistema SHALL exibir o documento, os dados do aluno, do estágio e a situação do documento
+
+### Requirement: Confirmação das assinaturas e liberação inicial
+
+O sistema SHALL permitir apenas ao Coordenador de Estágio confirmar no site que o Termo de Compromisso, o Formulário de Liberação e o Plano de Atividades foram assinados fora do sistema. A liberação SHALL exigir parecer favorável no Formulário de Liberação e confirmação das assinaturas dos três documentos, registrando o responsável e a data da conferência.
+
+#### Scenario: Conferência completa
+
+- **WHEN** o Coordenador de Estágio confirma as assinaturas dos três documentos iniciais de um estágio cujo Formulário de Liberação possui parecer favorável
+- **THEN** o sistema SHALL registrar a conferência, colocar o estágio em andamento, liberar seus demais documentos e notificar o aluno de que pode continuar
+
+#### Scenario: Parecer favorável ausente
+
+- **WHEN** o Coordenador de Estágio tenta liberar o estágio sem parecer favorável no Formulário de Liberação
+- **THEN** o sistema SHALL recusar a liberação e identificar a pendência
+
+#### Scenario: Assinatura pendente
+
+- **WHEN** a conferência ainda não confirma as assinaturas de um dos três documentos iniciais
+- **THEN** o sistema SHALL manter o estágio em preparação e os demais documentos bloqueados, identificando o documento pendente
+
+#### Scenario: Tentativa por outro perfil
+
+- **WHEN** um usuário sem papel de Coordenador de Estágio tenta confirmar as assinaturas ou liberar inicialmente o estágio, inclusive por requisição direta
+- **THEN** o sistema SHALL recusar a operação sem alterar a situação do estágio
+
+### Requirement: Controle da situação pela coordenação
+
+O sistema SHALL reservar aos coordenadores com acesso ao estágio as alterações entre em andamento e concluído, respeitando as validações do período. A edição genérica dos dados não SHALL permitir contornar os requisitos de liberação inicial pelo Coordenador de Estágio.
+
+#### Scenario: Conclusão pela coordenação
+
+- **WHEN** um coordenador com acesso ao estágio registra a conclusão de um estágio em andamento com período válido
+- **THEN** o sistema SHALL persistir a situação concluído e registrar autor e data da alteração
+
+#### Scenario: Edição não substitui liberação inicial
+
+- **WHEN** um coordenador tenta colocar um estágio em preparação diretamente em andamento ou concluído pela edição dos dados
+- **THEN** o sistema SHALL recusar a mudança e exigir o fluxo de liberação inicial
+
+### Requirement: Registro de observações pelos coordenadores
+
+O sistema SHALL permitir ao Coordenador de Curso acrescentar observações nos documentos dos alunos de seu curso e ao Coordenador de Estágio nos documentos do campus, sempre com conteúdo, autor e data. As ações de parecer e de confirmação de assinaturas SHALL oferecer o registro de observações por documento, e o mesmo registro SHALL estar disponível independentemente dessas ações e da etapa do estágio.
+
+#### Scenario: Observação fora das ações principais
+
+- **WHEN** um coordenador com acesso ao documento acrescenta uma observação sem emitir parecer ou confirmar assinaturas
+- **THEN** o sistema SHALL registrar a observação e preservar as anteriores, sem alterar a situação do documento ou do estágio
+
+#### Scenario: Documento de outro curso
+
+- **WHEN** um Coordenador de Curso tenta acrescentar uma observação a um documento de aluno de outro curso
+- **THEN** o sistema SHALL recusar o acesso e a gravação
 
 ### Requirement: Permissões do Coordenador de Curso
 

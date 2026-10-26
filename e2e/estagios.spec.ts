@@ -28,7 +28,7 @@ test("filtra o histórico por instituição e situação com total de resultados
   await expect(page.getByText("Total de resultados: 1")).toBeVisible();
 });
 
-test("edita o próprio estágio, salva seleção e solicita exclusão com autorização (7.8, 7.10)", async ({
+test("bloqueia edição inicial e preserva a seleção de documentos posteriores (7.8, 7.14)", async ({
   page,
 }) => {
   await entrar(page, "luiza.santos@aluno.ifrj.edu.br");
@@ -36,18 +36,12 @@ test("edita o próprio estágio, salva seleção e solicita exclusão com autori
   await expect(
     page.getByText("Tecnoweb Serviços de Tecnologia Ltda.", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Editar estágio", exact: true }).click();
-  await page.getByLabel("Data de Fim").fill("2026-01-01");
-  await page.getByRole("button", { name: "Salvar Estágio" }).click();
-  await expect(page.getByLabel("Data de Fim")).toHaveAttribute("aria-invalid", "true");
-  await expect(page.locator("#dataFim-erro")).toHaveText(
-    "A data final deve ser igual ou posterior à data inicial.",
-  );
-  await page.getByLabel("Data de Fim").fill("2026-08-27");
-  await page.getByRole("button", { name: "Salvar Estágio" }).click();
-  await expect(page.getByText("Período: 2026-03-02 a 2026-08-27")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Editar estágio", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Selecionar documentos" }).click();
-  await page.getByLabel("Plano de Atividades de Estágio", { exact: true }).check();
+  await expect(
+    page.getByRole("checkbox", { name: "Plano de Atividades de Estágio", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel(/Ficha de Acompanhamento/).check();
   await page.getByRole("button", { name: "Salvar seleção" }).click();
   await expect(
     page.getByRole("link", { name: "Plano de Atividades de Estágio", exact: true }),
@@ -56,11 +50,7 @@ test("edita o próprio estágio, salva seleção e solicita exclusão com autori
   await expect(
     page.getByRole("link", { name: "Plano de Atividades de Estágio", exact: true }),
   ).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Solicitar exclusão" }).click();
-  await expect(page.getByText("Exclusão aguardando autorização", { exact: true })).toBeVisible();
-  await page.reload();
-  await expect(page.getByText("Exclusão aguardando autorização", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-template-id="tpl-ficha-acompanhamento"]')).toBeVisible();
   await expect(page.getByText("Detalhes do Estágio", { exact: true })).toBeVisible();
 });
 
@@ -111,26 +101,18 @@ test("remove preenchimento da seleção sem apagar sua consulta pela coordenaç�
   await expect(page.getByTestId("documentos-inativos")).toContainText("Inativo");
 });
 
-test("cadastra estágio, seleciona documento e registra/corrige horas dentro dos limites (14.2)", async ({
+test("estágio já liberado permite registrar e corrigir horas dentro dos limites", async ({
   page,
 }) => {
   await entrar(page, "luiza.santos@aluno.ifrj.edu.br");
-  await page.goto("/estagio");
-  await page.getByRole("button", { name: "Cadastrar Estágio", exact: true }).click();
-  await page.getByLabel("Convênio", { exact: true }).click();
-  await expect(page.getByRole("option", { name: /Cooperativa/ })).toHaveCount(0);
-  await page.getByRole("option", { name: /Convênio de Estágio — Tecnoweb/ }).click();
-  await page.getByLabel("Orientador", { exact: true }).click();
-  await page.getByRole("option", { name: "Carla Menezes", exact: true }).click();
-  await page.getByLabel("Supervisor", { exact: true }).click();
-  await page.getByRole("option", { name: "Ricardo Alves", exact: true }).click();
-  await page.getByLabel("Data de Início").fill("2027-01-04");
-  await page.getByLabel("Data de Fim").fill("2027-01-29");
-  await page.getByLabel(/Ficha de Acompanhamento/).check();
-  await page.getByRole("button", { name: "Salvar Estágio" }).click();
-  await expect(page.getByText("Período: 2027-01-04 a 2027-01-29")).toBeVisible();
+  await page.goto("/estagio?estagio=est-sem-endereco");
+  if ((await page.getByRole("link", { name: /Ficha de Acompanhamento/ }).count()) === 0) {
+    await page.getByRole("button", { name: "Selecionar documentos", exact: true }).click();
+    await page.getByRole("checkbox", { name: /Ficha de Acompanhamento/ }).check();
+    await page.getByRole("button", { name: "Salvar seleção", exact: true }).click();
+  }
   await expect(page.getByRole("link", { name: /Ficha de Acompanhamento/ })).toBeVisible();
-  await page.getByLabel("Data", { exact: true }).fill("2027-01-05");
+  await page.getByLabel("Data", { exact: true }).fill("2026-03-05");
   await page.getByLabel("Entrada", { exact: true }).fill("09:00");
   await page.getByLabel("Saída", { exact: true }).fill("17:00");
   await page.getByLabel(/Desligar intervalo de almoço/).check();

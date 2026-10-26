@@ -28,6 +28,8 @@
 - [x] 3.6 Escrever as máscaras puras de CPF, RG, celular, telefone, CEP e data — verificação: testes unitários com valores válidos, inválidos e colagem de texto
 - [x] 3.7 Escrever os esquemas Zod reutilizáveis de CPF com dígito verificador, e-mail, telefone, intervalo de datas e campos condicionais — verificação: testes unitários de cada esquema
 - [x] 3.8 Implementar a formatação pt-BR de datas, números e moeda com fuso America/Sao_Paulo — verificação: testes unitários dos formatos gerados
+- [x] 3.9 Ampliar os contratos e serviços com estágio em preparação, pedido de encaminhamento, conferência de assinaturas por documento e observações com autor e data — verificação: `npm run typecheck` passa e testes de serviço preservam os vínculos entre solicitação, documentos e registros
+- [x] 3.10 Atualizar fixtures e transições para o novo fluxo, distinguindo solicitações em preparação de estágios liberados e reservando as mutações às coordenações competentes — verificação: testes unitários recusam alteração de situação pelo aluno e liberação sem parecer favorável ou conferência completa, inclusive por administrador sem o papel de coordenação exigido
 
 ## 4. Shell, sessão simulada e navegação por papel
 
@@ -66,17 +68,21 @@
 
 ## 7. Estágios do aluno
 
-- [x] 7.1 Criar o formulário de cadastro de estágio com instituição a partir de convênios ativos, supervisor, orientador, datas e situação — verificação: teste E2E de cadastro válido abrindo a seleção de documentos
+- [x] 7.1 Substituir o cadastro direto por solicitação com convênio ativo, supervisor, orientador, datas previstas e os dados necessários aos três documentos iniciais, reaproveitando o cadastro do aluno e sem escolha de situação — verificação: teste E2E salva em preparação e apresenta os três documentos preenchidos e a ação de encaminhamento
 - [x] 7.2 Impedir a escolha de convênio expirado e avisar quando não há convênio ativo — verificação: teste E2E da mensagem de indisponibilidade
 - [x] 7.3 Validar o período do estágio e a coerência entre situação e data de fim — verificação: testes unitários de data final anterior à inicial e de concluído com data futura
 - [x] 7.4 Montar o histórico de estágios com busca, filtro por situação e total de resultados — verificação: teste E2E filtrando e conferindo o total
 - [x] 7.5 Criar o estado vazio do histórico com ação de cadastrar estágio — verificação: aluno sem estágios vê a mensagem e a ação
 - [x] 7.6 Montar a tela de detalhes com dados do estágio, documentos com situação e total de horas — verificação: teste E2E conferindo os três blocos
-- [x] 7.7 Criar o estado vazio de detalhes orientando iniciar a seleção de documentos — verificação: estágio sem documentos exibe a orientação
-- [x] 7.8 Implementar a seleção de documentos por estágio com persistência — verificação: teste E2E adicionando documentos e reabrindo a seleção
+- [x] 7.7 Substituir a orientação de seleção livre na preparação pelo acompanhamento dos três documentos iniciais, parecer, correções, assinaturas e conferência — verificação: teste E2E identifica a próxima ação em cada etapa sem apresentar os demais documentos como liberados
+- [x] 7.8 Adaptar a seleção para disponibilizar documentos opcionais somente após a liberação, preservando os três iniciais obrigatórios — verificação: testes de serviço e E2E recusam seleção antecipada e remoção dos iniciais, e preservam a seleção opcional após recarga
 - [x] 7.9 Exigir confirmação para remover documento preenchido e inativá-lo sem apagar — verificação: teste E2E do documento sumindo da seleção e continuando visível ao coordenador
 - [x] 7.10 Implementar a edição de estágio e o pedido de exclusão com autorização de cargo superior — verificação: teste E2E da exclusão registrada como aguardando autorização
 - [x] 7.11 Restringir a gestão de estágios do coordenador de curso aos alunos do seu curso e registrar a autoria da edição — verificação: teste E2E sem estágios de outro curso e com autoria exibida
+- [x] 7.12 Retirar a alteração de situação das ações do aluno e impedir que a edição genérica contorne a liberação inicial — verificação: testes de requisição direta recusam criação ou edição pelo aluno com situação em andamento/concluído e a passagem direta da preparação para essas situações
+- [x] 7.13 Incluir preparação nos detalhes e filtros, mantendo solicitações não liberadas fora dos indicadores de andamento e conclusão — verificação: testes de consulta e E2E distinguem preparação, andamento e conclusão sem contar preparação como estágio liberado
+- [x] 7.14 Bloquear a edição dos dados iniciais pelo aluno, com exceção para correção após indeferimento, e permitir edição dos dados registrados depois da liberação — verificação: testes de serviço e E2E recusam alteração inicial durante a espera e após liberação, mas permitem correção do indeferimento e edição autorizada dos documentos posteriores
+- [x] 7.15 Implementar cancelamento e exclusão pelo aluno com preservação do nome e histórico e remoção dos dados pessoais vinculados ao estágio, sem excluir o perfil — verificação: testes de serviço e E2E impedem continuidade do registro cancelado/excluído e mantêm histórico sem recuperar dados pessoais pela relação com o perfil
 
 ## 8. Documentos, template, preview e horas
 
@@ -87,7 +93,7 @@
 - [x] 8.5 Criar o renderizador de formulário dirigido pelo descritor cobrindo todos os tipos de campo observados no Kit — verificação: página de laboratório renderizando um formulário para cada tipo de campo
 - [x] 8.6 Resolver o preenchimento automático de origem aluno e estágio em modo somente leitura — verificação: teste E2E dos campos automáticos não editáveis
 - [x] 8.7 Avisar pendência quando o dado de origem não existe no cadastro e orientar completar o cadastro — verificação: teste E2E de aluno sem endereço informado
-- [x] 8.8 Preencher a duração em horas do Termo de Compromisso com o total do estágio mantendo o valor ajustável — verificação: teste E2E do campo calculado e editável
+- [x] 8.8 Coletar a duração prevista em horas na solicitação e aplicá-la ao Termo de Compromisso, distinguindo-a do total realizado — verificação: teste E2E prepara o Termo com a duração declarada sem exigir lançamentos anteriores à liberação
 - [x] 8.9 Implementar gravação, reabertura e listagem dos documentos preenchidos por estágio — verificação: teste E2E de salvar, reabrir e localizar na lista
 - [x] 8.10 Exigir a indicação do estágio nos documentos vinculados, como o Termo Aditivo — verificação: teste E2E de submissão sem estágio recusada
 - [x] 8.11 Aplicar as permissões de preenchimento por perfil vindas do descritor — verificação: teste E2E de aluno recusado na Ficha de Frequência e no Convênio
@@ -101,77 +107,89 @@
 - [x] 8.19 Registrar horas aplicando os limites de seis horas por dia e trinta por semana, com desligamento do intervalo de almoço — verificação: testes unitários dos limites e teste E2E de lançamento excedente recusado
 - [x] 8.20 Manter o lançamento imutável e corrigir por lançamento de correção sem apagar o original — verificação: teste E2E do histórico com original e correção identificados
 - [x] 8.21 Exibir o total acumulado e a lista de lançamentos do estágio — verificação: teste E2E do total após correções
+- [x] 8.22 Preparar automaticamente os três documentos iniciais a partir dos dados compartilhados e específicos da solicitação, com vínculos obrigatórios e sem duplicação na reabertura — verificação: testes de serviço conferem dados aplicados, três registros distintos vinculados ao mesmo estágio e reutilização dos registros existentes
+- [x] 8.23 Bloquear no serviço e na interface a abertura, criação, gravação e seleção de documentos adicionais e o lançamento de horas antes da liberação — verificação: testes de acesso direto e E2E recusam as operações em preparação e mantêm catálogo e PDFs fixos acessíveis
+- [x] 8.24 Acrescentar o histórico de observações por documento e a ação independente disponível às duas coordenações com acesso — verificação: testes de serviço e E2E preservam conteúdo, autor, data e observações anteriores, recusam aluno e acesso entre cursos e aceitam acréscimos em documento sem parecer e estágio concluído sem alterar situações
+- [x] 8.25 Refletir atualizações do perfil nos dados correspondentes do estágio sem reiniciar a autorização — verificação: teste de integração altera o perfil e preserva parecer e liberação já registrados
+- [x] 8.26 Retirar a Data do Termo de Compromisso do preenchimento no sistema e manter espaço em branco no Termo Aditivo para assinatura externa — verificação: formulário sem input ou pendência dessa data e preview/download com espaço em branco, sem aceitar valor enviado pelo cliente
 
 ## 9. Parecer e notificações
 
-- [x] 9.1 Ler o metadado de parecer do descritor e identificar os documentos com parecer interno e externo — verificação: testes unitários da matriz de parecer dos doze documentos
-- [ ] 9.2 Implementar a submissão a parecer validando o documento completo — verificação: teste E2E de recusa com campo pendente e de sucesso com documento completo
-- [ ] 9.3 Recusar a submissão em documento que não exige parecer — verificação: teste E2E do aviso de que o documento não está sujeito a parecer
-- [ ] 9.4 Aplicar as transições de situação do documento, de rascunho a submetido, em análise, aprovado e indeferido — verificação: testes unitários das transições permitidas e recusadas
-- [ ] 9.5 Criar a fila de parecer do coordenador de curso restrita ao curso — verificação: teste E2E sem itens de outros cursos
-- [ ] 9.6 Registrar o parecer com decisão e considerações e exibi-lo ao aluno — verificação: teste E2E do parecer visível para o aluno
-- [ ] 9.7 Exigir a escolha entre aprovar e indeferir e permitir parecer sem considerações — verificação: teste E2E de decisão ausente recusada
-- [ ] 9.8 Criar a fila da Comissão de Estágio exibindo o total de horas solicitado — verificação: teste E2E da fila com o total do requerimento
-- [ ] 9.9 Sinalizar pendências na navegação e criar a central de notificações — verificação: teste E2E do contador de pendências por papel
-- [ ] 9.10 Implementar o envio para responsável externo com registro de autor, data e destinatário — verificação: teste E2E do histórico de envios
-- [ ] 9.11 Notificar o aluno quando o e-mail do responsável externo estiver indisponível — verificação: teste E2E do aviso ao aluno
-- [ ] 9.12 Reenviar preservando o histórico e registrar falha permitindo nova tentativa — verificação: testes unitários do registro de envio com falha e do reenvio
+- [x] 9.1 Corrigir a matriz para exigir parecer apenas no Formulário de Liberação entre os documentos iniciais, mantendo o Termo e o Plano como documentos com assinaturas e preservando os pareceres dos demais documentos do Kit — verificação: testes unitários dos doze descritores distinguem parecer de assinatura e não classificam o Termo como parecer externo
+- [x] 9.2 Implementar a submissão a parecer validando o documento completo — verificação: teste E2E de recusa com campo pendente e de sucesso com documento completo
+- [x] 9.3 Recusar a submissão em documento que não exige parecer — verificação: teste E2E do aviso de que o documento não está sujeito a parecer
+- [x] 9.4 Aplicar as transições de situação do documento, de rascunho a submetido, em análise, aprovado e indeferido — verificação: testes unitários das transições permitidas e recusadas
+- [x] 9.5 Criar a fila de parecer do coordenador de curso restrita ao curso — verificação: teste E2E sem itens de outros cursos
+- [x] 9.6 Registrar o parecer com decisão e considerações e exibi-lo ao aluno — verificação: teste E2E do parecer visível para o aluno
+- [x] 9.7 Exigir a escolha entre aprovar e indeferir e permitir parecer sem considerações — verificação: teste E2E de decisão ausente recusada
+- [x] 9.8 Criar a fila da Comissão de Estágio exibindo o total de horas solicitado — verificação: teste E2E da fila com o total do requerimento
+- [x] 9.9 Sinalizar pendências na navegação e criar a central de notificações — verificação: teste E2E do contador de pendências por papel
+- [x] 9.10 Implementar o envio para responsável externo com registro de autor, data e destinatário — verificação: teste E2E do histórico de envios
+- [x] 9.11 Notificar o aluno quando o e-mail do responsável externo estiver indisponível — verificação: teste E2E do aviso ao aluno
+- [x] 9.12 Reenviar preservando o histórico e registrar falha permitindo nova tentativa — verificação: testes unitários do registro de envio com falha e do reenvio
+- [x] 9.13 Implementar o pedido de encaminhamento dos três documentos completos, submetendo apenas o Formulário de Liberação e registrando o pedido de envio para após a aprovação — verificação: testes de serviço recusam dados pendentes e comprovam ausência de envio antes de parecer favorável
+- [x] 9.14 Conectar o parecer favorável ao envio solicitado para os respectivos assinantes e a confirmação das assinaturas à notificação de liberação — verificação: testes de integração registram o envio após aprovação e mostram que somente a conferência completa libera e notifica o aluno
+- [x] 9.15 Devolver o Formulário de Liberação indeferido para correção e nova submissão, preservando pareceres e observações e mantendo os bloqueios — verificação: teste E2E de indeferimento, correção, reenvio e nova aprovação sem perda do histórico ou envio antecipado para assinaturas
 
 ## 10. Coordenação de estágio e de curso
 
-- [ ] 10.1 Montar a listagem e a busca de documentos preenchidos por aluno, orientador, supervisor e instituição com total — verificação: teste E2E da pesquisa e do estado sem resultado
-- [ ] 10.2 Cadastrar convênio com vigência de cinco anos e classificação automática por vencimento — verificação: testes unitários do cálculo de vigência
-- [ ] 10.3 Listar convênios com classificação, contagem de estágios vinculados e contagem por classificação — verificação: teste E2E da listagem
-- [ ] 10.4 Inativar convênio com estágio vinculado em vez de excluir — verificação: teste E2E da recusa de exclusão e do convênio preservado
-- [ ] 10.5 Implementar o cadastro de cursos, turmas e períodos com vínculo obrigatório de curso — verificação: teste E2E do CRUD e da turma oferecida apenas ao curso vinculado
-- [ ] 10.6 Implementar o cadastro e a exclusão de orientadores e supervisores com remoção de dados pessoais — verificação: teste E2E da exclusão com estágios preservados
-- [ ] 10.7 Gerenciar os estágios dos alunos do curso com edição registrada em nome do coordenador — verificação: teste E2E da edição e da autoria
-- [ ] 10.8 Conectar as filas de parecer do coordenador de curso e da comissão às telas de gestão — verificação: teste E2E navigating das telas de gestão até o parecer
-- [ ] 10.9 Aplicar as regras de integridade recusando exclusão com vínculos e oferecendo inativação para curso, convênio, turma e template — verificação: quatro testes E2E de recusa com opção de inativação
-- [ ] 10.10 Excluir aluno, orientador, supervisor e administrador com remoção de dados pessoais e preservação dos documentos — verificação: teste E2E da exclusão mantendo os documentos visíveis à coordenação
-- [ ] 10.11 Dar ao coordenador de estágio acesso a todos os documentos preenchidos do campus — verificação: teste E2E de documento de aluno de qualquer curso visível
+- [x] 10.1 Montar a listagem e a busca de documentos preenchidos por aluno, orientador, supervisor e instituição com total — verificação: teste E2E da pesquisa e do estado sem resultado
+- [x] 10.2 Cadastrar convênio com vigência de cinco anos e classificação automática por vencimento — verificação: testes unitários do cálculo de vigência
+- [x] 10.3 Listar convênios com classificação, contagem de estágios vinculados e contagem por classificação — verificação: teste E2E da listagem
+- [x] 10.4 Inativar convênio com estágio vinculado em vez de excluir — verificação: teste E2E da recusa de exclusão e do convênio preservado
+- [x] 10.5 Implementar o cadastro de cursos, turmas e períodos com vínculo obrigatório de curso — verificação: teste E2E do CRUD e da turma oferecida apenas ao curso vinculado
+- [x] 10.6 Implementar o cadastro e a exclusão de orientadores e supervisores com remoção de dados pessoais — verificação: teste E2E da exclusão com estágios preservados
+- [x] 10.7 Gerenciar os estágios dos alunos do curso com edição registrada em nome do coordenador — verificação: teste E2E da edição e da autoria
+- [x] 10.8 Conectar as filas de parecer do coordenador de curso e da comissão às telas de gestão — verificação: teste E2E navigating das telas de gestão até o parecer
+- [x] 10.9 Aplicar as regras de integridade recusando exclusão com vínculos e oferecendo inativação para curso, convênio, turma e template — verificação: quatro testes E2E de recusa com opção de inativação
+- [x] 10.10 Excluir aluno, orientador, supervisor e administrador com remoção de dados pessoais e preservação dos documentos — verificação: teste E2E da exclusão mantendo os documentos visíveis à coordenação
+- [x] 10.11 Dar ao coordenador de estágio acesso a todos os documentos preenchidos do campus — verificação: teste E2E de documento de aluno de qualquer curso visível
+- [x] 10.12 Criar a conferência das assinaturas dos três documentos iniciais pelo Coordenador de Estágio com registro de responsável e data e liberação condicionada ao parecer favorável — verificação: testes de serviço recusam papel incompatível, parecer ausente ou assinatura pendente e teste E2E libera o estágio somente após conferência completa
+- [x] 10.13 Oferecer o acréscimo de observações por documento ao emitir parecer ou confirmar assinaturas, reutilizando o histórico da ação independente — verificação: teste E2E registra observações nas duas ações e depois delas, exibindo os respectivos autores e datas sem sobrescrever registros
+- [x] 10.14 Reservar conclusão e reabertura aos coordenadores com acesso, preservando a exigência de liberação inicial — verificação: testes de serviço e E2E recusam aluno, data final futura e tentativa de concluir ou reabrir uma solicitação ainda não liberada, e registram a autoria das transições válidas
 
 ## 11. Administração do sistema
 
 - [x] 11.1 Cadastrar, editar e excluir alunos pela administração, registrando automaticamente a matrícula informada quando ela ainda não consta e liberando o acesso — verificação: testes E2E de cadastro com matrícula nova e com matrícula já registrada, sem duplicar o registro
 - [x] 11.2 Cadastrar coordenadores de estágio, coordenadores de curso e administradores com papel obrigatório e curso vinculado — verificação: testes E2E do CRUD e da recusa sem papel
 - [x] 11.3 Listar usuários com filtro por papel, situação e curso, busca, perfil completo e inativação sem exclusão — verificação: teste E2E dos filtros, do perfil completo e da inativação bloqueando o acesso
-- [ ] 11.4 Gerenciar templates com cadastro de nova versão, campos de preenchimento e histórico de versões — verificação: teste E2E do versioning com a versão vigente indicada
-- [ ] 11.5 Recusar arquivo de template fora do formato docx e inativar template preservando os documentos gerados — verificação: testes E2E da recusa e da inativação
-- [ ] 11.6 Manter a versão usada por documentos já preenchidos sem reaplicar os campos da nova versão — verificação: teste E2E de reabertura de documento com versão anterior
+- [x] 11.4 Gerenciar templates com cadastro de nova versão, campos de preenchimento e histórico de versões — verificação: teste E2E do versioning com a versão vigente indicada
+- [x] 11.5 Recusar arquivo de template fora do formato docx e inativar template preservando os documentos gerados — verificação: testes E2E da recusa e da inativação
+- [x] 11.6 Manter a versão usada por documentos já preenchidos sem reaplicar os campos da nova versão — verificação: teste E2E de reabertura de documento com versão anterior
 - [x] 11.7 Lançar matrícula válida pela tela de Matrículas, com dez dígitos, nome e curso, recusando duplicatas — verificação: teste E2E do lançamento e da recusa de matrícula duplicada
-- [ ] 11.10 Exibir a importação de matrículas por arquivo com as válidas, as rejeitadas e as ignoradas com o motivo — verificação: teste E2E do relatório de importação com matrícula duplicada
+- [x] 11.10 Exibir a importação de matrículas por arquivo com as válidas, as rejeitadas e as ignoradas com o motivo — verificação: teste E2E do relatório de importação com matrícula duplicada
 - [x] 11.8 Avisar que o registro é manual enquanto não houver acesso oficial ao SIGAA — verificação: inspeção visual do aviso na tela de Matrículas
 - [x] 11.9 Listar as matrículas registradas com busca por nome, matrícula ou curso, filtro por origem e o total — verificação: teste E2E da listagem
 
 ## 12. Estatísticas
 
-- [ ] 12.1 Implementar a pesquisa de estágios por aluno, orientador, supervisor e instituição com o total de cada filtro — verificação: testes E2E dos quatro filtros e do estado sem resultado
-- [ ] 12.2 Filtrar estágios concluídos combinado com os demais filtros — verificação: teste E2E do filtro combinado
-- [ ] 12.3 Filtrar por curso e por ano e semestre com ordenação por data de início — verificação: teste E2E dos filtros e da ordenação
-- [ ] 12.4 Calcular totais de horas por aluno, curso, turma e instituição, contando zero para estágio sem lançamento — verificação: testes unitários do cálculo
-- [ ] 12.5 Montar os painéis de estágios em andamento e concluídos e de convênios ativos e expirados — verificação: teste E2E dos painéis
-- [ ] 12.6 Exibir a quantidade de documentos gerados por tipo e por situação — verificação: teste E2E do painel de documentos
-- [ ] 12.7 Calcular a taxa de aproveitamento de horas com deferidos e indeferidos — verificação: testes unitários do cálculo da proporção
-- [ ] 12.8 Listar estágios concluídos sem parecer final e o total de pendências — verificação: teste E2E da lista de pendências
-- [ ] 12.9 Aplicar o recorte por papel, do campus para o curso, sinalizando o recorte no título do painel — verificação: teste E2E dos dois recortes
-- [ ] 12.10 Abrir a lista de registros a partir do valor exibido no indicador — verificação: teste E2E da navegação do indicador para a lista
+- [x] 12.1 Implementar a pesquisa de estágios por aluno, orientador, supervisor e instituição com o total de cada filtro — verificação: testes E2E dos quatro filtros e do estado sem resultado
+- [x] 12.2 Filtrar estágios concluídos combinado com os demais filtros — verificação: teste E2E do filtro combinado
+- [x] 12.3 Filtrar por curso e por ano e semestre com ordenação por data de início — verificação: teste E2E dos filtros e da ordenação
+- [x] 12.4 Calcular totais de horas por aluno, curso, turma e instituição, contando zero para estágio sem lançamento — verificação: testes unitários do cálculo
+- [x] 12.5 Montar os painéis de estágios em andamento e concluídos e de convênios ativos e expirados — verificação: teste E2E dos painéis
+- [x] 12.6 Exibir a quantidade de documentos gerados por tipo e por situação — verificação: teste E2E do painel de documentos
+- [x] 12.7 Calcular a taxa de aproveitamento de horas com deferidos e indeferidos — verificação: testes unitários do cálculo da proporção
+- [x] 12.8 Listar estágios concluídos sem parecer final e o total de pendências — verificação: teste E2E da lista de pendências
+- [x] 12.9 Aplicar o recorte por papel, do campus para o curso, sinalizando o recorte no título do painel — verificação: teste E2E dos dois recortes
+- [x] 12.10 Abrir a lista de registros a partir do valor exibido no indicador — verificação: teste E2E da navegação do indicador para a lista
 
 ## 13. Responsividade e acessibilidade
 
-- [ ] 13.1 Auditar todas as telas em 360, 768 e 1440 pixels sem rolagem horizontal indevida — verificação: registro de revisão visual sem pendências
-- [ ] 13.2 Garantir navegação recolhida e ações principais acessíveis no celular em todas as áreas — verificação: teste E2E de viewport móvel percorrendo as áreas do aluno
-- [ ] 13.3 Garantir foco visível e ordem de tabulação em formulários e diálogos — verificação: teste E2E de navegação por teclado em login, cadastro de estágio e parecer
-- [ ] 13.4 Associar rótulos e mensagens de erro aos respectivos campos — verificação: testes unitários de associação de rótulo e erro por campo
-- [ ] 13.5 Fechar diálogos com escape devolvendo o foco ao elemento de origem — verificação: teste E2E do retorno de foco
-- [ ] 13.6 Conferir contraste em ambos os temas para erro, foco e situação de documento — verificação: medição de contraste registrada sem valor abaixo de 4,5:1
+- [x] 13.1 Auditar todas as telas em 360, 768 e 1440 pixels sem rolagem horizontal indevida — verificação: registro de revisão visual sem pendências
+- [x] 13.2 Garantir navegação recolhida e ações principais acessíveis no celular em todas as áreas — verificação: teste E2E de viewport móvel percorrendo as áreas do aluno
+- [x] 13.3 Garantir foco visível e ordem de tabulação em formulários e diálogos — verificação: teste E2E de navegação por teclado em login, cadastro de estágio e parecer
+- [x] 13.4 Associar rótulos e mensagens de erro aos respectivos campos — verificação: testes unitários de associação de rótulo e erro por campo
+- [x] 13.5 Fechar diálogos com escape devolvendo o foco ao elemento de origem — verificação: teste E2E do retorno de foco
+- [x] 13.6 Conferir contraste em ambos os temas para erro, foco e situação de documento — verificação: medição de contraste registrada sem valor abaixo de 4,5:1
 
 ## 14. Testes de fluxo
 
 - [x] 14.1 Escrever o teste E2E do cadastro em duas etapas para matrícula válida e inválida — verificação: `npm run test:e2e` passa
-- [x] 14.2 Escrever o teste E2E do ciclo de estágio com seleção de documentos e limite de horas — verificação: `npm run test:e2e` passa
-- [ ] 14.3 Escrever o teste E2E do ciclo de parecer, da submissão à decisão e à notificação — verificação: `npm run test:e2e` passa
-- [ ] 14.4 Ampliar a suíte unitária para cobrir máscaras, esquemas Zod, descritores, situações e limites de horas — verificação: `npm run test:unit` passa cobrindo todas as regras de domínio
+- [x] 14.2 Reescrever o ciclo E2E de estágio para cobrir solicitação, preparação automática dos três documentos, parecer favorável, envio, conferência, notificação e liberação antes da seleção e das horas — verificação: `npm run test:e2e` passa e o envio isolado não libera o estágio
+- [x] 14.3 Escrever o teste E2E do ciclo de parecer, da submissão à decisão e à notificação — verificação: `npm run test:e2e` passa
+- [x] 14.4 Ampliar a suíte unitária para cobrir máscaras, esquemas Zod, descritores, situações e limites de horas — verificação: `npm run test:unit` passa cobrindo todas as regras de domínio
+- [x] 14.5 Cobrir os bloqueios do novo fluxo em conjunto, incluindo parecer desfavorável, acesso por URL/requisição direta e aluno com dois estágios em etapas diferentes — verificação: testes de integração e E2E mantêm os documentos bloqueados somente no estágio não liberado e preservam o histórico após correção
 
 ## 15. Pendências do Kit de Estágio
 
@@ -192,10 +210,12 @@
 - [ ] 16.1 Revisar responsividade e acessibilidade com a cliente e corrigir o que for apontado — verificação: lista de problemas zerada
 - [ ] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo
 - [x] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
-- [x] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build — verificação: todos os comandos passam
-- [x] 16.5 Publicar o Preview na Vercel para validação das telas — verificação: endereço acessível e testado pela cliente
+- [ ] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build após a adequação do fluxo — verificação: todos os comandos passam com os novos critérios de liberação e observações
+- [ ] 16.5 Publicar o Preview atualizado na Vercel para validação das telas — verificação: endereço acessível e fluxo redefinido testado pela cliente
 
 ### Evidências da reconciliação de implementação
+
+As evidências abaixo se referem à implementação anterior à redefinição do fluxo. As tarefas 7.1, 7.7, 7.8, 8.8, 9.1, 14.2, 16.4 e 16.5 foram reabertas porque seus critérios mudaram ou precisam ser revalidados após a adequação. As novas tarefas estão pendentes; atualizar o planejamento não comprova implementação do fluxo redefinido.
 
 - `e2e/estagios.spec.ts`: histórico e filtros (7.4), seleção e reabertura (7.8), inativação com consulta pela coordenação (7.9), edição e solicitação de exclusão persistida (7.10), recorte por curso e autoria (7.11), ciclo de cadastro/seleção/horas/correção (14.2).
 - `e2e/documentos-preenchimento.spec.ts`: endereço ausente (8.7), cálculo do conceito global (8.17) e submissão real recusada por comprovante pendente (8.18).
@@ -203,3 +223,12 @@
 - `src/lib/templates/descriptors.test.ts`: matriz de parecer dos doze documentos (9.1).
 - A submissão inicial reutilizada em 8.18 está disponível; as tarefas restantes do fluxo completo de parecer continuam sujeitas aos seus próprios critérios de aceitação. O registro da ficha assinada (8.12) foi concluído com `e2e/ficha-frequencia.spec.ts` e `src/lib/services/frequencia.test.ts`; a página de impressão do preview (8.13) foi concluída com `e2e/documento-impressao.spec.ts`, `src/components/documentos/documento-impressao.tsx` e `src/lib/templates/valores-legiveis.ts`.
 - Validação desta reconciliação: typecheck e lint sem erros/avisos de código, 419 testes unitários, build sem avisos e 88 E2E aprovados contra o build compilado (`PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`). O teste do seletor, omitido por depender de flag na suíte principal, foi aprovado separadamente em `npm run test:e2e:seletor`.
+
+### Evidências do fluxo redefinido e da gestão de cadastros
+
+- `src/lib/services/fluxo-estagio.test.ts` e `e2e/fluxo-estagio.spec.ts`: solicitação, documentação inicial, parecer restrito ao formulário, exceção de correção após indeferimento, envio posterior, conferência completa, notificação, liberação, observações, exclusão e histórico.
+- `src/lib/services/templates.test.ts`: validações do versionamento em desenvolvimento, preservação da versão anterior, arquivos permitidos, mapeamento de dados do perfil e proteção dos campos de parecer contra alteração pelo aluno.
+- Suíte completa do fluxo redefinido antes da ampliação de cadastros/templates: 517 testes unitários aprovados; 106 E2E aprovados e um teste de seletor omitido por depender de flag, contra build isolado na porta 3107. Build e verificação de tipos aprovados.
+- `src/lib/services/cadastros.test.ts` e `e2e/cadastros-gestao.spec.ts`: vigência de cinco anos, filtros e contagens de convênio, inativação com vínculos, relacionamento entre curso/turma/período, manutenção do perfil com referências inativas e exclusão dos contatos de responsáveis. Verificação focada: 68 testes unitários e quatro E2E aprovados, com build e typecheck aprovados.
+- Definição confirmada para `termoCompromissoData`, do Termo Aditivo: a data é preenchida ao assinar, fora do sistema. O campo sai do preenchimento automático e da validação obrigatória; o documento mantém um espaço em branco. A confirmação das assinaturas não coleta essa data.
+- Versionamento e data externa: 68 testes unitários focados aprovados e quatro E2E de `e2e/templates.spec.ts` aprovados contra o build compilado. Os arquivos do documento preservam os trechos fixos; novas versões não alteram validação, campos ou download dos preenchimentos anteriores. A consulta por documento mantém a verificação de acesso e permite acessar o histórico preservado pela coordenação.

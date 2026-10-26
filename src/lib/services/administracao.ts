@@ -531,7 +531,12 @@ export async function importarMatriculas(
 
     if (existentes.has(matricula)) {
       resultado.ignoradas += 1;
-      resultado.itens.push({ matricula, nome, resultado: "ignorada" });
+      resultado.itens.push({
+        matricula,
+        nome,
+        resultado: "ignorada",
+        motivo: "Matrícula já registrada; a linha foi ignorada.",
+      });
       continue;
     }
 

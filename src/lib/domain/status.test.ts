@@ -128,6 +128,8 @@ describe("transições de documento", () => {
 
 describe("transições de estágio", () => {
   it.each([
+    ["em_preparacao", "em_andamento", true],
+    ["em_preparacao", "concluido", false],
     ["em_andamento", "concluido", true],
     ["em_andamento", "em_andamento", false],
     ["concluido", "em_andamento", true],

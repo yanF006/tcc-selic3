@@ -74,7 +74,7 @@ test("perfil: consulta, corrige, salva e reabre sem consultar na carga inicial",
   await page.getByLabel("Número", { exact: true }).fill("s/n");
   await page.getByLabel("Complemento", { exact: true }).fill("Casa B");
   await page.getByRole("button", { name: "Salvar alterações" }).click();
-  await expect(page.getByText("Dados atualizados.")).toBeVisible();
+  await expect(page.getByText("Dados atualizados.", { exact: true })).toBeVisible();
   const antes = consultas;
   await page.reload();
   await expect(page.getByLabel("Endereço", { exact: true })).toHaveValue("Rua corrigida no perfil");
@@ -93,9 +93,9 @@ test("documento: prioriza cadastro, consulta apenas na edição e preserva corre
   await entrar(page, "maria.souza@aluno.ifrj.edu.br");
   await page.goto("/perfil");
   const original = await page.getByLabel("Endereço", { exact: true }).inputValue();
-  await page.goto("/documentos/tpl-formulario-liberacao?estagio=est-maria-hospital");
+  await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-maria-tecnoweb");
   let aluno = page.getByRole("group", { name: "Endereço do aluno", exact: true });
-  const local = page.getByRole("group", { name: "Endereço do local de estágio", exact: true });
+  const local = page.getByRole("group", { name: "Endereço da instituição", exact: true });
   await expect(aluno.getByLabel("Logradouro")).toHaveValue(original);
   expect(consultas).toBe(0);
   await aluno.getByRole("button", { name: "Alterar endereço" }).click();
@@ -112,12 +112,18 @@ test("documento: prioriza cadastro, consulta apenas na edição e preserva corre
   await local.getByLabel("Logradouro").fill("Rua do local");
   await local.getByLabel("Número").fill("10");
   await expect(aluno.getByLabel("Logradouro")).toHaveValue("Correção exclusiva do documento");
-  await page.getByLabel("Telefone", { exact: true }).fill("2133337788");
-  await page.getByLabel("Celular", { exact: true }).fill("21998761234");
-  await page.getByLabel("E-mail", { exact: true }).fill("maria.souza@aluno.ifrj.edu.br");
-  await page.getByLabel("Telefone do(a) supervisor(a)").fill("2133331000");
-  await page.getByRole("radio", { name: "Sim", exact: true }).check();
-  await page.getByLabel("Data do parecer").fill("01/03/2026");
+  for (const rotulo of [
+    "Descrição da empresa",
+    "Objetivos do estágio",
+    "Desenvolvimento das atividades",
+    "Dificuldades encontradas",
+    "Considerações finais",
+  ])
+    await page
+      .getByLabel(rotulo, { exact: true })
+      .fill("Relato das atividades e da experiência de estágio.");
+  for (const opcao of await page.getByRole("radio", { name: "Bom", exact: true }).all())
+    await opcao.check();
   await page.getByRole("button", { name: "Salvar rascunho" }).click();
   await expect(page.getByText("Rascunho salvo.")).toBeVisible();
   await page.reload();
@@ -126,7 +132,7 @@ test("documento: prioriza cadastro, consulta apenas na edição e preserva corre
   await expect(aluno.getByLabel("Complemento")).toHaveValue("Apartamento 3");
   await expect(
     page
-      .getByRole("group", { name: "Endereço do local de estágio", exact: true })
+      .getByRole("group", { name: "Endereço da instituição", exact: true })
       .getByLabel("Logradouro"),
   ).toHaveValue("Rua do local");
   expect(consultas).toBe(2);
@@ -167,7 +173,7 @@ for (const caso of ["nao_encontrado", "indisponivel", "inutilizavel", "parcial"]
       await expect(page.getByLabel("Cidade", { exact: true })).toHaveValue("Cidade parcial");
     await page.getByLabel("Endereço", { exact: true }).fill(`Endereço manual ${caso}`);
     await page.getByRole("button", { name: "Salvar alterações" }).click();
-    await expect(page.getByText("Dados atualizados.")).toBeVisible();
+    await expect(page.getByText("Dados atualizados.", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByLabel("Endereço", { exact: true })).toHaveValue(
       `Endereço manual ${caso}`,

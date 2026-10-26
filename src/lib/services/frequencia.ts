@@ -1,4 +1,5 @@
 import type { DocumentoPreenchido, Estagio, Usuario } from "@/lib/domain/types";
+import { estagioLiberado } from "@/lib/domain/fluxo-estagio";
 
 import {
   documentosDoEstagio,
@@ -59,6 +60,11 @@ export async function iniciarRegistroFicha(
   }
 
   const estagio = await exigirAcessoEstagio(autor, estagioId);
+  if (!estagioLiberado(estagio))
+    throw new ErroDeRegra(
+      "O estágio aguarda liberação ou está cancelado/excluído.",
+      "liberacao_pendente",
+    );
   const aluno = obterEstado().usuarios.find((registro) => registro.id === estagio.alunoId);
 
   if (!aluno) {
@@ -107,8 +113,9 @@ export async function registrarFichaFrequencia(
     aluno,
     estagioId,
     valores,
+    ficha?.versaoTemplate,
   );
-  const problemas = validarValores(TEMPLATE_FICHA_FREQUENCIA, preparados);
+  const problemas = validarValores(TEMPLATE_FICHA_FREQUENCIA, preparados, ficha?.versaoTemplate);
 
   if (problemas.length > 0) {
     return { ok: false, erro: problemas[0].mensagem, problemas };

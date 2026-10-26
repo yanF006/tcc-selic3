@@ -5,8 +5,8 @@ import {
   type FormatoDocumento,
 } from "@/lib/documentos/gerar-demo";
 import type { DocumentoPreenchido } from "@/lib/domain/types";
-import { validarValores } from "@/lib/services/documentos";
-import { camposDoTemplate, classificacaoDoCampo, descritorPorTemplate } from "@/lib/templates/descriptors";
+import { descritorDoDocumento, validarValores } from "@/lib/services/documentos";
+import { camposDoTemplate, classificacaoDoCampo } from "@/lib/templates/descriptors";
 
 export type { FormatoDocumento } from "@/lib/documentos/gerar-demo";
 
@@ -30,21 +30,22 @@ export function arquivoDoDocumento(
   templateId: string,
   formato: FormatoDocumento,
 ): ResultadoBaixarDocumento {
-  const descriptor = descritorPorTemplate(templateId);
+  const descriptor = descritorDoDocumento(documento);
 
   if (!descriptor) {
     return { ok: false, erro: "Documento não encontrado." };
   }
 
-  const problemas = validarValores(templateId, documento.valores);
+  const problemas = validarValores(templateId, documento.valores, documento.versaoTemplate);
 
   if (problemas.length > 0) {
     return { ok: false, erro: "Há campos obrigatórios pendentes.", problemas };
   }
 
-  const linhas = camposDoTemplate(templateId)
-    .filter((campo) => classificacaoDoCampo(campo) === "campo")
+  const linhas = camposDoTemplate(templateId, descriptor)
+    .filter((campo) => classificacaoDoCampo(campo) !== "instrucao")
     .map((campo) => {
+      if (campo.tipo === "fixo") return `${campo.rotulo}: ${campo.ajuda ?? campo.rotulo}`;
       const valor = documento.valores[campo.id];
 
       if (valor === undefined || valor === null || String(valor).trim() === "") return null;

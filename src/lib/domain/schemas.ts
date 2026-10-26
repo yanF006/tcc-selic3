@@ -155,6 +155,7 @@ export interface OpcoesSelecao {
   cursosIds: readonly string[];
   turmasPorCurso: Readonly<Record<string, readonly string[]>>;
   periodosIds: readonly string[];
+  periodosPorCurso?: Readonly<Record<string, readonly string[]>>;
 }
 
 export function esquemaDadosPessoais(opcoes: OpcoesSelecao) {
@@ -182,6 +183,16 @@ export function esquemaDadosPessoais(opcoes: OpcoesSelecao) {
           message: "A turma não pertence ao curso selecionado.",
         });
       }
+      if (
+        opcoes.periodosPorCurso &&
+        !(opcoes.periodosPorCurso[dados.cursoId] ?? []).includes(dados.periodoId)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["periodoId"],
+          message: "O período não pertence ao curso selecionado.",
+        });
+      }
     });
 }
 
@@ -189,7 +200,7 @@ export function esquemaDadosPessoais(opcoes: OpcoesSelecao) {
 /* Estágio                                                            */
 /* ------------------------------------------------------------------ */
 
-export const esquemaSituacaoEstagio = z.enum(["em_andamento", "concluido"]);
+export const esquemaSituacaoEstagio = z.enum(["em_preparacao", "em_andamento", "concluido"]);
 
 export function esquemaEstagio(opcoes: { dirname?: () => string } = {}) {
   return z
@@ -200,6 +211,12 @@ export function esquemaEstagio(opcoes: { dirname?: () => string } = {}) {
       dataInicio: esquemaData,
       dataFim: esquemaData,
       situacao: esquemaSituacaoEstagio,
+      cargaHorariaPrevista: z
+        .number()
+        .finite()
+        .positive("Informe uma duração prevista positiva.")
+        .max(4000)
+        .optional(),
     })
     .superRefine((dados, ctx) => {
       if (diasEntre(dados.dataInicio, dados.dataFim) < 0) {

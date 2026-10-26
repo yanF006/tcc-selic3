@@ -71,7 +71,7 @@ describe("metadados de preenchimento", () => {
       "tpl-formulario-liberacao": "coordenador_curso",
       "tpl-plano-atividades": "nenhum",
       "tpl-convenio-estagio": "externo",
-      "tpl-termo-compromisso": "externo",
+      "tpl-termo-compromisso": "nenhum",
       "tpl-ficha-acompanhamento": "nenhum",
       "tpl-ficha-frequencia": "externo",
       "tpl-relatorio-semestral": "externo",

@@ -28,6 +28,7 @@ import {
   type PreparacaoRegistro,
 } from "@/lib/services/frequencia";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
+import { descritorDaVersao } from "@/lib/services/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -214,7 +215,10 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/fre
         </span>
       </div>
       <RegistroFrequencia
-        descriptor={descriptor}
+        descriptor={
+          descritorDaVersao(TEMPLATE_FICHA_FREQUENCIA, ficha?.versaoTemplate ?? vigente.versao) ??
+          descriptor
+        }
         estagioId={estagio.id}
         ficha={
           ficha
@@ -222,7 +226,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/fre
             : null
         }
         valoresIniciais={preparacao.valores}
-        versaoTemplate={vigente.versao}
+        versaoTemplate={ficha?.versaoTemplate ?? vigente.versao}
       />
     </PaginaArea>
   );

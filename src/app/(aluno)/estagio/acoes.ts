@@ -12,7 +12,19 @@ import {
   selecionarDocumentos,
   removerDocumentoEstagio,
   type NovoEstagio,
+  cancelarSolicitacao,
+  excluirEstagio,
+  concluirEstagio,
+  reabrirEstagio,
 } from "@/lib/services/estagios";
+import {
+  confirmarAssinaturas,
+  enviarParaAssinaturas,
+  reabrirParaCorrecao,
+  solicitarEncaminhamento,
+} from "@/lib/services/fluxo-estagio";
+import { registrarParecer } from "@/lib/services/documentos";
+import { acrescentarObservacao } from "@/lib/services/observacoes";
 import { ErroDeRegra } from "@/lib/services/erros";
 import {
   corrigirLancamento,
@@ -153,4 +165,84 @@ export async function corrigirLancamentoAction(
     }
     return { ok: false, erro: "Não foi possível corrigir o lançamento." };
   }
+}
+
+async function executarFluxo(operacao: () => Promise<unknown>) {
+  try {
+    await operacao();
+    revalidatePath("/estagio");
+    revalidatePath("/coordenacao/estagios");
+    revalidatePath("/coordenacao/documentos");
+    return { ok: true };
+  } catch (erro) {
+    return {
+      ok: false,
+      erro: erro instanceof Error ? erro.message : "Não foi possível concluir a operação.",
+    };
+  }
+}
+
+export async function encaminharEstagioAction(estagioId: string) {
+  return executarFluxo(async () =>
+    solicitarEncaminhamento(estagioId, await usuarioDaRequisicaoObrigatorio()),
+  );
+}
+
+export async function corrigirSolicitacaoAction(estagioId: string) {
+  return executarFluxo(async () =>
+    reabrirParaCorrecao(estagioId, await usuarioDaRequisicaoObrigatorio()),
+  );
+}
+
+export async function confirmarAssinaturasAction(
+  estagioId: string,
+  confirmacoes: { documentoId: string; confirmado: boolean; observacao?: string }[],
+) {
+  return executarFluxo(async () =>
+    confirmarAssinaturas(estagioId, await usuarioDaRequisicaoObrigatorio(), confirmacoes),
+  );
+}
+
+export async function emitirParecerAction(
+  documentoId: string,
+  decisao: "aprovado" | "indeferido",
+  observacao: string,
+) {
+  return executarFluxo(async () =>
+    registrarParecer(documentoId, decisao, await usuarioDaRequisicaoObrigatorio(), observacao),
+  );
+}
+
+export async function observarDocumentoAction(documentoId: string, conteudo: string) {
+  return executarFluxo(async () => {
+    const observacao = await acrescentarObservacao(
+      documentoId,
+      conteudo,
+      await usuarioDaRequisicaoObrigatorio(),
+    );
+    revalidatePath("/documentos", "layout");
+    return observacao;
+  });
+}
+
+export async function enviarAssinaturasAction(documentoId: string) {
+  return executarFluxo(async () =>
+    enviarParaAssinaturas(documentoId, await usuarioDaRequisicaoObrigatorio()),
+  );
+}
+
+export async function encerrarRegistroAction(estagioId: string, cancelar: boolean) {
+  return executarFluxo(async () => {
+    const usuario = await usuarioDaRequisicaoObrigatorio();
+    return cancelar ? cancelarSolicitacao(estagioId, usuario) : excluirEstagio(estagioId, usuario);
+  });
+}
+
+export async function alterarSituacaoAction(estagioId: string, concluir: boolean) {
+  return executarFluxo(async () => {
+    const usuario = await usuarioDaRequisicaoObrigatorio();
+    return concluir
+      ? concluirEstagio(estagioId, usuario.id)
+      : reabrirEstagio(estagioId, usuario.id);
+  });
 }

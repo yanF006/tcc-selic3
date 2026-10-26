@@ -11,13 +11,35 @@ import { DocumentoImpressao } from "@/components/documentos/documento-impressao"
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
+import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
+import { prepararDocumentosIniciais } from "./fluxo-estagio";
 
 vi.mock("@/lib/auth/sessao-servidor", () => ({ usuarioDaRequisicaoObrigatorio: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const usuario = (id = "usr-maria") => obterEstado().usuarios.find((u) => u.id === id)!;
-beforeEach(() => {
+beforeEach(async () => {
   reiniciarEstado();
   obterEstado().documentos = [];
+  const estagio = obterEstado().estagios.find((registro) => registro.id === "est-maria-tecnoweb")!;
+  estagio.situacao = "em_preparacao";
+  estagio.liberadoEm = undefined;
+  obterEstado().documentos.push({
+    id: "liberacao-em-correcao",
+    templateId: "tpl-formulario-liberacao",
+    alunoId: "usr-maria",
+    estagioId: estagio.id,
+    versaoTemplate: 1,
+    valores: {},
+    situacao: "rascunho",
+    correcaoAberta: true,
+    criadoEm: "2026-01-01T00:00:00Z",
+    atualizadoEm: "2026-01-01T00:00:00Z",
+  });
+  await prepararDocumentosIniciais(
+    estagio.id,
+    usuario(),
+    dadosSolicitacaoTeste().valoresDocumentos,
+  );
   vi.clearAllMocks();
   vi.mocked(usuarioDaRequisicaoObrigatorio).mockResolvedValue(usuario());
 });
@@ -32,8 +54,6 @@ const manual = {
   emailAluno: "maria.souza@aluno.ifrj.edu.br",
   enderecoLocal: "Rua da empresa, 10",
   telefoneSupervisor: "2133331000",
-  planoDeAcordo: "sim",
-  dataParecer: "01/03/2026",
 };
 
 describe("endereços persistidos nos documentos", () => {

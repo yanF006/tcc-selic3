@@ -132,6 +132,23 @@ export const NAV: ItemNav[] = [
     grupo: "gestao",
     ordem: 4,
   },
+  {
+    href: "/coordenacao/cadastros",
+    icone: "convenios",
+    rotulo: "Cadastros de apoio",
+    descricao: "Gerenciar convênios, cursos, turmas, períodos e responsáveis.",
+    requiredRoles: ["coordenador_estagio"],
+    grupo: "gestao",
+    ordem: 5,
+  },
+  {
+    href: "/coordenacao/templates",
+    icone: "documentos",
+    rotulo: "Templates de documentos",
+    requiredRoles: ["coordenador_estagio"],
+    grupo: "gestao",
+    ordem: 6,
+  },
 ];
 
 /** Itens visíveis para o usuário, na ordem declarada. */

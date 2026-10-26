@@ -12,7 +12,7 @@ export function PaginaArea({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex min-w-0 flex-col gap-6 [&>*]:min-w-0">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
         <p className="text-muted-foreground text-sm">{descricao}</p>

@@ -12,7 +12,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { podeAcessarAlgum } from "@/lib/auth/permissions";
 import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
 import { rotuloPapel } from "@/lib/domain/status";
-import { criarRascunho, documentosDoEstagio, templatePorId } from "@/lib/services/documentos";
+import {
+  criarRascunho,
+  documentoDoTemplate,
+  documentoPorId,
+  podeConsultarDocumento,
+  descritorDoDocumento,
+  documentosDoEstagio,
+  templatePorId,
+} from "@/lib/services/documentos";
+import { descritorDaVersao } from "@/lib/services/templates";
 import {
   estagioPorId,
   podeConsultarEstagio,
@@ -21,6 +30,10 @@ import {
 } from "@/lib/services/estagios";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
 import { usuarioPorId } from "@/lib/services/administracao";
+import { documentoInicial, estagioEncerrado, estagioLiberado } from "@/lib/domain/fluxo-estagio";
+import { correcaoInicialPermitida } from "@/lib/services/estagios";
+import { observacoesDoDocumento, podeAcrescentarObservacao } from "@/lib/services/observacoes";
+import { ObservacoesDocumento } from "@/components/documentos/observacoes-documento";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +58,25 @@ export default async function Page({
   if (!usuario) redirect("/login");
 
   const { templateId } = await params;
-  const { estagio: estagioBruto } = await searchParams;
-  const estagioParam = typeof estagioBruto === "string" ? estagioBruto : undefined;
-  const descriptor = descritorPorTemplate(templateId);
+  const { estagio: estagioBruto, documento: documentoBruto } = await searchParams;
+  const documentoEscolhido =
+    typeof documentoBruto === "string" ? await documentoPorId(documentoBruto) : null;
+  if (
+    documentoBruto &&
+    (!documentoEscolhido ||
+      documentoEscolhido.templateId !== templateId ||
+      !(await podeConsultarDocumento(usuario, documentoEscolhido)))
+  )
+    notFound();
+  if (
+    documentoEscolhido &&
+    typeof estagioBruto === "string" &&
+    documentoEscolhido.estagioId !== estagioBruto
+  )
+    notFound();
+  const estagioParam =
+    documentoEscolhido?.estagioId ?? (typeof estagioBruto === "string" ? estagioBruto : undefined);
+  const descriptor = descritorDaVersao(templateId);
   const template = await templatePorId(templateId);
 
   if (!descriptor || !template) notFound();
@@ -71,9 +100,19 @@ export default async function Page({
   }
 
   const metadados = descriptor.metadados;
+  const estagioSelecionado = estagioParam ? await estagioPorId(estagioParam) : null;
+  const documentoExistente =
+    documentoEscolhido ??
+    (estagioSelecionado && podeConsultarEstagio(usuario, estagioSelecionado)
+      ? (await documentosDoEstagio(estagioSelecionado.id)).find(
+          (doc) => doc.templateId === templateId && doc.situacao !== "inativo",
+        )
+      : !metadados.exigeEstagio
+        ? await documentoDoTemplate(templateId, usuario.id)
+        : undefined);
 
   // 8.11: só os perfis da matriz de preenchimento abrem o formulário.
-  if (!podeAcessarAlgum(usuario, metadados.papeisPreenchimento)) {
+  if (!podeAcessarAlgum(usuario, metadados.papeisPreenchimento) && !documentoExistente) {
     return (
       <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
         <Alert variant="destructive">
@@ -90,12 +129,14 @@ export default async function Page({
 
   const vigente = template.versoes.find((versao) => versao.vigente);
 
-  if (!vigente) {
+  if ((!vigente || template.situacao !== "ativo") && !documentoExistente) {
     return (
       <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
         <Alert variant="warning">
           <FileWarningIcon aria-hidden="true" />
-          <AlertTitle>Documento sem versão vigente</AlertTitle>
+          <AlertTitle>
+            {template.situacao !== "ativo" ? "Template inativo" : "Documento sem versão vigente"}
+          </AlertTitle>
           <AlertDescription>
             O preenchimento está indisponível enquanto não houver uma versão vigente cadastrada.
             {template.tipo === "download" ? (
@@ -184,21 +225,44 @@ export default async function Page({
         </PaginaArea>
       );
     }
+    if (
+      !documentoEscolhido &&
+      (estagioEncerrado(estagio) || (!documentoInicial(templateId) && !estagioLiberado(estagio)))
+    ) {
+      return (
+        <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
+          <Alert variant="warning">
+            <AlertTitle>Documento indisponível nesta etapa</AlertTitle>
+            <AlertDescription>
+              O estágio aguarda liberação ou foi cancelado/excluído. Consulte o acompanhamento do
+              estágio.
+            </AlertDescription>
+          </Alert>
+        </PaginaArea>
+      );
+    }
   }
 
-  const documento = await criarRascunho(
-    usuario,
-    templateId,
-    metadados.exigeEstagio ? estagioParam : undefined,
-  );
+  const documento =
+    documentoExistente ??
+    (await criarRascunho(usuario, templateId, metadados.exigeEstagio ? estagioParam : undefined));
 
   const preenchidos = documento.estagioId ? await documentosDoEstagio(documento.estagioId) : [];
   const titular = await usuarioPorId(documento.alunoId);
+  const observacoes = await observacoesDoDocumento(documento.id, usuario);
+  const nomesAutores = Object.fromEntries(
+    await Promise.all(
+      [...new Set(observacoes.map((observacao) => observacao.autorId))].map(async (id) => [
+        id,
+        (await usuarioPorId(id))?.nome ?? "Coordenação",
+      ]),
+    ),
+  );
 
   return (
     <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
       <ConteudoDocumento
-        descriptor={descriptor}
+        descriptor={descritorDoDocumento(documento) ?? descriptor}
         documento={documento}
         preenchidos={preenchidos.map((item) => ({
           id: item.id,
@@ -206,13 +270,35 @@ export default async function Page({
           situacao: item.situacao,
         }))}
         estagioId={documento.estagioId}
-        consultaApenas={titular?.situacao !== "ativo"}
+        consultaApenas={
+          template.situacao !== "ativo" ||
+          documento.situacao === "inativo" ||
+          Boolean(estagioSelecionado && estagioEncerrado(estagioSelecionado)) ||
+          Boolean(
+            estagioSelecionado &&
+            !documentoInicial(templateId) &&
+            !estagioLiberado(estagioSelecionado),
+          ) ||
+          titular?.situacao !== "ativo" ||
+          !podeAcessarAlgum(usuario, metadados.papeisPreenchimento) ||
+          Boolean(
+            estagioSelecionado &&
+            documentoInicial(templateId) &&
+            !correcaoInicialPermitida(estagioSelecionado),
+          )
+        }
       />
       {documento.estagioId ? (
         <div>
           <Badge variant="outline">Estágio #{documento.estagioId.slice(-6)}</Badge>
         </div>
       ) : null}
+      <ObservacoesDocumento
+        documentoId={documento.id}
+        observacoes={observacoes}
+        nomesAutores={nomesAutores}
+        podeAcrescentar={podeAcrescentarObservacao(usuario, documento)}
+      />
     </PaginaArea>
   );
 }

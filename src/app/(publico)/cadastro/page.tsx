@@ -22,7 +22,7 @@ export default async function CadastroPage() {
   if (usuario) redirect(rotaInicial(usuario));
 
   const [cursos, turmas, periodos] = await Promise.all([
-    listarCursos(),
+    listarCursos("ativo"),
     listarTurmas(),
     listarPeriodos(),
   ]);

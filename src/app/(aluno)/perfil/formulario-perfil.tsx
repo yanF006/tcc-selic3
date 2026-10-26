@@ -28,6 +28,7 @@ import {
 import { mensagemDeErro } from "@/lib/domain/validar-campo";
 import { useConsultaEndereco } from "@/hooks/use-consulta-endereco";
 import type { Curso, DadosPessoais, Periodo, Turma, Usuario } from "@/lib/domain/types";
+import { periodosDoCurso } from "@/lib/domain/selecoes";
 
 export function FormularioPerfil({
   usuario,
@@ -78,7 +79,24 @@ export function FormularioPerfil({
     },
   });
 
-  const turmasDoCurso = turmas.filter((turma) => turma.cursoId === cursoId);
+  const cursosDisponiveis = cursos.filter(
+    (curso) => curso.situacao === "ativo" || curso.id === dadosIniciais?.cursoId,
+  );
+  const turmasDoCurso = turmas.filter(
+    (turma) =>
+      turma.cursoId === cursoId &&
+      (turma.situacao === "ativo" || turma.id === dadosIniciais?.turmaId),
+  );
+  const periodosDisponiveis = periodosDoCurso(
+    cursoId,
+    turmasDoCurso,
+    periodos.filter(
+      (periodo) =>
+        periodo.situacao === "ativo" ||
+        (cursoId === dadosIniciais?.cursoId && periodo.id === dadosIniciais?.periodoId),
+    ),
+    dadosIniciais?.turmaId,
+  );
 
   function erroDoCampo(campo: string): string | null {
     if (erro?.campo === campo) return erro.texto;
@@ -145,7 +163,7 @@ export function FormularioPerfil({
     <Card className="w-full max-w-2xl">
       <CardHeader>
         <CardTitle>
-          <h1 className="text-base font-semibold">Dados Pessoais e Perfil</h1>
+          <h2 className="text-base font-semibold">Dados Pessoais e Perfil</h2>
         </CardTitle>
         <CardDescription>
           Mantenha seus dados atualizados. A matrícula é exibida em modo somente leitura.
@@ -337,7 +355,7 @@ export function FormularioPerfil({
                   <SelectValue placeholder="Selecione o curso" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cursos.map((curso) => (
+                  {cursosDisponiveis.map((curso) => (
                     <SelectItem key={curso.id} value={curso.id}>
                       {curso.nome}
                     </SelectItem>
@@ -373,7 +391,7 @@ export function FormularioPerfil({
                   <SelectValue placeholder="Selecione o período" />
                 </SelectTrigger>
                 <SelectContent>
-                  {periodos.map((periodo) => (
+                  {periodosDisponiveis.map((periodo) => (
                     <SelectItem key={periodo.id} value={periodo.id}>
                       {periodo.rotulo}
                     </SelectItem>

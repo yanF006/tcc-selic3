@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
 import { rotuloPapel } from "@/lib/domain/status";
 import { catalogoDocumentos, type ItemCatalogo } from "@/lib/services/documentos";
+import { podeAcessarAlgum } from "@/lib/auth/permissions";
 
 export const metadata: Metadata = {
   title: "Documentos",
@@ -16,14 +17,21 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   const [usuario, catalogo] = await Promise.all([usuarioDaRequisicao(), catalogoDocumentos()]);
-  const papeis = usuario?.papeis ?? [];
 
   return (
     <PaginaArea titulo="Documentos" descricao="Catálogo dos documentos do Kit de Estágio.">
-      <ul aria-label="Catálogo dos documentos do Kit de Estágio" className="grid gap-4 md:grid-cols-2">
+      <ul
+        aria-label="Catálogo dos documentos do Kit de Estágio"
+        className="grid gap-4 md:grid-cols-2"
+      >
         {catalogo.map((item) => (
           <li key={item.id}>
-            <CartaoDocumento item={item} podePreencher={item.papeisPreenchimento.some((papel) => papeis.includes(papel))} />
+            <CartaoDocumento
+              item={item}
+              podePreencher={Boolean(
+                usuario && podeAcessarAlgum(usuario, item.papeisPreenchimento),
+              )}
+            />
           </li>
         ))}
       </ul>
@@ -71,13 +79,24 @@ function CartaoDocumento({ item, podePreencher }: { item: ItemCatalogo; podePree
               <span>Requer estágio cadastrado</span>
             </>
           ) : null}
-          {item.versaoVigente ? (
-            <span aria-hidden="true">·</span>
-          ) : null}
+          {item.versaoVigente ? <span aria-hidden="true">·</span> : null}
           {item.versaoVigente ? <span>Versão vigente: {item.versaoVigente}</span> : null}
         </p>
 
-        {preenchivel ? (
+        {!item.ativo ? (
+          <>
+            <Badge variant="secondary">Template inativo</Badge>
+            <p className="text-muted-foreground text-sm">Indisponível para novos preenchimentos.</p>
+            {preenchivel && (
+              <Link
+                href={`/documentos/${item.id}`}
+                className="text-primary text-sm underline-offset-4 hover:underline"
+              >
+                Consultar documento existente
+              </Link>
+            )}
+          </>
+        ) : preenchivel ? (
           podePreencher ? (
             <Link
               href={`/documentos/${item.id}`}

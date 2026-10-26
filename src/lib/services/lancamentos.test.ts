@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { LIMITE_HORAS_DIA, LIMITE_HORAS_SEMANA } from "@/lib/domain/schemas";
 import type { Usuario } from "@/lib/domain/types";
 import { criarEstagio, lancamentosDoEstagio } from "./estagios";
+import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
 import {
   corrigirLancamento,
   horasDaSemana,
@@ -124,14 +125,17 @@ describe("lançamento de horas (8.19)", () => {
   it("aplica o teto de 30 horas por semana", async () => {
     const maria = await mariaLogada();
     const estagio = await criarEstagio(maria, {
+      ...dadosSolicitacaoTeste(),
       convenioId: "conv-ti-pinheiral",
       supervisorId: "sup-ricardo",
       orientadorId: "ori-carla",
       dataInicio: "2027-01-04",
       dataFim: "2027-01-29",
-      situacao: "em_andamento",
       documentosSelecionados: [],
     });
+    // Cenário autorizado para isolar o cálculo da jornada; o fluxo de liberação tem testes próprios.
+    estagio.situacao = "em_andamento";
+    estagio.liberadoEm = "2027-01-01T00:00:00Z";
 
     const dias = ["2027-01-04", "2027-01-05", "2027-01-06", "2027-01-07", "2027-01-08"];
 

@@ -24,21 +24,20 @@ async function entrar(page: Page, email: string) {
 }
 
 test.describe("preenchimento de documentos", () => {
-  test("não duplica os rótulos dos campos com máscara na liberação", async ({ page }) => {
+  test("não duplica rótulos e mantém os dados iniciais bloqueados após liberação", async ({
+    page,
+  }) => {
     await entrar(page, "maria.souza@aluno.ifrj.edu.br");
     await page.goto("/documentos/tpl-formulario-liberacao?estagio=est-maria-hospital");
 
     for (const rotulo of ["Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
       await expect(page.getByText(rotulo, { exact: true })).toHaveCount(1);
-      await expect(page.getByLabel(rotulo, { exact: true })).toBeEditable();
+      await expect(page.getByLabel(rotulo, { exact: true })).not.toBeEditable();
     }
 
     const grupo = page.getByRole("group", { name: "Endereço do aluno", exact: true });
     await expect(grupo.getByLabel("CEP", { exact: true })).toHaveCount(1);
-    await grupo.getByRole("button", { name: "Alterar endereço" }).click();
-    const cep = grupo.getByLabel("CEP", { exact: true });
-    await cep.fill("23940000");
-    await expect(cep).toHaveValue("23940-000");
+    await expect(grupo.getByRole("button", { name: "Alterar endereço" })).toBeDisabled();
   });
 
   test("exige escolher o estágio antes de abrir o formulário (8.10)", async ({ page }) => {
@@ -69,16 +68,15 @@ test.describe("preenchimento de documentos", () => {
     await expect(page.getByRole("button", { name: "Salvar rascunho" })).toHaveCount(0);
   });
 
-  test("pré-preenche a carga horária total e deixa editar (8.8)", async ({ page }) => {
+  test("preserva a duração prevista do Termo após a liberação (8.8)", async ({ page }) => {
     await entrar(page, "joao.lima@aluno.ifrj.edu.br");
     await page.goto("/documentos/tpl-termo-compromisso?estagio=est-joao-lab");
 
     const carga = page.getByLabel("Carga horária total");
 
     await expect(carga).toBeVisible();
-    await expect(carga).toBeEditable();
-    await carga.fill("180");
-    await expect(carga).toHaveValue("180");
+    await expect(carga).not.toBeEditable();
+    await expect(carga).toHaveValue("480");
   });
 
   test("salva o rascunho e reaproveita os valores ao reabrir (8.9)", async ({ page }) => {

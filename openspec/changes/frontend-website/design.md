@@ -2,12 +2,13 @@
 
 Estado atual e restrições que moldam a abordagem. A motivação está em `proposal.md` e os requisitos em `specs/`.
 
-- Nenhuma linha de código existe no repositório. Não há inicialização de Git, e o repositório ainda não é versionado.
+- O planejamento original antecedeu o código. Na revisão do fluxo, a interface já está parcialmente implementada e versionada; `src/lib/services/estagios.ts` ainda cria estágios diretamente em andamento ou concluídos, e os formulários permitem seleção livre de documentos.
 - O projeto será implantado na Vercel, com MySQL no Aiven, Prisma, Better Auth, Nodemailer e docxtemplater previstos no `Contexto/visaoGeral.md` (§15, §17), mas a ordem definida em `Contexto/desenvolvimento.md` é telas primeiro, banco e backend depois.
-- Os 9 arquivos de `specs/` somam 87 requisitos e 226 cenários. Esta mudança entrega todos eles no frontend.
+- Os 9 arquivos de `specs/` definem o contrato desta entrega de frontend. A revisão do início do estágio está concentrada em `estagios-aluno`, `documentos-estagio`, `parecer-notificacoes` e `gestao-coordenacao`.
 - Os 12 documentos do Kit de Estágio estão em `Contexto/kit-estagio`: 2 PDFs de download, 8 `.docx` e 2 arquivos `.doc` legados (Convênio e Termo de Compromisso), que precisam ser convertidos fora do sistema antes do cadastro (§7.4).
 - O único insumo visual inicial era a regra "verde como cor principal" (§16). A marca oficial chegou depois, em `Assets/selic-logo.svg`; continuam sem definição o valor oficial do verde, a tipografia e o ícone do navegador.
 - A camada de persistência será substituída depois, mas as telas não podem depender de nada específico do simulador.
+- `Contexto/fluxoEstagios.md` e as decisões confirmadas na exploração definem a revisão: três documentos iniciais preenchidos automaticamente, parecer somente no Formulário de Liberação, envio para assinaturas após aprovação e liberação pelo Coordenador de Estágio. As observações têm autor e data e também podem ser acrescentadas fora dessas ações.
 
 ## Goals / Non-Goals
 
@@ -17,6 +18,7 @@ Estado atual e restrições que moldam a abordagem. A motivação está em `prop
 - Fixar o modelo de rotas e permissões agora, de modo que a troca por Better Auth não renomeie URLs nem reescreva a navegação.
 - Congelar o contrato de dados (tipos + assinaturas de serviço) que o Prisma vai implementar depois, sem que as telas mudem.
 - Tornar os formulários de documento dirigidos por dados, para que os templates do Kit sejam configuração e não código.
+- Separar a preparação da solicitação da autorização para iniciar o estágio, aplicando os mesmos bloqueios na interface e nas mutações dos serviços.
 - Entregar os temas claro e escuro e a paleta na mesma entrega, já que mexer em tokens depois é retrabalho caro.
 
 **Non-Goals:**
@@ -36,7 +38,7 @@ As telas ficam em route groups do App Router por domínio de acesso (`(publico)`
 
 - **Alternativa:** uma URL por cargo (`/coordenador-curso/...`, `/coordenador-estagio/...`). Rejeitada porque duplica as áreas compartilhadas e amarra a navegação ao papel.
 - **Alternativa:** um layout por papel replicando a guarda. Rejeitada por duplicação.
-- **Efeito colateral:** como o admin tem todos os privilégios (§4), `administrator` satisfaz qualquer guarda; a regra é `rolesDoUsuario ⊇ rolesExigidas`.
+- **Efeito colateral:** o administrador acessa todas as áreas (§4). Essa guarda de navegação não substitui as regras de autoria das ações: observações exigem papel de coordenação, e a liberação inicial exige papel de Coordenador de Estágio, mesmo quando a área é acessível ao administrador.
 
 ### D2. Registro único de navegação alimentado por permissões
 
@@ -107,7 +109,7 @@ Datas em dd/mm/aaaa, números e moeda por `Intl` com `pt-BR` e fuso `America/Sao
 
 ### D11. Testes nos pontos de decisão, não em cada tela
 
-Testes unitários com Vitest para máscaras, esquemas Zod, mapeamento de descritor para campos e rótulos de situação, e três fluxos ponta a ponta com Playwright: cadastro em duas etapas, CRUD de estágio com seleção de documentos, e ciclo de submissão a parecer. O restante das telas é validado por revisão manual com a cliente.
+Testes unitários com Vitest para máscaras, esquemas Zod, descritores, rótulos, transições e bloqueios de liberação. Os fluxos ponta a ponta com Playwright cobrem cadastro em duas etapas, solicitação de estágio com os três documentos iniciais, parecer favorável ou desfavorável, envio posterior, conferência das assinaturas, notificação e desbloqueio; também cobrem observações e as tentativas diretas de contornar etapas. O restante das telas é validado por revisão manual com a cliente.
 
 - **Alternativa:** E2E de todos os requisitos. Rejeitada por custo desproporcional a uma entrega de frontend com dados simulados.
 - **Alternativa:** só revisão manual. Rejeitada porque parte dos requisitos é regra pura (CPF, máscaras, transições de situação), que é barata de testar e cara de revalidar a cada ajuste visual.
@@ -121,12 +123,21 @@ Heranças do `Contexto/visaoGeral.md` onde ele é omissivo, escolhendo o comport
 | Instituição do estágio | Selecionada entre convênios ativos; convênio expirado não recebe estágios novos (§11 implica vínculo obrigatório). |
 | Horas do estágio | Só podem ser lançadas dentro do período do estágio; múltiplos lançamentos por data são permitidos. |
 | Estágio concluído | Não aceita data de fim futura. |
-| Exclusão de estágio pelo aluno | Gera solicitação e aguarda autorização de cargo superior (§12), sem apagar nada antes da decisão. |
+| Criação de estágio | Decidido na exploração: o aluno solicita a criação e informa os dados; o estágio permanece em preparação até a liberação inicial pelo Coordenador de Estágio. |
+| Situação do estágio | Decidido na exploração: o aluno não informa nem altera a situação; coordenadores controlam andamento e conclusão, sem contornar a liberação inicial. |
+| Documentação inicial | Decidido na exploração: Termo de Compromisso, Formulário de Liberação e Plano de Atividades são obrigatórios e preenchidos automaticamente a partir da solicitação. |
+| Parecer inicial e envio | Decidido na exploração: somente o Formulário de Liberação exige parecer entre os três documentos; o pedido do aluno encaminha o formulário e o parecer favorável libera o envio solicitado para assinaturas. |
+| Indeferimento inicial | Decidido na exploração: devolve o formulário para correção e nova submissão, preservando o histórico e bloqueando os envios para assinaturas e os demais documentos. |
+| Confirmação das assinaturas | Decidido na exploração: o Coordenador de Estágio confirma no site as assinaturas obtidas fora do sistema; o estágio entra em andamento, o aluno é notificado e os demais documentos são liberados. |
+| Observações por documento | Decidido na exploração: as duas coordenações podem acrescentar observações com autor e data a qualquer momento, inclusive durante o parecer e a confirmação das assinaturas. |
+| Edição inicial e indeferimento | Decidido na implementação: os dados iniciais ficam bloqueados para o aluno; o indeferimento é exceção que permite correção e nova submissão. Dados informados após a liberação são editáveis conforme as regras de cada documento. |
+| Perfil e liberação | Decidido na implementação: alterações do perfil atualizam os dados correspondentes do estágio sem novo parecer ou autorização. |
+| Cancelamento e exclusão pelo aluno | Decidido na implementação: enquanto aguarda liberação, pode cancelar a solicitação; a exclusão preserva nome e informações históricas do estágio, removendo os dados pessoais do aluno daquele registro, sem excluir seu perfil. |
 | Documento em preenchimento | Fica como rascunho; parecer exige submissão explícita. |
 | Múltiplos convênios do mesmo aluno | Cada estágio referencia um convênio; nada impede o mesmo aluno estagiar na mesma instituição em períodos distintos. |
 | Ficha de Frequência e Avaliação | Aluno não preenche, porque o template só admite RH ou chefe imediato da concedente; o Coordenador de Estágio registra o documento já assinado e lança os valores. |
 | Correção de horas | Lançamento é imutável e a correção entra como lançamento de correção, porque a Ficha de Acompanhamento proíbe rasura. |
-| Carga horária do estágio | O total de horas vem dos lançamentos, e o campo de duração em horas do Termo de Compromisso é preenchido com esse total e permanece ajustável pelo aluno. |
+| Carga horária do estágio | O total realizado vem dos lançamentos após a liberação; a duração prevista do Termo de Compromisso é informada na solicitação e alimenta o documento inicial, sem depender de horas já realizadas. |
 | Formulário de Liberação e Plano de Atividades | Decidido com a cliente: viram dois arquivos `.docx` independentes, porque §7.4 exige que sejam templates separados. |
 | Genericidade dos templates | Decidido com a cliente: todos os templates são genéricos, inclusive a Proposta de Atuação Pedagógica, cuja menção ao curso Licenciatura em Computação é removida do cabeçalho. |
 | Matrícula do cadastro público | Só libera o acesso se já estiver registrada no sistema; matrícula sem registro gera cadastro pendente, como nas §7.4 do `Contexto/visaoGeral.md`. |
@@ -134,6 +145,70 @@ Heranças do `Contexto/visaoGeral.md` onde ele é omissivo, escolhendo o comport
 | Matrícula fora do registro | O cadastro do aluno pelo administrador registra a matrícula informada quando ela ainda não consta, com origem `cadastro_administrador`, e libera o acesso na mesma operação. A tela de Matrículas continua existindo para registrar antes; a autorização avulsa por checkbox foi descartada. |
 | Registro de matrícula sem SIGAA | Enquanto não houver integração, o registro é manual (lançamento por matrícula), com a importação por arquivo mantida como caminho previsto e não entregue nesta fatia. |
 | Abrangência do convênio | Decidido com a cliente: o convênio vale apenas para o Campus Pinheiral, então o cadastro não oferece escolha de campus, apesar da cláusula do template mencionar todos os campi do IFRJ. |
+
+### D13. Preparação como situação inicial, pendências derivadas dos documentos
+
+Adicionar `em_preparacao` às situações de estágio, mantendo `em_andamento` e `concluido`. As etapas internas da preparação são apresentadas a partir dos documentos e registros: dados pendentes, aguardando parecer, correção solicitada, aguardando assinaturas e aguardando conferência. Não criar uma situação de estágio para cada pendência documental evita duplicar o estado do parecer e dos envios.
+
+```text
+em_preparacao
+      |
+      v
+dados completos + pedido do aluno
+      |
+      v
+parecer no Formulario de Liberacao <---------+
+      |                                     |
+      +--> indeferido --> correcao e reenvio -+
+      |
+      +--> aprovado
+              |
+              v
+      envio para assinaturas
+              |
+              v
+      Coordenador de Estagio confirma
+      as assinaturas dos tres documentos
+              |
+              v
+em_andamento <--> concluido
+             coordenacao
+```
+
+- **Alternativa:** inferir andamento pela data de início ou pelo salvamento do cadastro. Rejeitada porque essas informações não comprovam a regularização documental.
+- As transições de conclusão e reabertura exigem coordenador com acesso ao estágio e registro de autoria. A edição genérica não aceita uma situação inicial escolhida pelo aluno nem substitui a conferência.
+- Listas e filtros incluem a preparação; os indicadores existentes de andamento e conclusão não contam solicitações ainda não liberadas nessas situações.
+
+### D14. Solicitação reúne dados e gera três documentos obrigatórios
+
+O formulário inicial coleta os dados faltantes exigidos pelos descritores dos três documentos e reutiliza os dados do aluno e dos cadastros de convênio, supervisor e orientador. Ao salvar os dados necessários, o serviço prepara os três registros de documento para a mesma solicitação, mantendo identidade e versão de template próprias. Reabrir a solicitação reutiliza os registros ativos, sem duplicá-los.
+
+- Os três templates são vinculados automaticamente e não podem ser removidos pela seleção opcional. A seleção dos demais documentos fica disponível após a liberação.
+- O aluno não edita os dados iniciais após concluir a solicitação, salvo para corrigir um indeferimento. Durante a espera pode cancelar a solicitação. A edição de dados do perfil é independente e não reinicia a autorização; a edição de dados registrados depois da liberação respeita as regras dos documentos e dos lançamentos de horas.
+- Os dados compartilhados alimentam os três preenchimentos; campos específicos continuam definidos pelos respectivos descritores. A duração prevista do Termo é coletada antes do início e não é calculada a partir de lançamentos ainda inexistentes.
+- **Alternativa:** manter três formulários independentes como ponto de entrada. Rejeitada porque obriga o aluno a selecionar os documentos iniciais e repetir dados que a solicitação já conhece.
+
+### D15. Parecer, envio e conferência são registros distintos
+
+O pedido de encaminhamento do aluno registra a intenção de envio e submete o Formulário de Liberação à fila do Coordenador de Curso. O Termo de Compromisso e o Plano de Atividades têm parecer `nenhum`; seus assinantes continuam descritos nos metadados de assinatura. Os pareceres dos demais documentos do Kit permanecem conforme a matriz existente.
+
+O parecer favorável executa o envio solicitado aos respectivos assinantes pela interface de serviço de e-mail, simulada nesta entrega. O histórico de envio preserva sucessos, falhas, destinatários e tentativas. Um envio não comprova assinatura. O indeferimento permite reabrir o formulário e submetê-lo novamente, preservando pareceres e observações e mantendo os bloqueios até nova aprovação. Nos demais documentos sujeitos a parecer, mantém-se o padrão anterior de reabertura e reenvio após indeferimento.
+
+A conferência registra, para cada documento inicial, a confirmação pelo Coordenador de Estágio e a data. A mutação de liberação exige parecer favorável no formulário e a conferência completa dos três documentos; então altera a situação, libera os demais documentos daquele estágio e notifica o aluno. A confirmação no site é o registro da conferência das assinaturas físicas.
+
+A data de assinatura a constar no documento é preenchida fora do sistema. Em particular, `termoCompromissoData`, no Termo Aditivo, é um trecho fixo com espaço em branco, sem input ou obrigatoriedade de preenchimento na aplicação. A conferência não solicita esse valor; sua data de registro continua sendo somente a data da ação no site. Os previews e arquivos de demonstração preservam os trechos fixos e os espaços de preenchimento externo.
+
+- **Alternativa:** marcar o estágio como válido quando o e-mail é enviado ou quando o formulário é aprovado. Rejeitada porque ambos antecedem a confirmação das assinaturas.
+- Todos os pontos de entrada que criam, salvam ou selecionam documentos adicionais e registram horas verificam a liberação no serviço, além de apresentar o bloqueio na interface. O acesso ao catálogo e aos PDFs fixos não depende dessa liberação.
+- A mesma regra vale para requisições diretas, sem permitir que a edição genérica de situação, outro estágio liberado ou um perfil que apenas consulta a área contorne a conferência.
+
+### D16. Observações como histórico por documento, independente das decisões
+
+Representar cada acréscimo de observação com documento, conteúdo, autor e data. As ações de parecer e de conferência permitem incluir observações no documento correspondente, e a ação independente de acrescentar observação usa o mesmo histórico. Uma observação nova preserva as anteriores e não dispara transição de parecer, assinatura ou estágio.
+
+- O Coordenador de Curso escreve em documentos de alunos de seu curso; o Coordenador de Estágio escreve em documentos do campus. A autorização de escrita exige um desses papéis e acesso ao documento, sem derivá-la apenas da permissão genérica de preencher ou consultar.
+- O histórico pode receber observações fora das ações principais, inclusive em documentos sem parecer e em estágios concluídos. Isso não reabre o preenchimento do documento.
+- **Alternativa:** um único campo livre sobrescrito pelas duas coordenações, ou usar somente `consideracoes` do parecer. Rejeitada porque perde autoria dos acréscimos e não atende documentos sem parecer ou comentários feitos depois da decisão.
 
 ## Risks / Trade-offs
 
@@ -145,6 +220,9 @@ Heranças do `Contexto/visaoGeral.md` onde ele é omissivo, escolhendo o comport
 - **Entrega grande demais (86 requisitos, 9 capabilities) para uma única passagem de revisão** → as tarefas são fatiadas por capability, com marco demonstrável ao fim do fluxo do aluno e revisão parcial antes das áreas de coordenação e administração.
 - **Tokens de cor provisórios podem vazar para produção** → a rampa de verde fica isolada em um arquivo de tokens, com a troca por valor oficial como tarefa única.
 - **Dois documentos do Kit estão em `.doc` legado** → a conversão para `.docx` fica fora do sistema, conforme §7.4, e entra como tarefa antes do cadastro dos templates; até lá, esses dois descritores são cadastrados sem arquivo anexado, com o campo de download sinalizado como pendente.
+- **Bloqueio aplicado somente à seleção visual** → centralizar a verificação de liberação nos serviços e testar abertura direta, salvamento, seleção, envio antecipado e lançamento de horas.
+- **Confusão entre parecer favorável e assinatura obtida** → manter os registros distintos e liberar apenas após a conferência do Coordenador de Estágio.
+- **Fixtures e testes do fluxo antigo continuam passando** → revisar a matriz de parecer do Termo, representar estágios em preparação e reabrir as tarefas cujos critérios foram substituídos; as evidências anteriores permanecem identificadas como históricas.
 - **Os templates do Kit contêm conteúdo que não deve chegar ao documento final** (o lorem ipsum e as instruções de preenchimento da Proposta de Atuação Pedagógica, o rótulo "Relatório Semestral de Estágio 2019" no nome do arquivo e o curso "Licenciatura em Computação" no cabeçalho) → o descritor marca cada trecho do template como `campo`, `fixo` ou `instrucao`, e a remoção de instruções é responsabilidade do gerador futuro, não do formulário.
 
 ## Migration Plan
@@ -159,6 +237,15 @@ Não há sistema em produção, então "migração" aqui é a sequência de entr
 6. Rollback é republicar o Preview anterior: como os dados são fixtures em memória, não há migração de dados nem risco de perder informação. Se algum dia houver URL pública, cada papel acessa pelo seu próprio login.
 7. Antes de abrir a mudança de backend, congelar os tipos de `lib/services` e o descritor de campo como contrato, para que Prisma e Better Auth implementem o que a tela já consome.
 
+Adequação da interface já implementada ao fluxo redefinido:
+
+1. Atualizar os contratos com preparação, conferência de assinaturas, pedido de encaminhamento e observações; revisar a matriz para que o Termo não exija parecer.
+2. Atualizar fixtures com solicitações em preparação e com estágios liberados cuja documentação inicial e conferência sejam coerentes. A situação antiga de andamento, isoladamente, não é evidência de assinatura conferida.
+3. Adaptar a entrada de dados e a preparação automática dos três documentos, o pedido do aluno e a correção após indeferimento.
+4. Conectar aprovação ao envio solicitado e implementar a conferência, a liberação e a notificação, com os bloqueios de serviço e de interface.
+5. Acrescentar o histórico de observações nas ações principais e na ação independente; revalidar os fluxos e o preview com a cliente.
+6. Fazer rollback da demonstração republicando o preview anterior e restaurando fixtures compatíveis; uma eventual migração de estágios reais exige conferência dos documentos e não pode presumir assinaturas a partir da situação legada.
+
 ## Open Questions
 
 Itens que não mudam a abordagem nem as specs e podem ser respondidos depois:
@@ -168,4 +255,3 @@ Itens que não mudam a abordagem nem as specs e podem ser respondidos depois:
 - **Se o sistema deve ter página pública institucional** → nenhuma spec cobre isso; adicionar é uma capability nova, sem impacto no que foi entregue.
 - **Nível de acessibilidade a declarar (ex.: WCAG AA)** → os requisitos já pedem teclado, foco visível e contraste; declarar o nível é um registro, não uma mudança de código.
 - **Se o Relatório Semestral continua vigente** → o corpo do arquivo está datado de 2026, apesar do nome indicar 2019, então o texto do documento é que manda; é um dado do descritor, ajustável sem tocar em código.
-- **Se o parecer indeferido reabre o preenchimento para reenvio** → padrão adotado nesta entrega é permitir reabrir e reenviar; se a cliente quiser bloquear, o ajuste é uma transição a remover em `lib/domain/status`, e nenhuma spec precisa mudar porque nenhuma delas descreve esse caminho.

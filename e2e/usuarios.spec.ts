@@ -266,6 +266,8 @@ test.describe("edição, inativação e exclusão", () => {
 
   test("exclui dados do aluno preservando os estágios registrados", async ({ page }) => {
     await entrarComoAdministrador(page);
+    await page.goto("/coordenacao/estagios?estagio=est-sem-endereco");
+    const horasAntesDaExclusao = await page.getByTestId("total-horas").innerText();
     await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
     await expect(page.locator("#nomeCompleto")).toHaveText("Luiza Santos");
     await page.goto("/admin/usuarios");
@@ -281,7 +283,7 @@ test.describe("edição, inativação e exclusão", () => {
     await expect(page.getByRole("cell", { name: "Luiza Santos", exact: true })).toHaveCount(0);
     await page.goto("/coordenacao/estagios?estagio=est-sem-endereco");
     await expect(page.getByText("Detalhes do Estágio", { exact: true })).toBeVisible();
-    await expect(page.getByTestId("total-horas")).toHaveText("0,00 h");
+    await expect(page.getByTestId("total-horas")).toHaveText(horasAntesDaExclusao);
     await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
     await expect(page.getByText("Documento apenas para consulta", { exact: true })).toBeVisible();
     await expect(page.locator("#nomeCompleto")).toHaveText("Luiza Santos");

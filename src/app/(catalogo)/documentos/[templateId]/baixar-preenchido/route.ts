@@ -55,7 +55,13 @@ export async function GET(
   const aluno = await usuarioPorId(documento.alunoId);
   const valores =
     documento.situacao === "rascunho" && aluno?.situacao === "ativo"
-      ? await valoresDoPreenchimento(templateId, aluno, documento.estagioId, documento.valores)
+      ? await valoresDoPreenchimento(
+          templateId,
+          aluno,
+          documento.estagioId,
+          documento.valores,
+          documento.versaoTemplate,
+        )
       : documento.valores;
   const resultado = arquivoDoDocumento({ ...documento, valores }, templateId, formato);
 

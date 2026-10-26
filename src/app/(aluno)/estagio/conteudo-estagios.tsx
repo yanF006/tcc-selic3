@@ -45,6 +45,16 @@ import {
 } from "@/lib/domain/status";
 import { LIMITE_HORAS_DIA, calcularHorasDia } from "@/lib/domain/schemas";
 import { formatarData, formatarHoras } from "@/lib/format";
+import {
+  DOCUMENTOS_INICIAIS,
+  documentoInicial,
+  estagioEncerrado,
+  estagioLiberado,
+} from "@/lib/domain/fluxo-estagio";
+import { PainelFluxo, type DadosPainelFluxo } from "@/components/estagios/painel-fluxo";
+import { FormularioDocumento } from "@/components/documentos/formulario-documento";
+import { descritorPorTemplate, type DescriptorDocumento } from "@/lib/templates/descriptors";
+import { encerrarRegistroAction } from "./acoes";
 
 export function ConteudoEstagios({
   estagioInicialId,
@@ -59,6 +69,9 @@ export function ConteudoEstagios({
   gestao = false,
   nomesUsuarios = {},
   exclusoesPendentes = [],
+  dadosFluxo,
+  valoresIniciaisDocumentos = {},
+  descritoresIniciais = {},
 }: {
   estagioInicialId?: string;
   estagiosIniciais: Estagio[];
@@ -67,11 +80,14 @@ export function ConteudoEstagios({
   supervisores: Pessoa[];
   templates: TemplateDocumento[];
   resumosHoras: Record<string, { total: number; lancamentos: LancamentoHoras[] }>;
-  documentos: DocumentoPreenchido[];
+  documentos: (DocumentoPreenchido & { descritor?: DescriptorDocumento })[];
   rotaBase?: string;
   gestao?: boolean;
   nomesUsuarios?: Record<string, string>;
   exclusoesPendentes?: string[];
+  dadosFluxo: DadosPainelFluxo;
+  valoresIniciaisDocumentos?: Record<string, Record<string, unknown>>;
+  descritoresIniciais?: Record<string, DescriptorDocumento | undefined>;
 }) {
   const router = useRouter();
   const estagios = estagiosIniciais;
@@ -83,7 +99,9 @@ export function ConteudoEstagios({
   const [editandoId, setEditandoId] = React.useState<string | null>(null);
   const [selecionandoDocs, setSelecionandoDocs] = React.useState(false);
   const [exclusaoPendente, setExclusaoPendente] = React.useState(false);
-  const [situacaoCadastro, setSituacaoCadastro] = React.useState("em_andamento");
+  const [valoresDocumentos, setValoresDocumentos] = React.useState(valoresIniciaisDocumentos);
+  const [documentoAtivo, setDocumentoAtivo] = React.useState<string>(DOCUMENTOS_INICIAIS[0]);
+  const [cargaHorariaPrevista, setCargaHorariaPrevista] = React.useState("");
   const [criando, setCriando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [errosCadastro, setErrosCadastro] = React.useState<Record<string, string>>({});
@@ -122,7 +140,8 @@ export function ConteudoEstagios({
       .join(" ")
       .toLowerCase();
     const matchBusca = !busca || termos.includes(busca.toLowerCase());
-    const matchSit = filtroSituacao === "todos" || e.situacao === filtroSituacao;
+    const situacaoEfetiva = e.canceladoEm ? "cancelado" : e.excluidoEm ? "excluido" : e.situacao;
+    const matchSit = filtroSituacao === "todos" || situacaoEfetiva === filtroSituacao;
     return matchBusca && matchSit;
   });
 
@@ -138,8 +157,18 @@ export function ConteudoEstagios({
         orientadorId,
         dataInicio,
         dataFim,
-        documentosSelecionados,
-        situacao: situacaoCadastro as "em_andamento" | "concluido",
+        cargaHorariaPrevista: Number(cargaHorariaPrevista),
+        valoresDocumentos: Object.fromEntries(
+          DOCUMENTOS_INICIAIS.map((id) => [
+            id,
+            {
+              ...valoresDocumentos[id],
+              dataInicioPrevista: dataInicio,
+              dataFimPrevista: dataFim,
+              cargaHorariaTotal: Number(cargaHorariaPrevista),
+            },
+          ]),
+        ),
       };
       const res = editandoId
         ? await editarEstagioAction(editandoId, dados)
@@ -250,7 +279,14 @@ export function ConteudoEstagios({
     setOrientadorId(estagioAtual.orientadorId);
     setDataInicio(estagioAtual.dataInicio);
     setDataFim(estagioAtual.dataFim);
-    setSituacaoCadastro(estagioAtual.situacao);
+    setCargaHorariaPrevista(String(estagioAtual.cargaHorariaPrevista ?? ""));
+    setValoresDocumentos(
+      Object.fromEntries(
+        documentos
+          .filter((doc) => doc.estagioId === estagioAtual.id && documentoInicial(doc.templateId))
+          .map((doc) => [doc.templateId, doc.valores]),
+      ),
+    );
     setCriando(true);
     setErro(null);
   }
@@ -311,23 +347,72 @@ export function ConteudoEstagios({
           </Alert>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={abrirEdicao}>
-            Editar estágio
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={pedirExclusao}
-            disabled={pendente || exclusaoPendente || exclusoesPendentes.includes(estagioAtual.id)}
-          >
-            Solicitar exclusão
-          </Button>
+          {(gestao ||
+            documentos.some(
+              (doc) =>
+                doc.estagioId === estagioAtual.id &&
+                doc.templateId === DOCUMENTOS_INICIAIS[0] &&
+                (doc.situacao === "indeferido" || doc.correcaoAberta),
+            )) &&
+          !estagioEncerrado(estagioAtual) ? (
+            <Button variant="outline" onClick={abrirEdicao}>
+              Editar estágio
+            </Button>
+          ) : null}
+          {!gestao && !estagioEncerrado(estagioAtual) && (
+            <Button
+              variant="destructive"
+              disabled={pendente}
+              onClick={() => {
+                const cancelar = estagioAtual.situacao === "em_preparacao";
+                if (
+                  !window.confirm(
+                    cancelar
+                      ? "Cancelar esta solicitação? O histórico será preservado."
+                      : "Excluir este estágio? O nome e o histórico serão preservados e os dados pessoais vinculados serão removidos.",
+                  )
+                )
+                  return;
+                iniciar(async () => {
+                  const resultado = await encerrarRegistroAction(estagioAtual.id, cancelar);
+                  if (!resultado.ok) setErro(resultado.erro ?? "Operação recusada.");
+                  else router.refresh();
+                });
+              }}
+            >
+              {estagioAtual.situacao === "em_preparacao"
+                ? "Cancelar solicitação"
+                : "Excluir estágio"}
+            </Button>
+          )}
+          {gestao ? (
+            <Button
+              variant="destructive"
+              onClick={pedirExclusao}
+              disabled={
+                pendente || exclusaoPendente || exclusoesPendentes.includes(estagioAtual.id)
+              }
+            >
+              Solicitar exclusão
+            </Button>
+          ) : null}
         </div>
+        <PainelFluxo
+          estagio={estagioAtual}
+          documentos={documentos.filter((doc) => doc.estagioId === estagioAtual.id)}
+          templates={templates}
+          dados={dadosFluxo}
+        />
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Detalhes do Estágio</CardTitle>
               <Badge variant={varianteSituacaoEstagio(estagioAtual.situacao)}>
-                {rotuloSituacaoEstagio(estagioAtual.situacao)}
+                {estagioAtual.canceladoEm
+                  ? "Cancelado"
+                  : estagioAtual.excluidoEm
+                    ? "Excluído"
+                    : rotuloSituacaoEstagio(estagioAtual.situacao)}
               </Badge>
             </div>
             <CardDescription>
@@ -376,7 +461,11 @@ export function ConteudoEstagios({
               <div className="bg-muted rounded p-4">
                 <p className="text-muted-foreground text-xs font-medium">Situação</p>
                 <p className="text-sm font-semibold">
-                  {rotuloSituacaoEstagio(estagioAtual.situacao)}
+                  {estagioAtual.canceladoEm
+                    ? "Cancelado"
+                    : estagioAtual.excluidoEm
+                      ? "Excluído"
+                      : rotuloSituacaoEstagio(estagioAtual.situacao)}
                 </p>
               </div>
             </div>
@@ -398,7 +487,7 @@ export function ConteudoEstagios({
                   </p>
                 </div>
 
-                {estagioAtual.situacao === "em_andamento" ? (
+                {estagioLiberado(estagioAtual) && estagioAtual.situacao === "em_andamento" ? (
                   <form
                     onSubmit={lidarComLancamento}
                     className="flex flex-col gap-4 rounded border p-4"
@@ -514,6 +603,7 @@ export function ConteudoEstagios({
                             </div>
 
                             {lancamento.tipo === "lancamento" &&
+                            estagioLiberado(estagioAtual) &&
                             estagioAtual.situacao === "em_andamento" ? (
                               corrigindoId === lancamento.id ? (
                                 <form
@@ -601,7 +691,7 @@ export function ConteudoEstagios({
 
             <div>
               <h3 className="mb-3 text-sm font-semibold">Documentos do Estágio (Seleção)</h3>
-              {estagioAtual.situacao === "em_andamento" ? (
+              {estagioLiberado(estagioAtual) && estagioAtual.situacao === "em_andamento" ? (
                 <Button
                   variant="outline"
                   className="mb-3"
@@ -626,7 +716,10 @@ export function ConteudoEstagios({
                         <Checkbox
                           id={`selecao-${t.id}`}
                           checked={documentosSelecionados.includes(t.id)}
-                          disabled={estagioAtual.documentosSelecionados.includes(t.id)}
+                          disabled={
+                            documentoInicial(t.id) ||
+                            estagioAtual.documentosSelecionados.includes(t.id)
+                          }
                           onCheckedChange={() => toggleDocumento(t.id)}
                         />
                         <Label htmlFor={`selecao-${t.id}`}>{t.nome}</Label>
@@ -682,14 +775,16 @@ export function ConteudoEstagios({
                               ? rotuloSituacaoDocumento(preenchido.situacao)
                               : "Não preenchido"}
                           </Badge>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            disabled={pendente}
-                            onClick={() => lidarComRemocaoDoc(docId)}
-                          >
-                            Remover
-                          </Button>
+                          {!documentoInicial(docId) && estagioLiberado(estagioAtual) && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={pendente}
+                              onClick={() => lidarComRemocaoDoc(docId)}
+                            >
+                              Remover
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
@@ -727,6 +822,12 @@ export function ConteudoEstagios({
                       <Badge variant={varianteSituacaoDocumento(documento.situacao)}>
                         {rotuloSituacaoDocumento(documento.situacao)}
                       </Badge>
+                      <Link
+                        className="text-primary text-sm underline-offset-4 hover:underline"
+                        href={`/documentos/${documento.templateId}?documento=${documento.id}`}
+                      >
+                        Consultar documento preservado
+                      </Link>
                     </li>
                   ))}
               </ul>
@@ -755,12 +856,13 @@ export function ConteudoEstagios({
               setOrientadorId("");
               setDataInicio("");
               setDataFim("");
-              setSituacaoCadastro("em_andamento");
+              setValoresDocumentos(valoresIniciaisDocumentos);
+              setCargaHorariaPrevista("");
               setDocumentosSelecionados([]);
               setCriando(true);
             }}
           >
-            <PlusIcon className="mr-2 h-4 w-4" /> Cadastrar Estágio
+            <PlusIcon className="mr-2 h-4 w-4" /> Solicitar estágio
           </Button>
         ) : null}
       </div>
@@ -891,42 +993,105 @@ export function ConteudoEstagios({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="situacaoCadastro">Situação do estágio</Label>
-                <Select value={situacaoCadastro} onValueChange={setSituacaoCadastro}>
-                  <SelectTrigger id="situacaoCadastro">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="em_andamento">Em andamento</SelectItem>
-                    <SelectItem value="concluido">Concluído</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="cargaHorariaPrevista">Duração prevista em horas</Label>
+                <Input
+                  id="cargaHorariaPrevista"
+                  type="number"
+                  min={1}
+                  max={4000}
+                  value={cargaHorariaPrevista}
+                  onChange={(evento) => setCargaHorariaPrevista(evento.target.value)}
+                  required
+                />
               </div>
-              {!editandoId ? (
-                <div>
-                  <Label className="mb-2 block">Documentos Iniciais</Label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {templates
-                      .filter(
-                        (t) =>
-                          t.tipo === "preenchivel" &&
-                          t.metadados?.papeisPreenchimento.includes("aluno"),
-                      )
-                      .map((t) => (
-                        <div key={t.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`tmpl-${t.id}`}
-                            checked={documentosSelecionados.includes(t.id)}
-                            onCheckedChange={() => toggleDocumento(t.id)}
-                          />
-                          <Label htmlFor={`tmpl-${t.id}`} className="text-sm font-normal">
-                            {t.nome}
-                          </Label>
-                        </div>
-                      ))}
-                  </div>
+              {!gestao && (
+                <div className="flex flex-col gap-4 rounded border p-4">
+                  <p className="text-sm">
+                    Os três documentos iniciais são obrigatórios. Os dados compartilhados são
+                    preenchidos automaticamente; complete as informações específicas antes de salvar
+                    a solicitação.
+                  </p>
+                  <Label htmlFor="documentoInicialAtivo">Dados dos documentos iniciais</Label>
+                  <select
+                    id="documentoInicialAtivo"
+                    className="bg-background max-w-full rounded border p-2"
+                    value={documentoAtivo}
+                    onChange={(evento) => setDocumentoAtivo(evento.target.value)}
+                  >
+                    {DOCUMENTOS_INICIAIS.map((id) => (
+                      <option key={id} value={id}>
+                        {templates.find((template) => template.id === id)?.nome ?? id}
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const existente = editandoId
+                      ? documentos.find(
+                          (doc) =>
+                            doc.estagioId === editandoId &&
+                            doc.templateId === documentoAtivo &&
+                            doc.situacao !== "inativo",
+                        )
+                      : undefined;
+                    const original =
+                      existente?.descritor ??
+                      descritoresIniciais[documentoAtivo] ??
+                      descritorPorTemplate(documentoAtivo)!;
+                    const descriptor = {
+                      ...original,
+                      auto: original.auto?.filter(
+                        (campo) =>
+                          !["orientador", "supervisor", "dataInicio", "dataFim"].includes(campo.id),
+                      ),
+                      secoes: original.secoes
+                        .filter((secao) => secao.id !== "parecer")
+                        .map((secao) => ({
+                          ...secao,
+                          campos: secao.campos.filter(
+                            (campo) =>
+                              ![
+                                "dataInicioPrevista",
+                                "dataFimPrevista",
+                                "cargaHorariaTotal",
+                              ].includes(campo.id),
+                          ),
+                        })),
+                    };
+                    const contexto = {
+                      ...valoresDocumentos[documentoAtivo],
+                      instituicao:
+                        convenios.find((convenio) => convenio.id === convenioId)?.instituicao ?? "",
+                      localEstagio:
+                        convenios.find((convenio) => convenio.id === convenioId)?.instituicao ?? "",
+                      supervisor:
+                        supervisores.find((pessoa) => pessoa.id === supervisorId)?.nome ?? "",
+                      orientador:
+                        orientadores.find((pessoa) => pessoa.id === orientadorId)?.nome ?? "",
+                      dataInicio,
+                      dataFim,
+                    };
+                    return (
+                      <FormularioDocumento
+                        key={documentoAtivo}
+                        descriptor={descriptor}
+                        valores={contexto}
+                        aoMudar={(id, valor) =>
+                          setValoresDocumentos((atual) => ({
+                            ...atual,
+                            [documentoAtivo]: { ...atual[documentoAtivo], [id]: valor },
+                          }))
+                        }
+                        aoMudarGrupo={(alteracoes) =>
+                          setValoresDocumentos((atual) => ({
+                            ...atual,
+                            [documentoAtivo]: { ...atual[documentoAtivo], ...alteracoes },
+                          }))
+                        }
+                      />
+                    );
+                  })()}
                 </div>
-              ) : null}
+              )}
 
               <div className="flex gap-2">
                 <Button type="submit" disabled={pendente}>
@@ -958,6 +1123,7 @@ export function ConteudoEstagios({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todas as situações</SelectItem>
+            <SelectItem value="em_preparacao">Em preparação</SelectItem>
             <SelectItem value="em_andamento">Em andamento</SelectItem>
             <SelectItem value="concluido">Concluído</SelectItem>
             <SelectItem value="cancelado">Cancelado</SelectItem>
@@ -1000,13 +1166,22 @@ export function ConteudoEstagios({
                   </Button>
                 </CardTitle>
                 <Badge variant={varianteSituacaoEstagio(estagio.situacao)}>
-                  {rotuloSituacaoEstagio(estagio.situacao)}
+                  {estagio.canceladoEm
+                    ? "Cancelado"
+                    : estagio.excluidoEm
+                      ? "Excluído"
+                      : rotuloSituacaoEstagio(estagio.situacao)}
                 </Badge>
               </CardHeader>
               <CardContent>
                 <div className="text-muted-foreground flex flex-wrap gap-4 text-sm">
                   {gestao ? (
-                    <span>Aluno: {nomesUsuarios[estagio.alunoId] ?? "Cadastro excluído"}</span>
+                    <span>
+                      Aluno:{" "}
+                      {estagio.excluidoEm
+                        ? estagio.nomeAlunoHistorico
+                        : (nomesUsuarios[estagio.alunoId] ?? "Cadastro excluído")}
+                    </span>
                   ) : null}
                   <span>
                     Instituição: {convenios.find((c) => c.id === estagio.convenioId)?.instituicao}

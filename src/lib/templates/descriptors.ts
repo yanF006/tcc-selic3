@@ -99,6 +99,10 @@ export interface CampoDescriptor {
   tipo: TipoCampoDescriptor;
   /** Origem do valor; `aluno` e `estagio` são preenchidos em modo somente leitura. */
   origem: OrigemCampo;
+  /** Chave do dado de origem, quando diferente da chave usada no arquivo. */
+  fonte?: string;
+  /** Campo preenchido exclusivamente a partir da decisão formal. */
+  parecer?: "decisao" | "consideracoes" | "data";
   obrigatorio?: boolean;
   /** Máscara de `lib/mask` aplicada enquanto o usuário digita. */
   mascara?: NomeMascara;
@@ -130,6 +134,55 @@ export interface SecaoDescriptor {
   titulo: string;
   descricao?: string;
   campos: CampoDescriptor[];
+}
+
+export const FONTES_ALUNO = [
+  "nomeCompleto",
+  "cpf",
+  "rg",
+  "dataNascimento",
+  "email",
+  "telefone",
+  "celular",
+  "endereco",
+  "enderecoAluno",
+  "cepAluno",
+  "bairro",
+  "cidade",
+  "cep",
+  "telefoneAluno",
+  "celularAluno",
+  "emailAluno",
+  "curso",
+  "turma",
+  "ano",
+  "anoSemestre",
+  "semestre",
+  "periodo",
+  "turmaSemestreAno",
+  "campus",
+  "aluno",
+  "matricula",
+];
+export const FONTES_ESTAGIO = [
+  "instituicao",
+  "localEstagio",
+  "razaoSocial",
+  "supervisor",
+  "orientador",
+  "dataInicio",
+  "dataFim",
+];
+
+export function fonteParecer(
+  templateId: string,
+  campo: CampoDescriptor,
+): CampoDescriptor["parecer"] {
+  if (campo.parecer) return campo.parecer;
+  if (templateId !== "tpl-formulario-liberacao") return undefined;
+  return (
+    { planoDeAcordo: "decisao", consideracoes: "consideracoes", dataParecer: "data" } as const
+  )[campo.id as "planoDeAcordo" | "consideracoes" | "dataParecer"];
 }
 
 export interface DescriptorDocumento {
@@ -996,7 +1049,7 @@ export const DESCRITORES: DescriptorDocumento[] = comGruposEndereco([
     preenchivel: true,
     metadados: {
       papeisPreenchimento: ["aluno"],
-      tipoParecer: "externo",
+      tipoParecer: "nenhum",
       exigeEstagio: true,
       assinaturas: [
         { papel: "aluno", rotulo: "Estagiário(a)", tipo: "interna" },
@@ -1943,12 +1996,9 @@ export const DESCRITORES: DescriptorDocumento[] = comGruposEndereco([
           {
             id: "termoCompromissoData",
             rotulo: "Data do Termo de Compromisso",
-            tipo: "data",
-            origem: "estagio",
-            mascara: "data",
-            validacao: ["data"],
-            obrigatorio: true,
-            somenteLeitura: true,
+            tipo: "fixo",
+            origem: "literal",
+            ajuda: "____/____/________ (preencher ao assinar, fora do sistema).",
             largura: "meia",
           },
           {
@@ -2271,8 +2321,11 @@ export function descritorPorTemplate(templateId: string): DescriptorDocumento | 
 }
 
 /** Todos os campos de um template, na ordem em que aparecem no documento. */
-export function camposDoTemplate(templateId: string): CampoDescriptor[] {
-  const descriptor = descritorPorTemplate(templateId);
+export function camposDoTemplate(
+  templateId: string,
+  versao?: DescriptorDocumento,
+): CampoDescriptor[] {
+  const descriptor = versao ?? descritorPorTemplate(templateId);
 
   if (!descriptor) return [];
 

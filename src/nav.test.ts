@@ -102,6 +102,8 @@ describe("registro de navegação", () => {
       "/coordenacao/documentos",
       "/solicitacoes",
       "/coordenacao/estatisticas",
+      "/coordenacao/cadastros",
+      "/coordenacao/templates",
     ]);
   });
 

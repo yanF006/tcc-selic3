@@ -14,6 +14,7 @@ import type {
   Turma,
   Usuario,
 } from "@/lib/domain/types";
+import { DOCUMENTOS_INICIAIS } from "@/lib/domain/fluxo-estagio";
 
 /**
  * Fixtures de desenvolvimento (D4). Nenhuma tela importa este arquivo: as
@@ -73,6 +74,9 @@ export const periodos: Periodo[] = [
   { id: "periodo-2025-2", rotulo: "2025.2", ano: 2025, semestre: 2, situacao: "ativo" },
   { id: "periodo-2025-1", rotulo: "2025.1", ano: 2025, semestre: 1, situacao: "ativo" },
 ];
+
+// O vínculo é explícito: períodos novos não entram automaticamente nas turmas existentes.
+for (const turma of turmas) turma.periodoIds = periodos.map((periodo) => periodo.id);
 
 export const convenios: Convenio[] = [
   {
@@ -147,6 +151,14 @@ export const pessoas: Pessoa[] = [
     nome: "Bruno Tavares",
     email: "bruno.tavares@ifrj.edu.br",
     telefone: "(21) 3333-1002",
+    papel: "orientador",
+    situacao: "ativo",
+  },
+  {
+    id: "ori-sem-email",
+    nome: "Orientador sem e-mail",
+    email: "",
+    telefone: "2133331003",
     papel: "orientador",
     situacao: "ativo",
   },
@@ -344,6 +356,8 @@ export const usuarios: Usuario[] = [
 export const estagios: Estagio[] = [
   {
     id: "est-sem-endereco",
+    liberadoEm: "2026-03-01T09:00:00Z",
+    liberadoPorId: "usr-ana",
     alunoId: "usr-sem-endereco",
     convenioId: "conv-ti-pinheiral",
     supervisorId: "sup-ricardo",
@@ -356,6 +370,8 @@ export const estagios: Estagio[] = [
   },
   {
     id: "est-maria-tecnoweb",
+    liberadoEm: "2026-03-01T09:00:00Z",
+    liberadoPorId: "usr-ana",
     alunoId: "usr-maria",
     convenioId: "conv-ti-pinheiral",
     supervisorId: "sup-ricardo",
@@ -372,6 +388,8 @@ export const estagios: Estagio[] = [
   },
   {
     id: "est-maria-hospital",
+    liberadoEm: "2025-08-01T09:00:00Z",
+    liberadoPorId: "usr-ana",
     alunoId: "usr-maria",
     convenioId: "conv-hospital-pinheiral",
     supervisorId: "sup-marta",
@@ -391,6 +409,8 @@ export const estagios: Estagio[] = [
   },
   {
     id: "est-joao-lab",
+    liberadoEm: "2024-03-01T09:00:00Z",
+    liberadoPorId: "usr-ana",
     alunoId: "usr-joao",
     convenioId: "conv-lab-eletro",
     supervisorId: "sup-jonathan",
@@ -650,6 +670,122 @@ export const pareceres: Parecer[] = [
   },
 ];
 
+// Evidência fictícia explícita de liberação: o estado em andamento, isoladamente,
+// não é usado pelo simulador para presumir que documentos foram conferidos.
+for (const estagio of estagios) {
+  const aluno = usuarios.find((usuario) => usuario.id === estagio.alunoId)!;
+  estagio.nomeAlunoHistorico = aluno.nome;
+  estagio.cursoIdHistorico = aluno.dadosPessoais?.cursoId;
+  estagio.cargaHorariaPrevista = 480;
+  estagio.encaminhadoEm = estagio.criadoEm;
+  estagio.encaminhadoPorId = aluno.id;
+  estagio.documentosSelecionados = [
+    ...new Set([...DOCUMENTOS_INICIAIS, ...estagio.documentosSelecionados]),
+  ];
+  for (const templateId of DOCUMENTOS_INICIAIS) {
+    let documento = documentos.find(
+      (doc) => doc.estagioId === estagio.id && doc.templateId === templateId,
+    );
+    if (!documento) {
+      documento = {
+        id: `doc-inicial-${estagio.id}-${templateId}`,
+        templateId,
+        alunoId: aluno.id,
+        estagioId: estagio.id,
+        versaoTemplate: 1,
+        valores: {},
+        situacao: "rascunho",
+        criadoEm: estagio.criadoEm,
+        atualizadoEm: estagio.criadoEm,
+      };
+      documentos.push(documento);
+    }
+    documento.assinaturasConfirmadasPorId = "usr-ana";
+    documento.assinaturasConfirmadasEm = estagio.liberadoEm;
+    if (templateId === "tpl-formulario-liberacao") {
+      documento.situacao = "aprovado";
+      if (
+        !pareceres.some(
+          (parecer) => parecer.documentoId === documento.id && parecer.decisao === "aprovado",
+        )
+      ) {
+        pareceres.push({
+          id: `par-inicial-${estagio.id}`,
+          documentoId: documento.id,
+          decisao: "aprovado",
+          autorId: aluno.dadosPessoais?.cursoId === "curso-ads" ? "usr-carla" : "usr-bruno",
+          fila: "coordenador_curso",
+          data: estagio.liberadoEm!,
+        });
+      }
+    } else documento.situacao = "rascunho";
+    if (templateId === "tpl-termo-compromisso")
+      documento.valores.cargaHorariaTotal = estagio.cargaHorariaPrevista;
+  }
+}
+
+estagios.push({
+  id: "est-solicitacao-luiza",
+  alunoId: "usr-sem-endereco",
+  convenioId: "conv-ti-pinheiral",
+  supervisorId: "sup-ricardo",
+  orientadorId: "ori-carla",
+  dataInicio: "2027-02-01",
+  dataFim: "2027-06-30",
+  situacao: "em_preparacao",
+  documentosSelecionados: [...DOCUMENTOS_INICIAIS],
+  nomeAlunoHistorico: "Luiza Santos",
+  cursoIdHistorico: "curso-ads",
+  cargaHorariaPrevista: 480,
+  criadoEm: "2026-10-01T10:00:00Z",
+});
+for (const templateId of DOCUMENTOS_INICIAIS) {
+  documentos.push({
+    id: `doc-preparacao-${templateId}`,
+    templateId,
+    alunoId: "usr-sem-endereco",
+    estagioId: "est-solicitacao-luiza",
+    versaoTemplate: 1,
+    valores: {},
+    situacao: templateId === "tpl-formulario-liberacao" ? "indeferido" : "rascunho",
+    criadoEm: "2026-10-01T10:00:00Z",
+    atualizadoEm: "2026-10-01T10:00:00Z",
+  });
+}
+pareceres.push({
+  id: "par-correcao-luiza",
+  documentoId: "doc-preparacao-tpl-formulario-liberacao",
+  decisao: "indeferido",
+  autorId: "usr-carla",
+  fila: "coordenador_curso",
+  consideracoes: "Complete os dados para nova análise.",
+  data: "2026-10-01T10:00:00Z",
+});
+documentos.push(
+  {
+    id: "doc-requerimento-submetido",
+    templateId: "tpl-requerimento-aproveitamento",
+    alunoId: "usr-sem-endereco",
+    estagioId: "est-sem-endereco",
+    versaoTemplate: 1,
+    valores: { cargaHorariaTotal: 120 },
+    situacao: "submetido",
+    criadoEm: "2026-10-01T10:00:00Z",
+    atualizadoEm: "2026-10-01T10:00:00Z",
+  },
+  {
+    id: "doc-requerimento-em-analise",
+    templateId: "tpl-requerimento-aproveitamento",
+    alunoId: "usr-joao",
+    estagioId: "est-joao-lab",
+    versaoTemplate: 1,
+    valores: { cargaHorariaTotal: 120 },
+    situacao: "em_analise",
+    criadoEm: "2026-10-01T10:00:00Z",
+    atualizadoEm: "2026-10-01T10:00:00Z",
+  },
+);
+
 export const notificacoes: Notificacao[] = [
   {
     id: "ntf-1",
@@ -664,7 +800,7 @@ export const notificacoes: Notificacao[] = [
     id: "ntf-2",
     destinatarioId: "usr-carla",
     titulo: "Documento aguardando parecer",
-    mensagem: "Plano de Atividades de Estágio está em análise.",
+    mensagem: "Há solicitações de estágio aguardando avaliação.",
     tipo: "parecer",
     lida: false,
     criadaEm: "2026-02-28T09:05:00",

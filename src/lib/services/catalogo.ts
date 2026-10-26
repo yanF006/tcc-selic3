@@ -6,8 +6,10 @@ import type {
   Periodo,
   Pessoa,
   Turma,
+  DadosPessoais,
 } from "@/lib/domain/types";
 import type { OpcoesSelecao } from "@/lib/domain/schemas";
+import { periodosDoCurso } from "@/lib/domain/selecoes";
 
 import { filtrarPorTexto, paginar } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
@@ -19,15 +21,15 @@ export async function listarCursos(situacao?: Curso["situacao"]): Promise<Curso[
   return obterEstado().cursos.filter((curso) => !situacao || curso.situacao === situacao);
 }
 
-export async function listarTurmas(cursoId?: string): Promise<Turma[]> {
+export async function listarTurmas(cursoId?: string, incluirInativas = false): Promise<Turma[]> {
   return obterEstado()
-    .turmas.filter((turma) => turma.situacao === "ativo")
+    .turmas.filter((turma) => incluirInativas || turma.situacao === "ativo")
     .filter((turma) => !cursoId || turma.cursoId === cursoId);
 }
 
-export async function listarPeriodos(): Promise<Periodo[]> {
+export async function listarPeriodos(incluirInativos = false): Promise<Periodo[]> {
   return obterEstado()
-    .periodos.filter((periodo) => periodo.situacao === "ativo")
+    .periodos.filter((periodo) => incluirInativos || periodo.situacao === "ativo")
     .sort((a, b) => b.ano - a.ano || b.semestre - a.semestre);
 }
 
@@ -44,8 +46,16 @@ export async function listarSupervisores(): Promise<Pessoa[]> {
 }
 
 /** Opções usadas pelos schemas Zod dos selects. */
-export async function opcoesSelecao(): Promise<OpcoesSelecao> {
-  const [turmas, cursos] = await Promise.all([listarTurmas(), listarCursos("ativo")]);
+export async function opcoesSelecao(dadosAtuais?: DadosPessoais): Promise<OpcoesSelecao> {
+  const cursos = (await listarCursos()).filter(
+    (curso) => curso.situacao === "ativo" || curso.id === dadosAtuais?.cursoId,
+  );
+  const turmas = (await listarTurmas(undefined, true)).filter(
+    (turma) => turma.situacao === "ativo" || turma.id === dadosAtuais?.turmaId,
+  );
+  const periodos = (await listarPeriodos(true)).filter(
+    (periodo) => periodo.situacao === "ativo" || periodo.id === dadosAtuais?.periodoId,
+  );
 
   return {
     cursosIds: cursos.map((curso) => curso.id),
@@ -55,7 +65,20 @@ export async function opcoesSelecao(): Promise<OpcoesSelecao> {
         turmas.filter((turma) => turma.cursoId === curso.id).map((turma) => turma.id),
       ]),
     ),
-    periodosIds: (await listarPeriodos()).map((periodo) => periodo.id),
+    periodosIds: periodos.map((periodo) => periodo.id),
+    periodosPorCurso: Object.fromEntries(
+      cursos.map((curso) => [
+        curso.id,
+        periodosDoCurso(
+          curso.id,
+          turmas,
+          periodos.filter(
+            (periodo) => periodo.situacao === "ativo" || curso.id === dadosAtuais?.cursoId,
+          ),
+          dadosAtuais?.turmaId,
+        ).map((periodo) => periodo.id),
+      ]),
+    ),
   };
 }
 
@@ -86,7 +109,7 @@ export function classificacaoConvenio(
   convenio: Convenio,
   hoje = new Date().toISOString().slice(0, 10),
 ): ClassificacaoConvenio {
-  return convenio.fimVigencia >= hoje ? "ativo" : "expirado";
+  return convenio.situacao === "ativo" && convenio.fimVigencia >= hoje ? "ativo" : "expirado";
 }
 
 export interface ConsultaConvenios extends OpcoesPaginacao {

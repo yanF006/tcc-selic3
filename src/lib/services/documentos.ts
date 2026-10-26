@@ -1,5 +1,6 @@
 import { transicaoDocumentoPermitida } from "@/lib/domain/status";
 import { conceitoGlobalDasNotas } from "@/lib/domain/avaliacao";
+import { documentoInicial, estagioEncerrado, estagioLiberado } from "@/lib/domain/fluxo-estagio";
 import {
   esquemaCpf,
   esquemaRg,
@@ -23,7 +24,7 @@ import {
   camposDoTemplate,
   classificacaoDoCampo,
   DESCRITORES,
-  descritorPorTemplate,
+  fonteParecer,
 } from "@/lib/templates/descriptors";
 
 import { PAPEL_COM_TODAS_AS_PERMISSOES } from "@/lib/auth/permissions";
@@ -41,11 +42,14 @@ import {
   podeConsultarEstagio,
   estagioPorId,
   totalHorasDoEstagio,
+  correcaoInicialPermitida,
 } from "./estagios";
+import { ErroDeRegra } from "./erros";
 import { filtrarPorTexto, paginar } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
 import { notificar } from "./sessao";
 import { agora, obterEstado, novoId } from "./store";
+import { descritorDaVersao } from "./templates";
 
 /** Documentos preenchidos: rascunho, submissão, parecer e inativação. */
 
@@ -79,6 +83,7 @@ export interface ItemCatalogo {
   exigeEstagio: boolean;
   /** Número da versão vigente, ou null quando o documento não tem versão. */
   versaoVigente: number | null;
+  ativo: boolean;
 }
 
 /**
@@ -100,6 +105,7 @@ export async function catalogoDocumentos(): Promise<ItemCatalogo[]> {
       papeisPreenchimento: preenchivel ? (descritor.metadados?.papeisPreenchimento ?? []) : [],
       exigeEstagio: preenchivel && descritor.metadados?.exigeEstagio === true,
       versaoVigente: template?.versoes.find((versao) => versao.vigente)?.versao ?? null,
+      ativo: template?.situacao === "ativo",
     };
   });
 }
@@ -117,6 +123,11 @@ export async function templatesDisponiveis(
   return (await listarTemplates("preenchivel")).filter((template) => {
     if (!template.metadados?.papeisPreenchimento.includes(papel)) return false;
     if (template.metadados.exigeEstagio && !estagio) return false;
+    if (
+      estagio &&
+      (estagioEncerrado(estagio) || (!documentoInicial(template.id) && !estagioLiberado(estagio)))
+    )
+      return false;
 
     return true;
   });
@@ -148,6 +159,41 @@ export async function documentosDoAluno(alunoId: string): Promise<DocumentoPreen
   return (await listarDocumentos(alunoId, { tamanho: 100 })).itens;
 }
 
+export async function documentosDaCoordenacao(usuario: Usuario, consulta: ConsultaDocumentos = {}) {
+  if (
+    usuario.situacao !== "ativo" ||
+    !usuario.papeis.some((papel) =>
+      ["administrador", "coordenador_curso", "coordenador_estagio"].includes(papel),
+    )
+  )
+    return paginar([], consulta);
+  const permitidos: DocumentoPreenchido[] = [];
+  for (const documento of obterEstado().documentos) {
+    if (
+      (!consulta.situacao || documento.situacao === consulta.situacao) &&
+      (await podeConsultarDocumento(usuario, documento))
+    )
+      permitidos.push(documento);
+  }
+  const estado = obterEstado();
+  const filtrados = filtrarPorTexto(permitidos, consulta.busca ?? "", (documento) => {
+    const estagio = estado.estagios.find((registro) => registro.id === documento.estagioId);
+    return [
+      estagio?.excluidoEm
+        ? estagio.nomeAlunoHistorico
+        : estado.usuarios.find((registro) => registro.id === documento.alunoId)?.nome,
+      estado.templates.find((template) => template.id === documento.templateId)?.nome,
+      estado.convenios.find((convenio) => convenio.id === estagio?.convenioId)?.instituicao,
+      estado.pessoas.find((pessoa) => pessoa.id === estagio?.orientadorId)?.nome,
+      estado.pessoas.find((pessoa) => pessoa.id === estagio?.supervisorId)?.nome,
+    ].filter((texto): texto is string => typeof texto === "string");
+  });
+  return paginar(
+    filtrados.sort((a, b) => b.atualizadoEm.localeCompare(a.atualizadoEm)),
+    consulta,
+  );
+}
+
 export async function documentosDoEstagio(estagioId: string): Promise<DocumentoPreenchido[]> {
   return obterEstado().documentos.filter((documento) => documento.estagioId === estagioId);
 }
@@ -156,15 +202,29 @@ export async function documentoPorId(id: string): Promise<DocumentoPreenchido | 
   return obterEstado().documentos.find((documento) => documento.id === id) ?? null;
 }
 
+export async function documentoDoTemplate(templateId: string, autorId: string, estagioId?: string) {
+  return (
+    obterEstado().documentos.find(
+      (documento) =>
+        documento.templateId === templateId &&
+        documento.alunoId === autorId &&
+        documento.estagioId === estagioId &&
+        documento.situacao !== "inativo",
+    ) ?? null
+  );
+}
+
 /** Valida os valores contra o descritor: obrigatoriedade e limites de palavras. */
 export function validarValores(
   templateId: string,
   valores: Record<string, unknown>,
+  versao?: number,
 ): ProblemaValidacao[] {
   const problemas: ProblemaValidacao[] = [];
-  const campos = camposDoTemplate(templateId);
+  const campos = camposDoTemplate(templateId, descritorDaVersao(templateId, versao));
 
   for (const campo of campos) {
+    if (fonteParecer(templateId, campo)) continue;
     // Trechos de texto do template não são valores: `fixo` entra no documento
     // final e `instrucao` é descartada pelo gerador.
     if (classificacaoDoCampo(campo) !== "campo") continue;
@@ -237,6 +297,12 @@ export function validarValores(
         mensagem: `${campo.rotulo} deve ser no máximo ${campo.max}.`,
       });
     }
+    if (campo.min !== undefined && typeof valor === "number" && valor < campo.min) {
+      problemas.push({
+        campo: campo.id,
+        mensagem: `${campo.rotulo} deve ser no mínimo ${campo.min}.`,
+      });
+    }
 
     if (campo.min !== undefined && typeof valor === "number" && valor < campo.min) {
       problemas.push({
@@ -296,16 +362,19 @@ export async function criarRascunho(
   }
 
   const estagio = estagioId ? await exigirAcessoEstagio(aluno, estagioId) : null;
+  if (
+    estagio &&
+    (estagioEncerrado(estagio) || (!documentoInicial(templateId) && !estagioLiberado(estagio)))
+  ) {
+    throw new ErroDeRegra(
+      "O estágio aguarda liberação ou está cancelado/excluído.",
+      "liberacao_pendente",
+    );
+  }
   const titular = await usuarioPorId(estagio?.alunoId ?? aluno.id);
   if (!titular) throw new Error("Cadastro do aluno não encontrado.");
 
-  const existente = obterEstado().documentos.find(
-    (documento) =>
-      documento.templateId === templateId &&
-      documento.alunoId === titular.id &&
-      documento.estagioId === estagioId &&
-      documento.situacao !== "inativo",
-  );
+  const existente = await documentoDoTemplate(templateId, titular.id, estagioId);
 
   if (existente) {
     if (existente.situacao === "rascunho" && titular.situacao === "ativo") {
@@ -314,24 +383,35 @@ export async function criarRascunho(
         titular,
         estagioId,
         existente.valores,
+        existente.versaoTemplate,
       );
     }
     return existente;
   }
 
   const versaoVigente = template.versoes.find((versao) => versao.vigente);
+  if (!versaoVigente) throw new ErroDeRegra("Template sem versão vigente.", "versao_indisponivel");
   const momento = agora();
-  const valoresIniciais = await valoresDoPreenchimento(templateId, titular, estagioId, valores);
+  const valoresIniciais = await valoresDoPreenchimento(
+    templateId,
+    titular,
+    estagioId,
+    valoresDigitadosPermitidos(templateId, valores, versaoVigente.versao),
+    versaoVigente.versao,
+  );
 
-  // 8.8: o Termo de Compromisso declara a duração em horas, que já vem do total
-  // do estágio e continua ajustável pelo aluno.
+  // A duração prevista do Termo antecede o estágio; não depende de horas realizadas.
   if (estagioId && !("cargaHorariaTotal" in valoresIniciais)) {
-    const temCargaHoraria = camposDoTemplate(templateId).some(
-      (campo) => campo.id === "cargaHorariaTotal",
-    );
+    const temCargaHoraria = camposDoTemplate(
+      templateId,
+      descritorDaVersao(templateId, versaoVigente.versao),
+    ).some((campo) => campo.id === "cargaHorariaTotal");
 
     if (temCargaHoraria) {
-      valoresIniciais.cargaHorariaTotal = await totalHorasDoEstagio(estagioId);
+      valoresIniciais.cargaHorariaTotal =
+        templateId === "tpl-termo-compromisso"
+          ? (estagio?.cargaHorariaPrevista ?? "")
+          : await totalHorasDoEstagio(estagioId);
     }
   }
 
@@ -357,8 +437,16 @@ export async function valoresAutomaticos(
   templateId: string,
   aluno: Usuario,
   estagioId?: string,
+  versao?: number,
 ): Promise<Record<string, unknown>> {
+  const descriptor = descritorDaVersao(templateId, versao);
   const estagio = estagioId ? await estagioPorId(estagioId) : null;
+  if (estagio?.excluidoEm) {
+    return {
+      nomeCompleto: estagio.nomeAlunoHistorico ?? "",
+      aluno: estagio.nomeAlunoHistorico ?? "",
+    };
+  }
   const dados = aluno.dadosPessoais;
   const [curso, turma, periodo] = dados
     ? await Promise.all([
@@ -421,7 +509,7 @@ export async function valoresAutomaticos(
   }
 
   const automaticos = Object.fromEntries(
-    camposDoTemplate(templateId)
+    camposDoTemplate(templateId, descriptor)
       .filter(
         (campo) =>
           campo.origem === "aluno" ||
@@ -430,10 +518,14 @@ export async function valoresAutomaticos(
       )
       .map((campo) => [
         campo.id,
-        campo.origem === "literal" ? campo.ajuda : (base[campo.id] ?? ""),
+        campo.origem === "literal"
+          ? campo.ajuda
+          : Object.hasOwn(base, campo.fonte || campo.id)
+            ? (base[campo.fonte || campo.id] ?? "")
+            : "",
       ]),
   );
-  for (const grupo of descritorPorTemplate(templateId)?.gruposEndereco ?? []) {
+  for (const grupo of descriptor?.gruposEndereco ?? []) {
     for (const id of idsDoGrupo(grupo)) delete automaticos[id];
     if (grupo.origemInicial !== "aluno") continue;
     for (const [chave, id] of Object.entries(grupo.campos)) {
@@ -452,9 +544,11 @@ export async function valoresDoPreenchimento(
   aluno: Usuario,
   estagioId: string | undefined,
   valores: Record<string, unknown>,
+  versao?: number,
 ) {
-  const automaticos = await valoresAutomaticos(templateId, aluno, estagioId);
-  const grupos = descritorPorTemplate(templateId)?.gruposEndereco ?? [];
+  const descriptor = descritorDaVersao(templateId, versao);
+  const automaticos = await valoresAutomaticos(templateId, aluno, estagioId, versao);
+  const grupos = descriptor?.gruposEndereco ?? [];
   const enderecos = new Set(grupos.flatMap(idsDoGrupo));
   const protegidos = Object.fromEntries(
     Object.entries(automaticos).filter(([id]) => !enderecos.has(id)),
@@ -469,7 +563,7 @@ export async function valoresDoPreenchimento(
     if (estruturaSuficiente(endereco)) resultado[grupo.composto] = formatarEndereco(endereco);
   }
   if (templateId === "tpl-ficha-frequencia") {
-    const notas = camposDoTemplate(templateId)
+    const notas = camposDoTemplate(templateId, descriptor)
       .filter((campo) => /^criterio_\d+$/.test(campo.id))
       .map((campo) => resultado[campo.id])
       .filter(
@@ -489,8 +583,27 @@ export async function salvarRascunho(
 
   if (!documento) throw new Error("Documento não encontrado.");
 
+  if ((await templatePorId(documento.templateId))?.situacao !== "ativo")
+    throw new ErroDeRegra("Template inativo: apenas consulta.", "template_inativo");
   if (documento.situacao !== "rascunho") {
     throw new Error("Somente rascunhos podem ser editados.");
+  }
+  const estagio = documento.estagioId ? await estagioPorId(documento.estagioId) : null;
+  if (
+    estagio &&
+    (estagioEncerrado(estagio) ||
+      (!documentoInicial(documento.templateId) && !estagioLiberado(estagio)))
+  ) {
+    throw new ErroDeRegra(
+      "O estágio aguarda liberação ou está cancelado/excluído.",
+      "liberacao_pendente",
+    );
+  }
+  if (estagio && documentoInicial(documento.templateId) && !correcaoInicialPermitida(estagio)) {
+    throw new ErroDeRegra(
+      "Os documentos iniciais só podem ser corrigidos após indeferimento.",
+      "dados_iniciais_bloqueados",
+    );
   }
 
   const aluno = await usuarioPorId(documento.alunoId);
@@ -501,7 +614,11 @@ export async function salvarRascunho(
     documento.templateId,
     aluno,
     documento.estagioId,
-    { ...documento.valores, ...valores },
+    {
+      ...documento.valores,
+      ...valoresDigitadosPermitidos(documento.templateId, valores, documento.versaoTemplate),
+    },
+    documento.versaoTemplate,
   );
   documento.atualizadoEm = agora();
 
@@ -517,7 +634,11 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
   if (!template?.metadados || template.metadados.tipoParecer === "nenhum") {
     throw new Error("Este documento não está sujeito a parecer.");
   }
-  const problemas = validarValores(documento.templateId, documento.valores);
+  const problemas = validarValores(
+    documento.templateId,
+    documento.valores,
+    documento.versaoTemplate,
+  );
 
   if (problemas.length > 0) {
     throw new Error(problemas[0].mensagem);
@@ -530,6 +651,7 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
   }
 
   documento.situacao = alvo;
+  documento.correcaoAberta = false;
   documento.atualizadoEm = agora();
   const tipoParecer = template.metadados.tipoParecer;
   for (const responsavel of obterEstado().usuarios.filter(
@@ -549,6 +671,13 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
         `Documento ${template.nome} submetido para análise.`,
         "parecer",
       );
+    }
+  }
+  if (tipoParecer === "externo") {
+    const aluno = await usuarioPorId(documento.alunoId);
+    if (aluno) {
+      const { enviarParaAssinaturas } = await import("./fluxo-estagio");
+      await enviarParaAssinaturas(documento.id, aluno);
     }
   }
 
@@ -583,7 +712,16 @@ export async function documentosParaParecer(
         autor.membroComissaoEstagio));
   if (!podeVerFila || fila === "externo" || fila === "nenhum") return paginar([], consulta);
   const emAnalise = obterEstado()
-    .documentos.filter((documento) => documento.situacao === "em_analise")
+    .documentos.filter(
+      (documento) => documento.situacao === "em_analise" || documento.situacao === "submetido",
+    )
+    .filter(
+      (documento) =>
+        !documento.estagioId ||
+        !obterEstado().estagios.find(
+          (estagio) => estagio.id === documento.estagioId && estagioEncerrado(estagio),
+        ),
+    )
     .filter((documento) => !consulta.estagioId || documento.estagioId === consulta.estagioId);
 
   const naFila: DocumentoPreenchido[] = [];
@@ -618,6 +756,9 @@ export async function registrarParecer(
   if (!documento) throw new Error("Documento não encontrado.");
 
   const fila = (await templatePorId(documento.templateId))?.metadados?.tipoParecer;
+  const estagio = documento.estagioId ? await estagioPorId(documento.estagioId) : null;
+  if (estagio && estagioEncerrado(estagio))
+    throw new ErroDeRegra("Estágio cancelado ou excluído.", "estagio_encerrado");
   const autorizado =
     autor.situacao === "ativo" &&
     (autor.papeis.includes("administrador") ||
@@ -638,12 +779,27 @@ export async function registrarParecer(
     throw new Error("Parecer não disponível para este usuário ou decisão inválida.");
   }
 
+  if (documento.situacao === "submetido") await iniciarAnalise(documento.id);
   if (!transicaoDocumentoPermitida(documento.situacao, decisao)) {
     throw new Error(`Não é possível emitir parecer a partir de "${documento.situacao}".`);
   }
 
   documento.situacao = decisao;
   documento.atualizadoEm = agora();
+  for (const campo of camposDoTemplate(documento.templateId, descritorDoDocumento(documento))) {
+    const fonte = fonteParecer(documento.templateId, campo);
+    if (fonte === "data") documento.valores[campo.id] = agora().slice(0, 10);
+    if (fonte === "consideracoes") documento.valores[campo.id] = consideracoes ?? "";
+    if (fonte === "decisao")
+      documento.valores[campo.id] =
+        campo.tipo === "checkbox"
+          ? decisao === "aprovado"
+          : campo.opcoes?.some((opcao) => opcao.valor === "sim")
+            ? decisao === "aprovado"
+              ? "sim"
+              : "nao"
+            : decisao;
+  }
 
   obterEstado().pareceres.push({
     id: novoId("par"),
@@ -661,6 +817,22 @@ export async function registrarParecer(
     consideracoes ?? "",
     "parecer",
   );
+
+  if (
+    consideracoes?.trim() &&
+    autor.papeis.some((papel) => papel === "coordenador_curso" || papel === "coordenador_estagio")
+  ) {
+    const { acrescentarObservacao } = await import("./observacoes");
+    await acrescentarObservacao(documento.id, consideracoes, autor);
+  }
+  if (
+    documento.templateId === "tpl-formulario-liberacao" &&
+    decisao === "aprovado" &&
+    estagio?.encaminhadoEm
+  ) {
+    const { enviarDocumentacaoInicial } = await import("./fluxo-estagio");
+    await enviarDocumentacaoInicial(estagio.id, autor);
+  }
 
   return documento;
 }
@@ -698,5 +870,67 @@ export function contarPalavras(texto: string): number {
 }
 
 export function descritorDoDocumento(documento: DocumentoPreenchido) {
-  return descritorPorTemplate(documento.templateId);
+  return descritorDaVersao(documento.templateId, documento.versaoTemplate);
+}
+
+export function valoresDigitadosPermitidos(
+  templateId: string,
+  valores: Record<string, unknown>,
+  versao?: number,
+) {
+  const reservados = new Set(
+    camposDoTemplate(templateId, descritorDaVersao(templateId, versao))
+      .filter((campo) => fonteParecer(templateId, campo) || classificacaoDoCampo(campo) !== "campo")
+      .map((campo) => campo.id),
+  );
+  return Object.fromEntries(Object.entries(valores).filter(([id]) => !reservados.has(id)));
+}
+
+/** Atualizações de perfil não refazem parecer nem conferência. Endereços corrigidos no documento são preservados. */
+export async function sincronizarDadosDoPerfil(anterior: Usuario, atual: Usuario) {
+  for (const documento of obterEstado().documentos.filter(
+    (doc) => doc.alunoId === atual.id && doc.situacao !== "inativo",
+  )) {
+    const estagio = documento.estagioId ? await estagioPorId(documento.estagioId) : null;
+    if (estagio && estagioEncerrado(estagio)) continue;
+    const descriptor = descritorDoDocumento(documento);
+    const antes = await valoresAutomaticos(
+      documento.templateId,
+      anterior,
+      documento.estagioId,
+      documento.versaoTemplate,
+    );
+    const depois = await valoresAutomaticos(
+      documento.templateId,
+      atual,
+      documento.estagioId,
+      documento.versaoTemplate,
+    );
+    const grupos = descriptor?.gruposEndereco ?? [];
+    const idsEndereco = new Set(grupos.flatMap(idsDoGrupo));
+    for (const campo of camposDoTemplate(documento.templateId, descriptor)) {
+      if (campo.origem === "aluno" && !idsEndereco.has(campo.id))
+        documento.valores[campo.id] = depois[campo.id] ?? "";
+    }
+    for (const grupo of grupos.filter((grupo) => grupo.origemInicial === "aluno")) {
+      const ids = idsDoGrupo(grupo);
+      if (
+        ids.every(
+          (id) => documento.valores[id] === undefined || documento.valores[id] === antes[id],
+        )
+      ) {
+        for (const id of ids) documento.valores[id] = depois[id] ?? "";
+      }
+    }
+    const dados = atual.dadosPessoais;
+    for (const [id, valor] of Object.entries({
+      telefoneAluno: dados?.telefone,
+      celularAluno: dados?.celular,
+      emailAluno: dados?.email,
+    })) {
+      if (camposDoTemplate(documento.templateId, descriptor).some((campo) => campo.id === id))
+        documento.valores[id] = valor ?? "";
+    }
+    documento.atualizadoEm = agora();
+  }
 }

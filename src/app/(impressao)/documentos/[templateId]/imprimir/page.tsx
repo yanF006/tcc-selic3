@@ -13,6 +13,7 @@ import {
   documentoPorId,
   podeConsultarDocumento,
   templatePorId,
+  descritorDoDocumento,
 } from "@/lib/services/documentos";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
 
@@ -87,14 +88,19 @@ export default async function Page({
     <main className="bg-muted/40 min-h-full p-4 print:bg-white print:p-0">
       <div className="sem-impressao mx-auto mb-4 flex w-full max-w-[210mm] justify-end gap-2">
         <Button asChild variant="outline">
-          <Link href={`/documentos/${templateId}${documento.estagioId ? `?estagio=${documento.estagioId}` : ""}`}>
+          <Link
+            href={`/documentos/${templateId}${documento.estagioId ? `?estagio=${documento.estagioId}` : ""}`}
+          >
             Voltar ao documento
           </Link>
         </Button>
         <BotaoImprimir />
       </div>
 
-      <DocumentoImpressao descriptor={descriptor} valores={documento.valores} />
+      <DocumentoImpressao
+        descriptor={descritorDoDocumento(documento) ?? descriptor}
+        valores={documento.valores}
+      />
     </main>
   );
 }

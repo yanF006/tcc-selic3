@@ -7,6 +7,7 @@ import {
 } from "@/lib/domain/schemas";
 import type { LancamentoHoras, Pagina } from "@/lib/domain/types";
 import { lancamentosEfetivos } from "@/lib/domain/horas";
+import { estagioLiberado } from "@/lib/domain/fluxo-estagio";
 import { chaveSemana } from "@/lib/format";
 
 import { filtrarPorTexto, paginar } from "./paginacao";
@@ -93,9 +94,9 @@ export async function lancarHoras(dados: NovoLancamento): Promise<LancamentoHora
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
 
-  if (estagio.situacao !== "em_andamento") {
+  if (!estagioLiberado(estagio) || estagio.situacao !== "em_andamento") {
     throw new ErroDeRegra(
-      "Lançamentos só são aceitos em estágio em andamento.",
+      "Lançamentos exigem estágio liberado e em andamento.",
       "estagio_encerrado",
     );
   }
@@ -175,7 +176,7 @@ export async function corrigirLancamento(
 
   const estagio = await estagioPorId(original.estagioId);
 
-  if (!estagio || estagio.situacao !== "em_andamento") {
+  if (!estagio || !estagioLiberado(estagio) || estagio.situacao !== "em_andamento") {
     throw new ErroDeRegra(
       "Lançamentos só são aceitos em estágio em andamento.",
       "estagio_encerrado",
