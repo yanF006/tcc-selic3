@@ -35,3 +35,23 @@ conexão ao Aiven, pois a versão anterior pode servir dados em memória após f
 É necessário publicar esta implementação e consultar a configuração/logs da
 Vercel e do Aiven para confirmar o egress e executar os cenários de recuperação
 e consistência entre instâncias.
+
+### Após a confirmação do novo deploy
+
+Nova verificação com Playwright no mesmo endereço, após o usuário confirmar a
+conclusão do deploy:
+
+- Login administrativo concluiu sem erros JavaScript.
+- A lista inicial mostrou `10 de 14 usuário(s) encontrado(s).`, com 10 linhas de dados.
+- Busca por `Maria` navegou para `/admin/usuarios?busca=Maria` e mostrou
+  `1 de 1 usuário(s) encontrado(s).`.
+- A próxima página navegou para `/admin/usuarios?pagina=2` e mostrou os quatro
+  registros restantes (`4 de 14`); o resultado permaneceu após recarregar a página.
+- `/admin/matriculas` carregou sua tabela com sete registros.
+
+Esses resultados confirmam que o comportamento novo está publicado e que as
+leituras autenticadas funcionam no momento da verificação. Não foi inspecionada
+a configuração de `DATABASE_URL`/egress/allowlist, nem provocada indisponibilidade
+no ambiente remoto. Não foram feitas mutações para validar consistência entre
+instâncias. Portanto, as tarefas operacionais 6.1 e 6.2 ainda não estão integralmente
+verificadas.
