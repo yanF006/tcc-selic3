@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { CampoTexto, LegendaObrigatorios, RotuloCampo } from "@/components/formularios/campo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -42,9 +43,17 @@ import {
  * lançamento manual é o que faz a matrícula do aluno valer no cadastro.
  */
 
+interface FiltrosMatriculas {
+  busca: string;
+  origem: string;
+}
+
 interface Props {
   matriculas: MatriculaImportada[];
   total: number;
+  paginaAtual: number;
+  tamanhoPagina: number;
+  filtros: FiltrosMatriculas;
   cursos: Curso[];
 }
 
@@ -54,16 +63,24 @@ const ORIGENS: { valor: string; rotulo: string }[] = [
   { valor: "cadastro_administrador", rotulo: "Lançamento do administrador" },
 ];
 
-export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
-  const [busca, setBusca] = React.useState("");
-  const [consulta, setConsulta] = React.useState("");
-  const [origem, setOrigem] = React.useState("todas");
+export function TabelaMatriculas({
+  matriculas,
+  total,
+  paginaAtual,
+  tamanhoPagina,
+  filtros,
+  cursos,
+}: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [busca, setBusca] = React.useState(filtros.busca);
   const [matricula, setMatricula] = React.useState("");
   const [nome, setNome] = React.useState("");
   const [curso, setCurso] = React.useState("");
   const [erro, setErro] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
+  const envioEmAndamento = React.useRef(false);
   const [arquivoImportacao, setArquivoImportacao] = React.useState<{
     arquivo: string;
     linhas: LinhaImportacao[];
@@ -73,31 +90,35 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
   );
   const [erroImportacao, setErroImportacao] = React.useState<string | null>(null);
   const [importando, setImportando] = React.useState(false);
+  const importacaoEmAndamento = React.useRef(false);
+  const [navegando, iniciarNavegacao] = React.useTransition();
 
-  const filtradas = React.useMemo(() => {
-    const alvo = consulta.trim().toLowerCase();
+  const totalPaginas = Math.max(1, Math.ceil(total / tamanhoPagina));
+  const paginaCorrente = Math.min(Math.max(1, paginaAtual), totalPaginas);
 
-    return matriculas.filter((registro) => {
-      if (origem !== "todas" && registro.origem !== origem) return false;
-      if (!alvo) return true;
+  function navegar(alteracoes: Partial<FiltrosMatriculas> & { pagina?: number }) {
+    const proximos = { ...filtros, pagina: paginaCorrente, ...alteracoes };
+    const parametros = new URLSearchParams();
 
-      return (
-        registro.nome.toLowerCase().includes(alvo) ||
-        registro.matricula.includes(alvo) ||
-        registro.curso.toLowerCase().includes(alvo)
-      );
+    if (proximos.busca.trim()) parametros.set("busca", proximos.busca.trim());
+    if (proximos.origem !== "todas") parametros.set("origem", proximos.origem);
+    if ((proximos.pagina ?? 1) > 1) parametros.set("pagina", String(proximos.pagina));
+
+    const consulta = parametros.toString();
+
+    iniciarNavegacao(() => {
+      router.push(consulta ? `${pathname}?${consulta}` : pathname);
     });
-  }, [consulta, matriculas, origem]);
+  }
 
   function buscar(evento: React.FormEvent) {
     evento.preventDefault();
-    setConsulta(busca);
+    navegar({ busca, pagina: 1 });
   }
 
   function limpar() {
     setBusca("");
-    setConsulta("");
-    setOrigem("todas");
+    navegar({ busca: "", origem: "todas", pagina: 1 });
   }
 
   async function lerArquivo(evento: React.ChangeEvent<HTMLInputElement>) {
@@ -115,6 +136,8 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
 
   async function importar(evento: React.FormEvent) {
     evento.preventDefault();
+    if (importacaoEmAndamento.current) return;
+
     setErroImportacao(null);
     setResultadoImportacao(null);
 
@@ -123,41 +146,55 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
       return;
     }
 
+    importacaoEmAndamento.current = true;
     setImportando(true);
-    const resposta = await importarMatriculasAction(
-      arquivoImportacao.arquivo,
-      arquivoImportacao.linhas,
-    );
-    setImportando(false);
 
-    if (!resposta.ok) {
-      setErroImportacao(resposta.erro ?? "Não foi possível importar o arquivo.");
-      return;
+    try {
+      const resposta = await importarMatriculasAction(
+        arquivoImportacao.arquivo,
+        arquivoImportacao.linhas,
+      );
+
+      if (!resposta.ok) {
+        setErroImportacao(resposta.erro ?? "Não foi possível importar o arquivo.");
+        return;
+      }
+
+      setResultadoImportacao(resposta.resultado ?? null);
+      router.refresh();
+    } finally {
+      importacaoEmAndamento.current = false;
+      setImportando(false);
     }
-
-    setResultadoImportacao(resposta.resultado ?? null);
   }
 
   async function registrar(evento: React.FormEvent) {
     evento.preventDefault();
+    if (envioEmAndamento.current) return;
+
+    envioEmAndamento.current = true;
     setErro(null);
     setAviso(null);
     setEnviando(true);
 
-    const resultado = await registrarMatriculaAction({ matricula, nome, curso });
+    try {
+      const resultado = await registrarMatriculaAction({ matricula, nome, curso });
 
-    setEnviando(false);
+      if (!resultado.ok) {
+        setErro(resultado.erro ?? "Não foi possível registrar a matrícula.");
 
-    if (!resultado.ok) {
-      setErro(resultado.erro ?? "Não foi possível registrar a matrícula.");
+        return;
+      }
 
-      return;
+      setAviso(`Matrícula ${matricula.trim()} registrada como válida.`);
+      setMatricula("");
+      setNome("");
+      setCurso("");
+      router.refresh();
+    } finally {
+      envioEmAndamento.current = false;
+      setEnviando(false);
     }
-
-    setAviso(`Matrícula ${matricula.trim()} registrada como válida.`);
-    setMatricula("");
-    setNome("");
-    setCurso("");
   }
 
   return (
@@ -343,7 +380,10 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="filtro-origem">Origem</Label>
-            <Select value={origem} onValueChange={setOrigem}>
+            <Select
+              value={filtros.origem}
+              onValueChange={(valor) => navegar({ origem: valor, pagina: 1 })}
+            >
               <SelectTrigger id="filtro-origem" className="w-56">
                 <SelectValue />
               </SelectTrigger>
@@ -373,10 +413,14 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
           </AlertDescription>
         </Alert>
 
-        <p className="text-muted-foreground text-sm" data-testid="total-matriculas">
-          {filtradas.length === 0
+        <p
+          className="text-muted-foreground text-sm"
+          data-testid="total-matriculas"
+          aria-busy={navegando}
+        >
+          {total === 0
             ? "Nenhuma matrícula encontrada com os filtros informados."
-            : `${filtradas.length} de ${total} matrícula(s) encontrada(s).`}
+            : `${matriculas.length} de ${total} matrícula(s) encontrada(s).`}
         </p>
 
         <div className="border-border overflow-x-auto rounded-lg border">
@@ -390,7 +434,7 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtradas.map((registro) => (
+              {matriculas.map((registro) => (
                 <TableRow key={registro.id} data-matricula={registro.matricula}>
                   <TableCell className="font-medium">{registro.matricula}</TableCell>
                   <TableCell>{registro.nome}</TableCell>
@@ -405,6 +449,30 @@ export function TabelaMatriculas({ matriculas, total, cursos }: Props) {
             </TableBody>
           </Table>
         </div>
+
+        {totalPaginas > 1 ? (
+          <nav aria-label="Paginação de matrículas" className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={paginaCorrente === 1 || navegando}
+              onClick={() => navegar({ pagina: paginaCorrente - 1 })}
+            >
+              Anterior
+            </Button>
+            <span className="text-muted-foreground text-sm">
+              Página {paginaCorrente} de {totalPaginas}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={paginaCorrente === totalPaginas || navegando}
+              onClick={() => navegar({ pagina: paginaCorrente + 1 })}
+            >
+              Próxima
+            </Button>
+          </nav>
+        ) : null}
       </div>
     </div>
   );

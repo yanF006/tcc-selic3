@@ -1,8 +1,10 @@
 import { Navbar, type GrupoNavbar } from "@/components/layout/navbar";
 import { SeletorPapel } from "@/components/layout/seletor-papel";
+import { TelaIndisponivel } from "@/components/layout/tela-indisponivel";
 import { exigirArea } from "@/lib/auth/guard";
+import { BancoIndisponivelError } from "@/lib/db/erros";
 import { ProvedorSessao } from "@/lib/auth/sessao-contexto";
-import type { Papel } from "@/lib/domain/types";
+import type { Papel, Usuario } from "@/lib/domain/types";
 import { gruposPara, ROTULOS_GRUPO } from "@/nav";
 import { AvisoCadastroPendente } from "@/features/cadastro/aviso-cadastro-pendente";
 import { contasDeDesenvolvimento } from "@/lib/services/sessao";
@@ -27,7 +29,16 @@ export async function ShellArea({
   qualquerPapel?: boolean;
   children: React.ReactNode;
 }) {
-  const usuario = await exigirArea({ papeisExigidos, destino, qualquerPapel });
+  let usuario: Usuario;
+
+  try {
+    usuario = await exigirArea({ papeisExigidos, destino, qualquerPapel });
+  } catch (erro) {
+    if (erro instanceof BancoIndisponivelError) return <TelaIndisponivel />;
+
+    throw erro;
+  }
+
   const cadastroPendente = usuario.situacao === "pendente";
   const grupos: GrupoNavbar[] = cadastroPendente
     ? []

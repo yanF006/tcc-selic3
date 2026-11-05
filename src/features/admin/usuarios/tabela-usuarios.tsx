@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { CampoTexto, LegendaObrigatorios, RotuloCampo } from "@/components/formularios/campo";
 import { Badge } from "@/components/ui/badge";
@@ -61,9 +62,19 @@ import {
  * guarda de papel.
  */
 
+interface FiltrosUsuarios {
+  busca: string;
+  papel: string;
+  situacao: string;
+  curso: string;
+}
+
 interface Props {
   usuarios: Usuario[];
   total: number;
+  paginaAtual: number;
+  tamanhoPagina: number;
+  filtros: FiltrosUsuarios;
   cursos: { id: string; nome: string }[];
   turmas: { id: string; nome: string }[];
   periodos: { id: string; rotulo: string }[];
@@ -85,54 +96,60 @@ const SITUACOES_FILTRO: { valor: string; rotulo: string }[] = [
   { valor: "inativo", rotulo: "Inativo" },
 ];
 
-export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situacoes }: Props) {
-  const [busca, setBusca] = React.useState("");
-  const [consulta, setConsulta] = React.useState("");
-  const [papel, setPapel] = React.useState("todos");
-  const [situacao, setSituacao] = React.useState("todas");
-  const [curso, setCurso] = React.useState("todos");
-  const [pagina, setPagina] = React.useState(1);
+export function TabelaUsuarios({
+  usuarios,
+  total,
+  paginaAtual,
+  tamanhoPagina,
+  filtros,
+  cursos,
+  turmas,
+  periodos,
+  situacoes,
+}: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [busca, setBusca] = React.useState(filtros.busca);
   const [formularioAberto, setFormularioAberto] = React.useState(false);
   const [editando, setEditando] = React.useState<Usuario | null>(null);
   const ultimoGatilho = React.useRef<HTMLElement | null>(null);
   const [perfil, setPerfil] = React.useState<Usuario | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
+  const [navegando, iniciarNavegacao] = React.useTransition();
 
-  const tamanho = 10;
-  const filtrados = React.useMemo(() => {
-    const alvo = consulta.trim().toLowerCase();
+  const totalPaginas = Math.max(1, Math.ceil(total / tamanhoPagina));
+  const paginaCorrente = Math.min(Math.max(1, paginaAtual), totalPaginas);
 
-    return usuarios.filter((usuario) => {
-      if (papel !== "todos" && !usuario.papeis.includes(papel as Papel)) return false;
-      if (situacao !== "todas" && usuario.situacao !== situacao) return false;
-      if (curso !== "todos" && cursoDoUsuario(usuario) !== curso) return false;
-      if (!alvo) return true;
+  function navegar(alteracoes: Partial<FiltrosUsuarios> & { pagina?: number }) {
+    const proximos = {
+      ...filtros,
+      pagina: paginaCorrente,
+      ...alteracoes,
+    };
+    const parametros = new URLSearchParams();
 
-      return (
-        usuario.nome.toLowerCase().includes(alvo) ||
-        usuario.email.toLowerCase().includes(alvo) ||
-        (usuario.matricula ?? "").includes(alvo)
-      );
+    if (proximos.busca.trim()) parametros.set("busca", proximos.busca.trim());
+    if (proximos.papel !== "todos") parametros.set("papel", proximos.papel);
+    if (proximos.situacao !== "todas") parametros.set("situacao", proximos.situacao);
+    if (proximos.curso !== "todos") parametros.set("curso", proximos.curso);
+    if ((proximos.pagina ?? 1) > 1) parametros.set("pagina", String(proximos.pagina));
+
+    const consulta = parametros.toString();
+
+    iniciarNavegacao(() => {
+      router.push(consulta ? `${pathname}?${consulta}` : pathname);
     });
-  }, [consulta, curso, papel, situacao, usuarios]);
-
-  const paginaAtual = Math.min(pagina, Math.max(1, Math.ceil(filtrados.length / tamanho)));
-  const visiveis = filtrados.slice((paginaAtual - 1) * tamanho, paginaAtual * tamanho);
+  }
 
   function buscar(evento: React.FormEvent) {
     evento.preventDefault();
-    setConsulta(busca);
-    setPagina(1);
+    navegar({ busca, pagina: 1 });
   }
 
   function limpar() {
     setBusca("");
-    setConsulta("");
-    setPapel("todos");
-    setSituacao("todas");
-    setCurso("todos");
-    setPagina(1);
+    navegar({ busca: "", papel: "todos", situacao: "todas", curso: "todos", pagina: 1 });
   }
 
   async function executar(acao: () => Promise<{ ok: boolean; erro?: string }>, sucesso: string) {
@@ -145,6 +162,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
     }
 
     setAviso(sucesso);
+    router.refresh();
   }
 
   return (
@@ -163,11 +181,8 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         <div className="flex flex-col gap-2">
           <Label htmlFor="filtro-papel">Papel</Label>
           <Select
-            value={papel}
-            onValueChange={(valor) => {
-              setPapel(valor);
-              setPagina(1);
-            }}
+            value={filtros.papel}
+            onValueChange={(valor) => navegar({ papel: valor, pagina: 1 })}
           >
             <SelectTrigger id="filtro-papel" className="w-56">
               <SelectValue />
@@ -185,11 +200,8 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         <div className="flex flex-col gap-2">
           <Label htmlFor="filtro-situacao">Situação</Label>
           <Select
-            value={situacao}
-            onValueChange={(valor) => {
-              setSituacao(valor);
-              setPagina(1);
-            }}
+            value={filtros.situacao}
+            onValueChange={(valor) => navegar({ situacao: valor, pagina: 1 })}
           >
             <SelectTrigger id="filtro-situacao" className="w-48">
               <SelectValue />
@@ -207,11 +219,8 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         <div className="flex flex-col gap-2">
           <Label htmlFor="filtro-curso">Curso</Label>
           <Select
-            value={curso}
-            onValueChange={(valor) => {
-              setCurso(valor);
-              setPagina(1);
-            }}
+            value={filtros.curso}
+            onValueChange={(valor) => navegar({ curso: valor, pagina: 1 })}
           >
             <SelectTrigger id="filtro-curso" className="w-48">
               <SelectValue />
@@ -263,10 +272,14 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         </Alert>
       ) : null}
 
-      <p className="text-muted-foreground text-sm" data-testid="total-usuarios">
-        {filtrados.length === 0
+      <p
+        className="text-muted-foreground text-sm"
+        data-testid="total-usuarios"
+        aria-busy={navegando}
+      >
+        {total === 0
           ? "Nenhum usuário encontrado com os filtros informados."
-          : `${filtrados.length} de ${total} usuário(s) encontrado(s).`}
+          : `${usuarios.length} de ${total} usuário(s) encontrado(s).`}
       </p>
 
       <div className="border-border overflow-x-auto rounded-lg border">
@@ -284,7 +297,7 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visiveis.map((usuario) => (
+            {usuarios.map((usuario) => (
               <TableRow key={usuario.id} data-usuario-id={usuario.id}>
                 <TableCell className="font-medium">{usuario.nome}</TableCell>
                 <TableCell>{usuario.email}</TableCell>
@@ -373,24 +386,24 @@ export function TabelaUsuarios({ usuarios, total, cursos, turmas, periodos, situ
         </Table>
       </div>
 
-      {filtrados.length > tamanho ? (
+      {totalPaginas > 1 ? (
         <nav aria-label="Paginação de usuários" className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            disabled={paginaAtual === 1}
-            onClick={() => setPagina(paginaAtual - 1)}
+            disabled={paginaCorrente === 1 || navegando}
+            onClick={() => navegar({ pagina: paginaCorrente - 1 })}
           >
             Anterior
           </Button>
           <span className="text-muted-foreground text-sm">
-            Página {paginaAtual} de {Math.ceil(filtrados.length / tamanho)}
+            Página {paginaCorrente} de {totalPaginas}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={paginaAtual === Math.ceil(filtrados.length / tamanho)}
-            onClick={() => setPagina(paginaAtual + 1)}
+            disabled={paginaCorrente === totalPaginas || navegando}
+            onClick={() => navegar({ pagina: paginaCorrente + 1 })}
           >
             Próxima
           </Button>
@@ -450,13 +463,19 @@ function FormularioUsuario({
   const [cursoId, setCursoId] = React.useState(usuario?.cursoId ?? "");
   const [erro, setErro] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
+  const envioEmAndamento = React.useRef(false);
+  const router = useRouter();
 
   async function confirmar(evento: React.FormEvent) {
     evento.preventDefault();
+    if (envioEmAndamento.current) return;
+
+    envioEmAndamento.current = true;
     setEnviando(true);
     setErro(null);
 
     if (!papel) {
+      envioEmAndamento.current = false;
       setEnviando(false);
       setErro("Escolha o papel antes de concluir o cadastro.");
 
@@ -471,19 +490,23 @@ function FormularioUsuario({
       cursoId: papel === "coordenador_curso" ? cursoId || undefined : undefined,
     };
 
-    const resultado =
-      editando && usuario
-        ? await editarUsuarioAction(usuario.id, cadastro)
-        : await cadastrarUsuarioAction(cadastro);
+    try {
+      const resultado =
+        editando && usuario
+          ? await editarUsuarioAction(usuario.id, cadastro)
+          : await cadastrarUsuarioAction(cadastro);
 
-    setEnviando(false);
+      if (!resultado.ok) {
+        setErro(resultado.erro ?? "Não foi possível salvar.");
+        return;
+      }
 
-    if (!resultado.ok) {
-      setErro(resultado.erro ?? "Não foi possível salvar.");
-      return;
+      router.refresh();
+      aoFechar();
+    } finally {
+      envioEmAndamento.current = false;
+      setEnviando(false);
     }
-
-    aoFechar();
   }
 
   return (

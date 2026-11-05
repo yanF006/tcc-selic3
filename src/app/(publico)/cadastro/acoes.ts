@@ -1,6 +1,7 @@
 "use server";
 
 import { validarEtapaUm, concluirCadastro } from "@/lib/services/cadastro";
+import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 
 import type {
   EtapaDoisCadastro,
@@ -22,12 +23,20 @@ export async function validarEtapaUmAction(dados: {
   senha: string;
   confirmacao: string;
 }): Promise<ResultadoCadastro> {
-  return validarEtapaUm(dados);
+  try {
+    return await validarEtapaUm(dados);
+  } catch (erro) {
+    return { ok: false, campo: "dados", erro: mensagemSeguraParaUsuario(erro) };
+  }
 }
 
 export async function concluirCadastroAction(
   previaId: string,
   dados: EtapaDoisCadastro,
 ): Promise<ResultadoConclusao> {
-  return concluirCadastro(previaId, dados);
+  try {
+    return await concluirCadastro(previaId, dados);
+  } catch (erro) {
+    return { ok: false, campo: "dados", erro: mensagemSeguraParaUsuario(erro) };
+  }
 }

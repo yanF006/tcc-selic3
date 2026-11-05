@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { exigirPapeis } from "@/lib/auth/guard";
-import { ErroDeRegra } from "@/lib/services/erros";
+import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 import {
   cadastrarUsuario,
   editarUsuario,
@@ -24,23 +24,16 @@ export interface ResultadoAcao {
   erro?: string;
 }
 
-function erroDaRegra(erro: unknown): ResultadoAcao {
-  if (erro instanceof ErroDeRegra || erro instanceof Error) {
-    return { ok: false, erro: erro.message };
-  }
-
-  return { ok: false, erro: "Não foi possível concluir a operação." };
+function erroDaAcao(erro: unknown): ResultadoAcao {
+  return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
 }
 
-export async function cadastrarUsuarioAction(
-  cadastro: CadastroUsuario,
-): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
+export async function cadastrarUsuarioAction(cadastro: CadastroUsuario): Promise<ResultadoAcao> {
   try {
+    await exigirPapeis(["administrador"]);
     await cadastrarUsuario(cadastro);
   } catch (erro) {
-    return erroDaRegra(erro);
+    return erroDaAcao(erro);
   }
 
   revalidatePath("/admin/usuarios");
@@ -52,12 +45,11 @@ export async function editarUsuarioAction(
   id: string,
   alteracoes: Partial<CadastroUsuario> & { situacao?: SituacaoUsuario },
 ): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
   try {
+    await exigirPapeis(["administrador"]);
     await editarUsuario(id, alteracoes);
   } catch (erro) {
-    return erroDaRegra(erro);
+    return erroDaAcao(erro);
   }
 
   revalidatePath("/admin/usuarios");
@@ -66,12 +58,11 @@ export async function editarUsuarioAction(
 }
 
 export async function inativarUsuarioAction(id: string): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
   try {
+    await exigirPapeis(["administrador"]);
     await inativarUsuario(id);
   } catch (erro) {
-    return erroDaRegra(erro);
+    return erroDaAcao(erro);
   }
 
   revalidatePath("/admin/usuarios");
@@ -80,12 +71,11 @@ export async function inativarUsuarioAction(id: string): Promise<ResultadoAcao> 
 }
 
 export async function reativarUsuarioAction(id: string): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
   try {
+    await exigirPapeis(["administrador"]);
     await reativarUsuario(id);
   } catch (erro) {
-    return erroDaRegra(erro);
+    return erroDaAcao(erro);
   }
 
   revalidatePath("/admin/usuarios");
@@ -94,12 +84,11 @@ export async function reativarUsuarioAction(id: string): Promise<ResultadoAcao> 
 }
 
 export async function excluirUsuarioAction(id: string): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
   try {
+    await exigirPapeis(["administrador"]);
     await excluirUsuario(id);
   } catch (erro) {
-    return erroDaRegra(erro);
+    return erroDaAcao(erro);
   }
 
   revalidatePath("/admin/usuarios");
@@ -109,7 +98,11 @@ export async function excluirUsuarioAction(id: string): Promise<ResultadoAcao> {
 
 /** Papéis disponíveis no formulário; o aluno exige matrícula. */
 export async function papeisDisponiveisAction(): Promise<Papel[]> {
-  await exigirPapeis(["administrador"]);
+  try {
+    await exigirPapeis(["administrador"]);
+  } catch {
+    return [];
+  }
 
   return ["aluno", "coordenador_estagio", "coordenador_curso", "administrador"];
 }

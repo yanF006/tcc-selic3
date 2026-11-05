@@ -157,6 +157,12 @@ test("solicitação, indeferimento excepcional, assinaturas, liberação e hist�
   await expect(page.locator('[data-template-id="tpl-ficha-acompanhamento"]')).toBeVisible();
   await page.reload();
   await expect(page.locator('[data-template-id="tpl-ficha-acompanhamento"]')).toBeVisible();
+  await page.waitForFunction(() => {
+    const entrada = document.querySelector("#novaData");
+    return Boolean(
+      entrada && Object.keys(entrada).some((chave) => chave.startsWith("__reactProps$")),
+    );
+  });
   await expect(
     page
       .locator('[data-template-id="tpl-termo-compromisso"]')

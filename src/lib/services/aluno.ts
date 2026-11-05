@@ -84,29 +84,43 @@ export async function atualizarDadosPessoais(
   }
 
   const emailAnterior = registro.dadosPessoais.email;
+  const anterior = structuredClone(registro);
+  let credencialMovida = false;
 
-  if (validado.data.email !== emailAnterior) {
-    const emUso = obterEstado().usuarios.some(
-      (outro) =>
-        outro.id !== registro.id && outro.email.toLowerCase() === validado.data.email.toLowerCase(),
-    );
+  try {
+    if (validado.data.email !== emailAnterior) {
+      const emUso = obterEstado().usuarios.some(
+        (outro) =>
+          outro.id !== registro.id &&
+          outro.email.toLowerCase() === validado.data.email.toLowerCase(),
+      );
 
-    if (emUso) {
-      return {
-        ok: false,
-        erro: "Confira os campos destacados.",
-        erros: { email: "E-mail já utilizado por outro cadastro." },
-      };
+      if (emUso) {
+        return {
+          ok: false,
+          erro: "Confira os campos destacados.",
+          erros: { email: "E-mail já utilizado por outro cadastro." },
+        };
+      }
+
+      await moverCredencial(emailAnterior, validado.data.email);
+      credencialMovida = true;
     }
 
-    await moverCredencial(emailAnterior, validado.data.email);
+    registro.nome = validado.data.nomeCompleto;
+    registro.email = validado.data.email;
+    registro.dadosPessoais = validado.data;
+    await gravarUsuario(registro);
+  } catch (erro) {
+    Object.assign(registro, anterior);
+
+    if (credencialMovida) {
+      await moverCredencial(validado.data.email, emailAnterior);
+    }
+
+    throw erro;
   }
 
-  const anterior = structuredClone(registro);
-  registro.nome = validado.data.nomeCompleto;
-  registro.email = validado.data.email;
-  registro.dadosPessoais = validado.data;
-  await gravarUsuario(registro);
   const { sincronizarDadosDoPerfil } = await import("./documentos");
   await sincronizarDadosDoPerfil(anterior, registro);
 

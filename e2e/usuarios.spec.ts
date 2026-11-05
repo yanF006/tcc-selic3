@@ -370,3 +370,59 @@ async function idDoUsuario(page: import("@playwright/test").Page, nome: string):
 
   return id;
 }
+
+test.describe("listagem completa no servidor", () => {
+  test("busca encontra cadastro que não está na primeira página", async ({ page }) => {
+    await entrarComoAdministrador(page);
+
+    const nome = `Zuleica Servidor ${SUFIXO}`;
+    const dialogo = await abrirFormulario(page);
+
+    await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
+    await dialogo
+      .getByLabel("E-mail", { exact: true })
+      .fill(`zuleica.servidor${SUFIXO}@ifrj.edu.br`);
+    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await page.getByRole("option", { name: "Administrador" }).click();
+    await dialogo.getByRole("button", { name: "Cadastrar" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "Cadastro recusado" })).toHaveCount(0);
+
+    // A página inicial é paginada no servidor (10 por página); o cadastro novo
+    // fica no fim da ordenação por nome e não aparece nela.
+    await page.goto("/admin/usuarios");
+    await expect(page.getByRole("cell", { name: nome, exact: true })).toHaveCount(0);
+
+    await page.getByLabel("Buscar por nome, e-mail ou matrícula").fill(nome);
+    await page.getByRole("button", { name: "Filtrar" }).click();
+
+    await expect(page).toHaveURL(/busca=Zuleica/);
+    await expect(page.getByRole("cell", { name: nome, exact: true })).toBeVisible();
+    await expect(page.getByTestId("total-usuarios")).toContainText("1 de");
+  });
+});
+
+test.describe("ações pendentes", () => {
+  test("duplo clique no cadastro grava uma única vez", async ({ page }) => {
+    await entrarComoAdministrador(page);
+
+    const nome = `Duplo Clique ${SUFIXO}`;
+    const dialogo = await abrirFormulario(page);
+
+    await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
+    await dialogo.getByLabel("E-mail", { exact: true }).fill(`duplo.clique${SUFIXO}@ifrj.edu.br`);
+    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await page.getByRole("option", { name: "Administrador" }).click();
+
+    await dialogo.getByRole("button", { name: "Cadastrar" }).dblclick();
+
+    await expect(dialogo).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByRole("alert").filter({ hasText: "Cadastro recusado" })).toHaveCount(0);
+
+    await page.getByLabel("Buscar por nome, e-mail ou matrícula").fill(nome);
+    await page.getByRole("button", { name: "Filtrar" }).click();
+
+    await expect(page.getByRole("cell", { name: nome, exact: true })).toHaveCount(1);
+    await expect(page.getByTestId("total-usuarios")).toContainText("1 de 1");
+  });
+});

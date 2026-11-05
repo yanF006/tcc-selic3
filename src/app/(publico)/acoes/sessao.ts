@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { gravarSessao, encerrarSessao, rotaInicial } from "@/lib/auth/sessao-servidor";
 import { entrar } from "@/lib/services/sessao";
 import { usuarioPorEmail, usuarioPorId } from "@/lib/services/administracao";
+import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
+import type { Usuario } from "@/lib/domain/types";
 
 /**
  * Server Actions da sessão simulada (D3). O cookie é gravado no servidor para
@@ -18,14 +20,20 @@ export interface EstadoLogin {
 }
 
 export async function entrarAction(email: string, senha: string): Promise<EstadoLogin> {
-  const resultado = await entrar(email, senha);
+  let usuario: Usuario | null;
 
-  if (!resultado.ok) return { ok: false, erro: resultado.erro };
+  try {
+    const resultado = await entrar(email, senha);
 
-  // O usuário vem do estado pelo e-mail, e não da conta de desenvolvimento: a
-  // senha pode ter sido redefinida (5.8) ou o cadastro pode ter vindo do
-  // cadastro público, e o login continua valendo.
-  const usuario = await usuarioPorEmail(email);
+    if (!resultado.ok) return { ok: false, erro: resultado.erro };
+
+    // O usuário vem do estado pelo e-mail, e não da conta de desenvolvimento: a
+    // senha pode ter sido redefinida (5.8) ou o cadastro pode ter vindo do
+    // cadastro público, e o login continua valendo.
+    usuario = await usuarioPorEmail(email);
+  } catch (erro) {
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
+  }
 
   if (!usuario) return { ok: false, erro: "E-mail ou senha inválidos." };
 
@@ -35,7 +43,13 @@ export async function entrarAction(email: string, senha: string): Promise<Estado
 
 /** Troca a sessão para outra conta, para demonstrar as quatro áreas. */
 export async function trocarSessaoAction(usuarioId: string, destino: string): Promise<void> {
-  const usuario = await usuarioPorId(usuarioId);
+  let usuario: Usuario | null;
+
+  try {
+    usuario = await usuarioPorId(usuarioId);
+  } catch {
+    redirect("/login");
+  }
 
   if (!usuario || usuario.situacao !== "ativo") redirect("/login");
 

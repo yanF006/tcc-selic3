@@ -7,9 +7,13 @@ import type {
   Usuario,
 } from "@/lib/domain/types";
 import type { Prisma } from "@/generated/prisma/client";
-import { matriculasImportadas as matriculasFixture, usuarios as usuariosFixture } from "@/lib/fixtures/base";
+import {
+  matriculasImportadas as matriculasFixture,
+  usuarios as usuariosFixture,
+} from "@/lib/fixtures/base";
 
-import { bancoConfigurado, carregarCliente } from "./prisma";
+import { bancoConfigurado, carregarCliente, descartarCliente } from "./prisma";
+import { BancoIndisponivelError, registrarFalhaBanco } from "./erros";
 import { obterEstado } from "@/lib/services/store";
 
 /**
@@ -17,55 +21,150 @@ import { obterEstado } from "@/lib/services/store";
  *
  * Estratégia (escopo "usuários + matrículas"):
  *
- * - **Hidratação:** na primeira leitura, o banco passa a ser a fonte da verdade
- *   de `estado.usuarios` e `estado.matriculas`. Um banco vazio é semeado com as
- *   fixtures, para o login de demonstração continuar funcionando. O restante do
- *   estado (estágios, documentos, pareceres...) segue nas fixtures.
+ * - **Hidratação:** o banco é a fonte da verdade de `estado.usuarios` e
+ *   `estado.matriculas`. Um banco vazio é semeado com as fixtures, para o login
+ *   de demonstração continuar funcionando. O restante do estado (estágios,
+ *   documentos, pareceres...) segue nas fixtures.
  * - **Escrita contínua:** toda mutação atualiza a memória (como antes) e é
  *   gravada no banco. Assim os demais serviços, que leem a memória de forma
  *   síncrona, continuam funcionando sem mudanças e os dados sobrevivem ao
  *   reinício do processo.
  *
- * Sem `DATABASE_URL` — e sempre sob testes — nada disto é ativado: o simulador
- * se comporta exatamente como antes.
- */
-
-let hidratacao: Promise<void> | null = null;
-
-/**
- * `null` = ainda não tentou; `true` = banco usado; `false` = inacessível.
+ * Com `DATABASE_URL` configurada, uma falha **não** vira sucesso com fixtures:
+ * `garantirHidratacao()` rejeita com `BancoIndisponivelError` e a tela mostra
+ * indisponibilidade. O snapshot tem validade curta (2 s por padrão) e a falha
+ * tem cooldown curto, permitindo nova tentativa na requisição seguinte.
  *
- * Depois de uma falha de conexão, o processo segue em memória até reiniciar:
- * insistir traria um `pool timeout` de ~10 s em cada leitura e derrubaria as
- * telas. É o mesmo comportamento sem `DATABASE_URL`, só que registrado no log.
+ * Sem `DATABASE_URL` — e sempre sob testes unitários sem mock — nada disto é
+ * ativado: o simulador se comporta exatamente como antes.
  */
-let disponivel: boolean | null = null;
 
-/** true quando existe banco configurado e a conexão já se mostrou utilizável. */
-function podeGravar(): boolean {
-  return bancoConfigurado() && disponivel !== false;
+export type ModoPersistencia = "simulado" | "pronto" | "falha";
+
+interface EstadoPersistencia {
+  modo: ModoPersistencia;
+  hidratacao: Promise<void> | null;
+  ultimaHidratacaoEm: number | null;
+  proximaTentativaEm: number;
+  ultimoErro: BancoIndisponivelError | null;
 }
 
-/** Garante que `estado.usuarios`/`estado.matriculas` refletem o banco. */
-export function garantirHidratacao(): Promise<void> {
-  if (!bancoConfigurado() || disponivel === false) return Promise.resolve();
+const TTL_SNAPSHOT_PADRAO_MS = 2_000;
+const COOLDOWN_RETRY_PADRAO_MS = 1_000;
 
-  if (!hidratacao) {
-    hidratacao = hidratar()
-      .then(() => {
-        disponivel = true;
-      })
-      .catch((erro) => {
-        disponivel = false;
-        hidratacao = null;
-        console.warn(
-          "[persistencia] Banco indisponível; seguindo em memória até reiniciar o processo.",
-          erro instanceof Error ? erro.message : erro,
-        );
-      });
+function numeroDoAmbiente(chave: string, padrao: number): number {
+  const bruto = process.env[chave];
+  const numero = bruto ? Number(bruto) : NaN;
+
+  return Number.isFinite(numero) && numero >= 0 ? Math.trunc(numero) : padrao;
+}
+
+function ttlSnapshotMs(): number {
+  return numeroDoAmbiente("SELIC_DB_SNAPSHOT_TTL_MS", TTL_SNAPSHOT_PADRAO_MS);
+}
+
+function cooldownRetryMs(): number {
+  return numeroDoAmbiente("SELIC_DB_RETRY_COOLDOWN_MS", COOLDOWN_RETRY_PADRAO_MS);
+}
+
+/**
+ * Com banco configurado, o estado inicial é `falha` sem tentativa registrada:
+ * `proximaTentativaEm = 0` libera a primeira leitura. Assim não existe um
+ * quarto estado para "ainda não tentei".
+ */
+function estadoInicial(): EstadoPersistencia {
+  return {
+    modo: bancoConfigurado() ? "falha" : "simulado",
+    hidratacao: null,
+    ultimaHidratacaoEm: null,
+    proximaTentativaEm: 0,
+    ultimoErro: null,
+  };
+}
+
+let estado = estadoInicial();
+
+/** Visão somente leitura do estado, usada nos testes e no diagnóstico. */
+export function estadoDaPersistencia(): {
+  modo: ModoPersistencia;
+  ultimaHidratacaoEm: number | null;
+  proximaTentativaEm: number;
+} {
+  return {
+    modo: bancoConfigurado() ? estado.modo : "simulado",
+    ultimaHidratacaoEm: estado.ultimaHidratacaoEm,
+    proximaTentativaEm: estado.proximaTentativaEm,
+  };
+}
+
+/** Reinicia a máquina de estados entre testes. */
+export function reiniciarPersistenciaParaTestes(): void {
+  estado = estadoInicial();
+}
+
+function erroAtual(): BancoIndisponivelError {
+  return estado.ultimoErro ?? new BancoIndisponivelError();
+}
+
+function snapshotValido(): boolean {
+  return (
+    estado.modo === "pronto" &&
+    estado.ultimaHidratacaoEm !== null &&
+    Date.now() - estado.ultimaHidratacaoEm < ttlSnapshotMs()
+  );
+}
+
+/**
+ * Garante que `estado.usuarios`/`estado.matriculas` refletem o banco.
+ *
+ * - simulado: resolve imediatamente;
+ * - pronto dentro do TTL: reutiliza o snapshot;
+ * - pronto expirado ou falha após o cooldown: dispara uma única hidratação;
+ * - falha dentro do cooldown: rejeita imediatamente com o último erro.
+ */
+export function garantirHidratacao(): Promise<void> {
+  if (!bancoConfigurado()) {
+    estado.modo = "simulado";
+
+    return Promise.resolve();
   }
 
-  return hidratacao;
+  if (snapshotValido()) return Promise.resolve();
+
+  if (estado.hidratacao) return estado.hidratacao;
+
+  if (estado.modo === "falha" && Date.now() < estado.proximaTentativaEm) {
+    return Promise.reject(erroAtual());
+  }
+
+  const inicio = Date.now();
+  const tentativa = hidratar()
+    .then(() => {
+      estado.modo = "pronto";
+      estado.ultimaHidratacaoEm = Date.now();
+      estado.proximaTentativaEm = 0;
+      estado.ultimoErro = null;
+    })
+    .catch((causa) => {
+      const erro =
+        causa instanceof BancoIndisponivelError ? causa : new BancoIndisponivelError(causa);
+
+      estado.modo = "falha";
+      estado.ultimaHidratacaoEm = null;
+      estado.proximaTentativaEm = Date.now() + cooldownRetryMs();
+      estado.ultimoErro = erro;
+      descartarCliente();
+      registrarFalhaBanco(causa, Date.now() - inicio);
+
+      throw erro;
+    })
+    .finally(() => {
+      estado.hidratacao = null;
+    });
+
+  estado.hidratacao = tentativa;
+
+  return tentativa;
 }
 
 async function hidratar(): Promise<void> {
@@ -78,7 +177,9 @@ async function hidratar(): Promise<void> {
 
   if (totalUsuarios === 0) {
     await prisma.usuario.createMany({
-      data: usuariosFixture.map((usuario) => paraBancoUsuario(Prisma, usuario)) as Prisma.UsuarioCreateManyInput[],
+      data: usuariosFixture.map((usuario) =>
+        paraBancoUsuario(Prisma, usuario),
+      ) as Prisma.UsuarioCreateManyInput[],
     });
   }
 
@@ -93,53 +194,113 @@ async function hidratar(): Promise<void> {
     prisma.matriculaImportada.findMany({ orderBy: { importadaEm: "asc" } }),
   ]);
 
-  const estado = obterEstado();
+  const estadoAtual = obterEstado();
 
-  estado.usuarios.splice(0, estado.usuarios.length, ...usuarios.map(paraDominioUsuario));
-  estado.matriculas.splice(0, estado.matriculas.length, ...matriculas.map(paraDominioMatricula));
+  estadoAtual.usuarios.splice(0, estadoAtual.usuarios.length, ...usuarios.map(paraDominioUsuario));
+  estadoAtual.matriculas.splice(
+    0,
+    estadoAtual.matriculas.length,
+    ...matriculas.map(paraDominioMatricula),
+  );
+}
+
+/**
+ * Executa uma escrita e renova o snapshot em caso de sucesso. Se a conexão
+ * falhar, invalida o snapshot e transforma a falha em `BancoIndisponivelError`,
+ * para a próxima leitura reidratar em vez de servir memória possivelmente parcial.
+ */
+async function executarEscrita<T>(operacao: () => Promise<T>): Promise<T> {
+  const inicio = Date.now();
+
+  try {
+    const resultado = await operacao();
+
+    renovarSnapshot();
+
+    return resultado;
+  } catch (causa) {
+    const erro =
+      causa instanceof BancoIndisponivelError ? causa : new BancoIndisponivelError(causa);
+
+    estado.modo = "falha";
+    estado.ultimaHidratacaoEm = null;
+    estado.proximaTentativaEm = Date.now() + cooldownRetryMs();
+    estado.ultimoErro = erro;
+    descartarCliente();
+    registrarFalhaBanco(causa, Date.now() - inicio);
+
+    throw erro;
+  }
+}
+
+/**
+ * Renova a validade do snapshot depois de uma mutação bem-sucedida. Só vale
+ * quando o estado já estava `pronto`; uma escrita isolada não deve promover
+ * memória não hidratada a fonte de verdade.
+ */
+function renovarSnapshot(): void {
+  if (!bancoConfigurado()) return;
+
+  if (estado.modo === "pronto") {
+    estado.ultimaHidratacaoEm = Date.now();
+  }
+}
+
+function podeEscrever(): boolean {
+  if (!bancoConfigurado()) return false;
+
+  if (estado.modo === "falha") throw erroAtual();
+
+  return true;
 }
 
 /** Cria ou atualiza o usuário no banco. No-op sem banco configurado. */
 export async function gravarUsuario(usuario: Usuario): Promise<void> {
-  if (!podeGravar()) return;
+  if (!podeEscrever()) return;
 
-  const { prisma, Prisma } = await carregarCliente();
-  const dados = paraBancoUsuario(Prisma, usuario);
+  await executarEscrita(async () => {
+    const { prisma, Prisma } = await carregarCliente();
+    const dados = paraBancoUsuario(Prisma, usuario);
 
-  const atualizado = await prisma.usuario.updateMany({
-    where: { id: usuario.id },
-    data: dados as Prisma.UsuarioUpdateManyMutationInput,
+    const atualizado = await prisma.usuario.updateMany({
+      where: { id: usuario.id },
+      data: dados as Prisma.UsuarioUpdateManyMutationInput,
+    });
+
+    if (atualizado.count === 0) {
+      await prisma.usuario.create({ data: dados as Prisma.UsuarioCreateInput });
+    }
   });
-
-  if (atualizado.count === 0) {
-    await prisma.usuario.create({ data: dados as Prisma.UsuarioCreateInput });
-  }
 }
 
 /** Remove o usuário do banco (a memória é ajustada por quem chama). */
 export async function excluirUsuarioDoBanco(id: string): Promise<void> {
-  if (!podeGravar()) return;
+  if (!podeEscrever()) return;
 
-  const { prisma } = await carregarCliente();
+  await executarEscrita(async () => {
+    const { prisma } = await carregarCliente();
 
-  await prisma.usuario.deleteMany({ where: { id } });
+    await prisma.usuario.deleteMany({ where: { id } });
+  });
 }
 
 /** Cria ou atualiza a matrícula no banco. No-op sem banco configurado. */
 export async function gravarMatricula(registro: MatriculaImportada): Promise<void> {
-  if (!podeGravar()) return;
+  if (!podeEscrever()) return;
 
-  const { prisma } = await carregarCliente();
-  const dados = paraBancoMatricula(registro);
+  await executarEscrita(async () => {
+    const { prisma } = await carregarCliente();
+    const dados = paraBancoMatricula(registro);
 
-  const atualizado = await prisma.matriculaImportada.updateMany({
-    where: { id: registro.id },
-    data: dados,
+    const atualizado = await prisma.matriculaImportada.updateMany({
+      where: { id: registro.id },
+      data: dados,
+    });
+
+    if (atualizado.count === 0) {
+      await prisma.matriculaImportada.create({ data: dados });
+    }
   });
-
-  if (atualizado.count === 0) {
-    await prisma.matriculaImportada.create({ data: dados });
-  }
 }
 
 function paraBancoUsuario(P: typeof Prisma, usuario: Usuario) {

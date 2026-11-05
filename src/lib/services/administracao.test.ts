@@ -57,6 +57,48 @@ describe("usuários", () => {
     expect(segunda.itens[0].id).not.toBe(primeira.itens[0].id);
   });
 
+  it("pagina as matrículas pelo conjunto completo, não por um recorte", async () => {
+    await entrarComoAdministrador();
+
+    for (let indice = 1; indice <= 12; indice += 1) {
+      await registrarMatricula({
+        matricula: `2026001${String(indice).padStart(4, "0")}`,
+        nome: `Zz Matrícula ${String(indice).padStart(2, "0")}`,
+        curso: "Informática",
+      });
+    }
+
+    const primeira = await listarMatriculas({ tamanho: 10, pagina: 1 });
+    const segunda = await listarMatriculas({ tamanho: 10, pagina: 2 });
+    const todas = [...primeira.itens, ...segunda.itens];
+
+    expect(primeira.total).toBe(segunda.total);
+    expect(primeira.total).toBeGreaterThan(10);
+    expect(todas.some((item) => item.matricula === "20260010012")).toBe(true);
+  });
+
+  it("encontra cadastro além dos primeiros 50 registros", async () => {
+    await entrarComoAdministrador();
+
+    for (let indice = 1; indice <= 55; indice += 1) {
+      const numero = String(indice).padStart(2, "0");
+
+      await cadastrarUsuario({
+        nome: `Zz Fora dos 50 ${numero}`,
+        email: `fora.dos.50.${numero}@ifrj.edu.br`,
+        papeis: ["coordenador_estagio"],
+      });
+    }
+
+    const busca = await listarUsuarios({ busca: "Zz Fora dos 50 55" });
+
+    expect(busca.total).toBe(1);
+    expect(busca.itens[0]).toMatchObject({
+      nome: "Zz Fora dos 50 55",
+      email: "fora.dos.50.55@ifrj.edu.br",
+    });
+  });
+
   it("registra a matrícula no cadastro do aluno e libera o acesso", async () => {
     await entrarComoAdministrador();
 

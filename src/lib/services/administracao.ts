@@ -194,8 +194,8 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
         importadaEm: agora(),
       };
 
-      estado.matriculas.push(registro);
       await gravarMatricula(registro);
+      estado.matriculas.push(registro);
     }
   }
 
@@ -212,8 +212,8 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     criadoEm: agora(),
   };
 
-  estado.usuarios.push(usuario);
   await gravarUsuario(usuario);
+  estado.usuarios.push(usuario);
 
   return usuario;
 }
@@ -228,6 +228,8 @@ export async function editarUsuario(
   const usuario = estado.usuarios.find((registro) => registro.id === id);
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
+
+  const anterior = structuredClone(usuario);
 
   if (alteracoes.email && alteracoes.email.toLowerCase() !== usuario.email.toLowerCase()) {
     const email = alteracoes.email.trim().toLowerCase();
@@ -250,7 +252,12 @@ export async function editarUsuario(
 
   if (alteracoes.situacao) usuario.situacao = alteracoes.situacao;
 
-  await gravarUsuario(usuario);
+  try {
+    await gravarUsuario(usuario);
+  } catch (erro) {
+    Object.assign(usuario, anterior);
+    throw erro;
+  }
 
   return usuario;
 }
@@ -272,8 +279,16 @@ export async function inativarUsuario(id: string): Promise<Usuario> {
     );
   }
 
+  const situacaoAnterior = usuario.situacao;
+
   usuario.situacao = "inativo";
-  await gravarUsuario(usuario);
+
+  try {
+    await gravarUsuario(usuario);
+  } catch (erro) {
+    usuario.situacao = situacaoAnterior;
+    throw erro;
+  }
 
   return usuario;
 }
@@ -285,8 +300,16 @@ export async function reativarUsuario(id: string): Promise<Usuario> {
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
 
+  const situacaoAnterior = usuario.situacao;
+
   usuario.situacao = "ativo";
-  await gravarUsuario(usuario);
+
+  try {
+    await gravarUsuario(usuario);
+  } catch (erro) {
+    usuario.situacao = situacaoAnterior;
+    throw erro;
+  }
 
   return usuario;
 }
@@ -304,6 +327,7 @@ export async function excluirUsuario(id: string): Promise<void> {
     estado.documentos.some((documento) => documento.alunoId === id) ||
     estado.pareceres.some((parecer) => parecer.autorId === id);
   if (temHistorico) {
+    const anterior = structuredClone(usuario);
     const cursoId = cursoDoUsuario(usuario);
     Object.assign(usuario, {
       nome: "Cadastro excluído",
@@ -313,10 +337,24 @@ export async function excluirUsuario(id: string): Promise<void> {
       dadosPessoais: undefined,
       cursoId,
     });
-    await gravarUsuario(usuario);
+
+    try {
+      await gravarUsuario(usuario);
+    } catch (erro) {
+      Object.assign(usuario, anterior);
+      throw erro;
+    }
   } else {
+    const indice = estado.usuarios.indexOf(usuario);
+
     estado.usuarios = estado.usuarios.filter((registro) => registro.id !== id);
-    await excluirUsuarioDoBanco(id);
+
+    try {
+      await excluirUsuarioDoBanco(id);
+    } catch (erro) {
+      estado.usuarios.splice(indice, 0, usuario);
+      throw erro;
+    }
   }
   estado.notificacoes = estado.notificacoes.filter(
     (notificacao) => notificacao.destinatarioId !== id,
@@ -380,78 +418,99 @@ export async function decidirSolicitacao(
     throw new ErroDeRegra("Informe o motivo da recusa.", "motivo_obrigatorio");
   }
 
-  solicitacao.situacao = decisao;
-  solicitacao.decididoPorId = administradorId;
-  solicitacao.decididoEm = agora();
-  solicitacao.motivo = motivo?.trim() || solicitacao.motivo;
+  const antes = {
+    usuarios: structuredClone(estado.usuarios),
+    matriculas: structuredClone(estado.matriculas),
+    notificacoes: structuredClone(estado.notificacoes),
+    solicitacao: structuredClone(solicitacao),
+  };
 
-  if (decisao === "autorizado") {
-    // A matrícula conferida passa a valer no sistema: o cadastro do aluno deixa
-    // de depender de autorização avulsa e a matrícula fica registrada para os
-    // próximos cadastros.
-    if (!estado.matriculas.some((registro) => registro.matricula === solicitacao.matricula)) {
-      const registro = {
-        id: novoId("mat"),
-        matricula: solicitacao.matricula,
-        nome: solicitacao.nome,
-        curso: nomeDoCurso(solicitacao.dadosPessoais.cursoId),
-        origem: "cadastro_administrador" as const,
-        importadaEm: agora(),
-      };
+  try {
+    solicitacao.situacao = decisao;
+    solicitacao.decididoPorId = administradorId;
+    solicitacao.decididoEm = agora();
+    solicitacao.motivo = motivo?.trim() || solicitacao.motivo;
 
-      estado.matriculas.push(registro);
-      await gravarMatricula(registro);
-    }
+    if (decisao === "autorizado") {
+      // A matrícula conferida passa a valer no sistema: o cadastro do aluno deixa
+      // de depender de autorização avulsa e a matrícula fica registrada para os
+      // próximos cadastros.
+      if (!estado.matriculas.some((registro) => registro.matricula === solicitacao.matricula)) {
+        const registro = {
+          id: novoId("mat"),
+          matricula: solicitacao.matricula,
+          nome: solicitacao.nome,
+          curso: nomeDoCurso(solicitacao.dadosPessoais.cursoId),
+          origem: "cadastro_administrador" as const,
+          importadaEm: agora(),
+        };
 
-    const existente = estado.usuarios.find(
-      (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
-    );
+        await gravarMatricula(registro);
+        estado.matriculas.push(registro);
+      }
 
-    if (existente) {
-      existente.situacao = "ativo";
-      await gravarUsuario(existente);
-    } else {
-      const usuario: Usuario = {
-        id: novoId("usr"),
-        nome: solicitacao.nome,
-        email: solicitacao.email.toLowerCase(),
-        papeis: ["aluno"],
-        situacao: "ativo",
-        campus: "Pinheiral",
-        matricula: solicitacao.matricula,
-        dadosPessoais: {
-          ...solicitacao.dadosPessoais,
+      const existente = estado.usuarios.find(
+        (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
+      );
+
+      if (existente) {
+        existente.situacao = "ativo";
+        await gravarUsuario(existente);
+      } else {
+        const usuario: Usuario = {
+          id: novoId("usr"),
           nome: solicitacao.nome,
           email: solicitacao.email.toLowerCase(),
+          papeis: ["aluno"],
+          situacao: "ativo",
           campus: "Pinheiral",
-        } as Usuario["dadosPessoais"],
-        membroComissaoEstagio: false,
-        criadoEm: agora(),
-      };
+          matricula: solicitacao.matricula,
+          dadosPessoais: {
+            ...solicitacao.dadosPessoais,
+            nome: solicitacao.nome,
+            email: solicitacao.email.toLowerCase(),
+            campus: "Pinheiral",
+          } as Usuario["dadosPessoais"],
+          membroComissaoEstagio: false,
+          criadoEm: agora(),
+        };
 
-      estado.usuarios.push(usuario);
-      await gravarUsuario(usuario);
+        await gravarUsuario(usuario);
+        estado.usuarios.push(usuario);
+      }
     }
+
+    const aluno = estado.usuarios.find(
+      (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
+    );
+    if (aluno) {
+      if (decisao === "recusado") {
+        aluno.situacao = "inativo";
+        await gravarUsuario(aluno);
+      }
+      estado.notificacoes.push({
+        id: novoId("ntf"),
+        destinatarioId: aluno.id,
+        titulo: decisao === "autorizado" ? "Cadastro autorizado" : "Cadastro recusado",
+        mensagem: solicitacao.motivo ?? "",
+        tipo: "acesso",
+        lida: false,
+        criadaEm: agora(),
+      });
+    }
+  } catch (erro) {
+    estado.usuarios = antes.usuarios;
+    estado.matriculas = antes.matriculas;
+    estado.notificacoes = antes.notificacoes;
+    for (const chave of Object.keys(solicitacao)) {
+      if (!(chave in antes.solicitacao)) {
+        delete (solicitacao as unknown as Record<string, unknown>)[chave];
+      }
+    }
+    Object.assign(solicitacao, antes.solicitacao);
+    throw erro;
   }
 
-  const aluno = estado.usuarios.find(
-    (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
-  );
-  if (aluno) {
-    if (decisao === "recusado") {
-      aluno.situacao = "inativo";
-      await gravarUsuario(aluno);
-    }
-    estado.notificacoes.push({
-      id: novoId("ntf"),
-      destinatarioId: aluno.id,
-      titulo: decisao === "autorizado" ? "Cadastro autorizado" : "Cadastro recusado",
-      mensagem: solicitacao.motivo ?? "",
-      tipo: "acesso",
-      lida: false,
-      criadaEm: agora(),
-    });
-  }
   return solicitacao;
 }
 
@@ -550,8 +609,8 @@ export async function importarMatriculas(
       importadaEm: agora(),
     };
 
-    estado.matriculas.push(registro);
     await gravarMatricula(registro);
+    estado.matriculas.push(registro);
     resultado.validas += 1;
     resultado.itens.push({ matricula, nome, resultado: "valida" });
   }
@@ -604,8 +663,8 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
     importadaEm: agora(),
   };
 
-  estado.matriculas.push(registro);
   await gravarMatricula(registro);
+  estado.matriculas.push(registro);
 
   return registro;
 }

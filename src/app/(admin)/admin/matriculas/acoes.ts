@@ -9,7 +9,7 @@ import {
   type LinhaImportacao,
 } from "@/lib/services/administracao";
 import type { ResultadoImportacao } from "@/lib/domain/types";
-import { ErroDeRegra } from "@/lib/services/erros";
+import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 
 /**
  * Lançamento manual de matrícula válida (5.6 e bloco 8.4). Enquanto não houver
@@ -23,16 +23,11 @@ export interface ResultadoAcao {
 }
 
 export async function registrarMatriculaAction(linha: LinhaImportacao): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
   try {
+    await exigirPapeis(["administrador"]);
     await registrarMatricula(linha);
   } catch (erro) {
-    if (erro instanceof ErroDeRegra || erro instanceof Error) {
-      return { ok: false, erro: erro.message };
-    }
-
-    throw erro;
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
   }
 
   revalidatePath("/admin/matriculas");
@@ -49,19 +44,14 @@ export async function importarMatriculasAction(
   arquivo: string,
   linhas: LinhaImportacao[],
 ): Promise<ResultadoAcao> {
-  await exigirPapeis(["administrador"]);
-
   try {
+    await exigirPapeis(["administrador"]);
     if (linhas.length === 0) throw new Error("O arquivo não possui linhas para importar.");
     const resultado = await importarMatriculas(arquivo, linhas);
     revalidatePath("/admin/matriculas");
     revalidatePath("/admin/usuarios");
     return { ok: true, resultado };
   } catch (erro) {
-    if (erro instanceof ErroDeRegra || erro instanceof Error) {
-      return { ok: false, erro: erro.message };
-    }
-
-    throw erro;
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
   }
 }

@@ -262,8 +262,8 @@ export async function concluirCadastro(
     criadoEm: agora(),
   };
 
-  estado.usuarios.push(usuario);
   await gravarUsuario(usuario);
+  estado.usuarios.push(usuario);
 
   // A senha escolhida na primeira etapa vira credencial: sem isso o cadastro
   // concluído não liberaria acesso a ninguém (o §5.4 exige liberar a área do
