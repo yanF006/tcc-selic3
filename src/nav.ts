@@ -159,11 +159,9 @@ export function itensPara(usuario: Usuario | null): ItemNav[] {
     if (item.exigeComissaoDeEstagio) {
       // O administrador tem acesso a todas as áreas (§4); para os demais, a
       // Comissão de Estágio é condição do papel de Coordenador de Estágio.
-      if (usuario.papeis.includes("administrador")) return true;
+      if (usuario.papel === "administrador") return true;
 
-      return (
-        usuario.papeis.includes("coordenador_estagio") && Boolean(usuario.membroComissaoEstagio)
-      );
+      return usuario.papel === "coordenador_estagio" && Boolean(usuario.membroComissaoEstagio);
     }
 
     if (item.requiredRoles.length === 0) return true;

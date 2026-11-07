@@ -4,12 +4,12 @@ import type { Papel, Usuario } from "@/lib/domain/types";
 
 import { gruposPara, itemVisivel, itensPara, NAV } from "./nav";
 
-function usuario(papeis: Papel[], extras: Partial<Usuario> = {}): Usuario {
+function usuario([papel]: [Papel], extras: Partial<Usuario> = {}): Usuario {
   return {
-    id: `usr-${papeis.join("-")}`,
+    id: `usr-${papel}`,
     nome: "Usuário de Teste",
     email: "teste@ifrj.edu.br",
-    papeis,
+    papel,
     situacao: "ativo",
     campus: "Pinheiral",
     criadoEm: "2026-01-01T00:00:00.000Z",
@@ -17,7 +17,7 @@ function usuario(papeis: Papel[], extras: Partial<Usuario> = {}): Usuario {
   };
 }
 
-function hrefs(papeis: Papel[], extras: Partial<Usuario> = {}): string[] {
+function hrefs(papeis: [Papel], extras: Partial<Usuario> = {}): string[] {
   return itensPara(usuario(papeis, extras)).map((item) => item.href);
 }
 

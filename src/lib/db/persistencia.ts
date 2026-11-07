@@ -1,19 +1,15 @@
-import type {
-  Campus,
-  DadosPessoais,
-  MatriculaImportada,
-  Papel,
-  SituacaoUsuario,
-  Usuario,
-} from "@/lib/domain/types";
-import type { Prisma } from "@/generated/prisma/client";
+import "server-only";
+
+import type { MatriculaImportada, Usuario } from "@/lib/domain/types";
 import {
   matriculasImportadas as matriculasFixture,
   usuarios as usuariosFixture,
 } from "@/lib/fixtures/base";
 
 import { bancoConfigurado, carregarCliente, descartarCliente } from "./prisma";
-import { BancoIndisponivelError, registrarFalhaBanco } from "./erros";
+import { BancoIndisponivelError, registrarFalhaBanco, traduzirErroPersistencia } from "./erros";
+import { criarRepositorioMatriculas } from "./repositorios/matriculas";
+import { criarRepositorioUsuarios } from "./repositorios/usuarios";
 import { obterEstado } from "@/lib/services/store";
 
 /**
@@ -146,8 +142,9 @@ export function garantirHidratacao(): Promise<void> {
       estado.ultimoErro = null;
     })
     .catch((causa) => {
-      const erro =
-        causa instanceof BancoIndisponivelError ? causa : new BancoIndisponivelError(causa);
+      const erro = traduzirErroPersistencia(causa);
+      estado.ultimaHidratacaoEm = null;
+      if (!(erro instanceof BancoIndisponivelError)) throw erro;
 
       estado.modo = "falha";
       estado.ultimaHidratacaoEm = null;
@@ -169,39 +166,31 @@ export function garantirHidratacao(): Promise<void> {
 
 async function hidratar(): Promise<void> {
   const { prisma, Prisma } = await carregarCliente();
+  const usuariosRepositorio = criarRepositorioUsuarios(prisma, Prisma);
+  const matriculasRepositorio = criarRepositorioMatriculas(prisma);
 
   const [totalUsuarios, totalMatriculas] = await Promise.all([
-    prisma.usuario.count(),
-    prisma.matriculaImportada.count(),
+    usuariosRepositorio.contar(),
+    matriculasRepositorio.contar(),
   ]);
 
   if (totalUsuarios === 0) {
-    await prisma.usuario.createMany({
-      data: usuariosFixture.map((usuario) =>
-        paraBancoUsuario(Prisma, usuario),
-      ) as Prisma.UsuarioCreateManyInput[],
-    });
+    await usuariosRepositorio.salvarMuitos(usuariosFixture);
   }
 
   if (totalMatriculas === 0) {
-    await prisma.matriculaImportada.createMany({
-      data: matriculasFixture.map(paraBancoMatricula),
-    });
+    await matriculasRepositorio.salvarMuitos(matriculasFixture);
   }
 
   const [usuarios, matriculas] = await Promise.all([
-    prisma.usuario.findMany({ orderBy: { criadoEm: "asc" } }),
-    prisma.matriculaImportada.findMany({ orderBy: { importadaEm: "asc" } }),
+    usuariosRepositorio.listar(),
+    matriculasRepositorio.listar(),
   ]);
 
   const estadoAtual = obterEstado();
 
-  estadoAtual.usuarios.splice(0, estadoAtual.usuarios.length, ...usuarios.map(paraDominioUsuario));
-  estadoAtual.matriculas.splice(
-    0,
-    estadoAtual.matriculas.length,
-    ...matriculas.map(paraDominioMatricula),
-  );
+  estadoAtual.usuarios.splice(0, estadoAtual.usuarios.length, ...usuarios);
+  estadoAtual.matriculas.splice(0, estadoAtual.matriculas.length, ...matriculas);
 }
 
 /**
@@ -219,8 +208,8 @@ async function executarEscrita<T>(operacao: () => Promise<T>): Promise<T> {
 
     return resultado;
   } catch (causa) {
-    const erro =
-      causa instanceof BancoIndisponivelError ? causa : new BancoIndisponivelError(causa);
+    const erro = traduzirErroPersistencia(causa);
+    if (!(erro instanceof BancoIndisponivelError)) throw erro;
 
     estado.modo = "falha";
     estado.ultimaHidratacaoEm = null;
@@ -254,22 +243,30 @@ function podeEscrever(): boolean {
   return true;
 }
 
-/** Cria ou atualiza o usuário no banco. No-op sem banco configurado. */
-export async function gravarUsuario(usuario: Usuario): Promise<void> {
+/** Cria o usuário no banco. Conflito de ID não atualiza o registro existente. */
+export async function criarUsuario(usuario: Usuario): Promise<void> {
   if (!podeEscrever()) return;
 
   await executarEscrita(async () => {
     const { prisma, Prisma } = await carregarCliente();
-    const dados = paraBancoUsuario(Prisma, usuario);
+    const repositorio = criarRepositorioUsuarios(prisma, Prisma);
 
-    const atualizado = await prisma.usuario.updateMany({
-      where: { id: usuario.id },
-      data: dados as Prisma.UsuarioUpdateManyMutationInput,
+    await repositorio.criar(usuario);
+  });
+}
+
+/** Atualiza um usuário existente. Alvo ausente não cria outro registro. */
+export async function atualizarUsuario(usuario: Usuario): Promise<void> {
+  if (!podeEscrever()) return;
+
+  await executarEscrita(async () => {
+    const { prisma, Prisma } = await carregarCliente();
+    await prisma.$transaction(async (tx) => {
+      await criarRepositorioUsuarios(tx, Prisma).atualizar(usuario);
+      if (usuario.situacao !== "ativo") {
+        await tx.authSession.deleteMany({ where: { userId: usuario.id } });
+      }
     });
-
-    if (atualizado.count === 0) {
-      await prisma.usuario.create({ data: dados as Prisma.UsuarioCreateInput });
-    }
   });
 }
 
@@ -278,102 +275,33 @@ export async function excluirUsuarioDoBanco(id: string): Promise<void> {
   if (!podeEscrever()) return;
 
   await executarEscrita(async () => {
-    const { prisma } = await carregarCliente();
+    const { prisma, Prisma } = await carregarCliente();
+    const repositorio = criarRepositorioUsuarios(prisma, Prisma);
 
-    await prisma.usuario.deleteMany({ where: { id } });
+    await repositorio.excluir(id);
   });
 }
 
-/** Cria ou atualiza a matrícula no banco. No-op sem banco configurado. */
-export async function gravarMatricula(registro: MatriculaImportada): Promise<void> {
+/** Cria a matrícula no banco. Conflito não atualiza o registro existente. */
+export async function criarMatricula(registro: MatriculaImportada): Promise<void> {
   if (!podeEscrever()) return;
 
   await executarEscrita(async () => {
     const { prisma } = await carregarCliente();
-    const dados = paraBancoMatricula(registro);
+    const repositorio = criarRepositorioMatriculas(prisma);
 
-    const atualizado = await prisma.matriculaImportada.updateMany({
-      where: { id: registro.id },
-      data: dados,
-    });
-
-    if (atualizado.count === 0) {
-      await prisma.matriculaImportada.create({ data: dados });
-    }
+    await repositorio.criar(registro);
   });
 }
 
-function paraBancoUsuario(P: typeof Prisma, usuario: Usuario) {
-  return {
-    id: usuario.id,
-    nome: usuario.nome,
-    email: usuario.email,
-    papeis: usuario.papeis,
-    situacao: usuario.situacao,
-    campus: usuario.campus,
-    matricula: usuario.matricula ?? null,
-    cursoId: usuario.cursoId ?? null,
-    membroComissaoEstagio: usuario.membroComissaoEstagio ?? false,
-    dadosPessoais: usuario.dadosPessoais
-      ? (usuario.dadosPessoais as unknown as Prisma.InputJsonValue)
-      : P.DbNull,
-    criadoEm: new Date(usuario.criadoEm),
-  };
-}
+/** Atualiza uma matrícula existente. Alvo ausente não cria outro registro. */
+export async function atualizarMatricula(registro: MatriculaImportada): Promise<void> {
+  if (!podeEscrever()) return;
 
-function paraBancoMatricula(registro: MatriculaImportada) {
-  return {
-    id: registro.id,
-    matricula: registro.matricula,
-    nome: registro.nome,
-    curso: registro.curso,
-    origem: registro.origem,
-    importadaEm: new Date(registro.importadaEm),
-  };
-}
+  await executarEscrita(async () => {
+    const { prisma } = await carregarCliente();
+    const repositorio = criarRepositorioMatriculas(prisma);
 
-function paraDominioUsuario(linha: {
-  id: string;
-  nome: string;
-  email: string;
-  papeis: unknown;
-  situacao: string;
-  campus: string;
-  matricula: string | null;
-  cursoId: string | null;
-  membroComissaoEstagio: boolean;
-  dadosPessoais: unknown;
-  criadoEm: Date;
-}): Usuario {
-  return {
-    id: linha.id,
-    nome: linha.nome,
-    email: linha.email,
-    papeis: linha.papeis as Papel[],
-    situacao: linha.situacao as SituacaoUsuario,
-    campus: linha.campus as Campus,
-    matricula: linha.matricula ?? undefined,
-    cursoId: linha.cursoId ?? undefined,
-    membroComissaoEstagio: linha.membroComissaoEstagio,
-    dadosPessoais: (linha.dadosPessoais as DadosPessoais | null) ?? undefined,
-    criadoEm: linha.criadoEm.toISOString(),
-  };
-}
-
-function paraDominioMatricula(linha: {
-  id: string;
-  matricula: string;
-  nome: string;
-  curso: string;
-  origem: string;
-  importadaEm: Date;
-}): MatriculaImportada {
-  return {
-    id: linha.id,
-    matricula: linha.matricula,
-    nome: linha.nome,
-    curso: linha.curso,
-    origem: linha.origem as MatriculaImportada["origem"],
-    importadaEm: linha.importadaEm.toISOString(),
-  };
+    await repositorio.atualizar(registro);
+  });
 }

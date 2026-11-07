@@ -2,6 +2,7 @@
 
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
 import { trocarSenha } from "@/lib/services/senhas";
+import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 
 /**
  * Troca autenticada de senha (5.9). A sessão vem do cookie: a tela não escolhe de
@@ -21,10 +22,12 @@ export async function trocarSenhaAction(
   senha: string,
   confirmacao: string,
 ): Promise<EstadoTrocaSenha> {
-  const usuario = await usuarioDaRequisicaoObrigatorio();
-  const resultado = await trocarSenha(usuario, senhaAtual, senha, confirmacao);
-
-  if (!resultado.ok) return { ok: false, erro: resultado.erro, campo: resultado.campo };
-
-  return { ok: true, mensagem: resultado.mensagem };
+  try {
+    const usuario = await usuarioDaRequisicaoObrigatorio();
+    const resultado = await trocarSenha(usuario, senhaAtual, senha, confirmacao);
+    if (!resultado.ok) return { ok: false, erro: resultado.erro, campo: resultado.campo };
+    return { ok: true, mensagem: resultado.mensagem };
+  } catch (erro) {
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
+  }
 }

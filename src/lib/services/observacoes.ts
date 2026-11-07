@@ -10,8 +10,8 @@ export function podeAcrescentarObservacao(usuario: Usuario, documento: Documento
   const estagio = obterEstado().estagios.find((registro) => registro.id === documento.estagioId);
   const cursoId = estagio?.excluidoEm ? estagio.cursoIdHistorico : aluno && cursoDoUsuario(aluno);
   return (
-    (usuario.papeis.includes("coordenador_estagio") && usuario.campus === aluno?.campus) ||
-    (usuario.papeis.includes("coordenador_curso") &&
+    (usuario.papel === "coordenador_estagio" && usuario.campus === aluno?.campus) ||
+    (usuario.papel === "coordenador_curso" &&
       Boolean(usuario.cursoId) &&
       cursoId === usuario.cursoId)
   );

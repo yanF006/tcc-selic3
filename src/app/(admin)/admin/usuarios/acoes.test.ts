@@ -42,7 +42,7 @@ describe("ações de usuários", () => {
     const resultado = await cadastrarUsuarioAction({
       nome: "Novo",
       email: "novo@ifrj.edu.br",
-      papeis: ["aluno"],
+      papel: "aluno",
     });
 
     expect(resultado).toEqual({ ok: false, erro: MENSAGEM_BANCO_INDISPONIVEL });
@@ -71,7 +71,9 @@ describe("ações de usuários", () => {
   it("não expõe mensagem de erro inesperado", async () => {
     mocks.editarUsuario.mockRejectedValue(new Error("detalhe interno do driver"));
 
-    const resultado = await (await import("./acoes")).editarUsuarioAction("usr-1", {
+    const resultado = await (
+      await import("./acoes")
+    ).editarUsuarioAction("usr-1", {
       nome: "Outro",
     });
 

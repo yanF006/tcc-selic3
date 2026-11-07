@@ -1,5 +1,9 @@
+import "server-only";
+
 import type * as ClienteGerado from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
+
+import { fonteDadosSelecionada } from "./adaptador";
 
 /**
  * Cliente Prisma único do processo (Prisma 7, MySQL/Aiven).
@@ -25,16 +29,15 @@ export interface ClientePrisma {
 let cache: ClientePrisma | null = null;
 
 /**
- * true quando há banco configurado e não estamos sob testes automatizados.
+ * true quando o ponto de composição selecionou persistência.
  *
- * Os testes unitários rodam em memória (fixtures); sem esta guarda, um `.env`
- * local apontaria os testes para o Aiven. Em produção e desenvolvimento a
- * variável presente liga a persistência.
+ * A escolha é explícita: `SELIC_PERSISTENCIA=persistente` (usado pela
+ * integração) vence o ambiente de teste; sem escolha, testes unitários ficam
+ * em simulação e produção/desenvolvimento usam o banco quando
+ * `DATABASE_URL` existe. Uma falha de conexão não muda esta resposta.
  */
 export function bancoConfigurado(): boolean {
-  if (process.env.NODE_ENV === "test") return false;
-
-  return Boolean(process.env.DATABASE_URL?.trim());
+  return fonteDadosSelecionada() === "persistente";
 }
 
 /**
@@ -95,7 +98,7 @@ export function opcoesDeConexao(
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: decodeURIComponent(url.pathname.replace(/^\/+/, "")) || undefined,
-    connectionLimit: 5,
+    connectionLimit: inteiroDoAmbiente(ambiente, "SELIC_DB_CONNECTION_LIMIT", 5, 1),
     connectTimeout: inteiroDoAmbiente(
       ambiente,
       "SELIC_DB_CONNECT_TIMEOUT_MS",
@@ -103,9 +106,14 @@ export function opcoesDeConexao(
     ),
     acquireTimeout,
     initializationTimeout,
-    // O certificado gerenciado do Aiven não está na cadeia local; aceitar a
-    // conexão TLS sem validar a cadeia mantém o transporte criptografado.
-    ssl: { rejectUnauthorized: false },
+    // O driver verifica a cadeia e o hostname. Sem CA adicional, usa as
+    // autoridades confiáveis do Node; certificados privados exigem a CA do ambiente.
+    ssl: {
+      rejectUnauthorized: true,
+      ...(ambiente.SELIC_DB_CA_CERT?.trim()
+        ? { ca: ambiente.SELIC_DB_CA_CERT.trim().replace(/\\n/g, "\n") }
+        : {}),
+    },
   };
 }
 

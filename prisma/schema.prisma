@@ -18,26 +18,200 @@ datasource db {
   // A URL de conexão vive em `prisma7.config.ts` (Prisma 7 removeu `url` daqui).
 }
 
-/// Espelha `Usuario` de `src/lib/domain/types.ts`.
+/// Espelha `Usuario` de `src/lib/domain/types.ts` e é a identidade única do
+/// Better Auth. Os campos `name`, `emailVerified`, `image`, `createdAt` e
+/// `updatedAt` são mapeados na configuração de autenticação.
 model Usuario {
-  id         String @id @db.VarChar(64)
-  nome       String @db.VarChar(191)
-  email      String @unique @db.VarChar(191)
-  /// Papel[] serializado como JSON (o MySQL não tem arrays nativos).
-  papeis     Json
-  situacao   String @db.VarChar(20)
-  campus     String @db.VarChar(50)
+  id                    String   @id @db.VarChar(64)
+  nome                  String   @db.VarChar(191)
+  email                 String   @unique @db.VarChar(191)
+  emailVerificado       Boolean  @default(false)
+  imagem                String?  @db.Text
+  /// Cargo único do usuário. O valor inicial seguro permite o signup padrão.
+  papel                 String   @default("aluno") @db.VarChar(30)
+  situacao              String   @default("pendente") @db.VarChar(20)
+  campus                String   @default("Pinheiral") @db.VarChar(50)
   /// Matrícula do aluno; imutável após o cadastro. Ausente nos demais papéis.
-  matricula  String? @db.VarChar(20)
+  matricula             String?  @unique @db.VarChar(20)
   /// Curso do coordenador de curso; ausente nos demais papéis.
-  cursoId    String? @db.VarChar(64)
+  cursoId               String?  @db.VarChar(64)
   membroComissaoEstagio Boolean  @default(false)
-  /// DadosPessoais completo serializado como JSON; ausente até o cadastro.
-  dadosPessoais Json?
-  criadoEm   DateTime @default(now())
+  /// DadosPessoais legado serializado como JSON; a transformação relacional
+  /// ocorre depois da carga explícita das referências acadêmicas.
+  dadosPessoais         Json?
+  criadoEm              DateTime @default(now())
+  atualizadoEm          DateTime @updatedAt
+
+  curso                            Curso?                       @relation("CursoCoordenador", fields: [cursoId], references: [id], onDelete: Restrict)
+  dadosPessoaisAluno               DadosPessoaisAluno?
+  authAccounts                     AuthAccount[]
+  authSessions                     AuthSession[]
+  solicitacaoAcesso                SolicitacaoAcesso?           @relation("SolicitacaoDoUsuario")
+  decisoesAcesso                   SolicitacaoAcesso[]          @relation("DecisorAcesso")
+  estagiosComoAluno                Estagio[]                    @relation("EstagioAluno")
+  estagiosEncaminhados             Estagio[]                    @relation("EstagioEncaminhadoPor")
+  estagiosLiberados                Estagio[]                    @relation("EstagioLiberadoPor")
+  estagiosEditados                 Estagio[]                    @relation("EstagioEditadoPor")
+  documentosPreenchidos            DocumentoPreenchido[]        @relation("DocumentoAluno")
+  documentosRegistrados            DocumentoPreenchido[]        @relation("DocumentoRegistradoPor")
+  documentosAssinaturasConfirmadas DocumentoPreenchido[]        @relation("DocumentoAssinaturasConfirmadasPor")
+  arquivosEnviados                 Arquivo[]
+  lancamentosHoras                 LancamentoHoras[]
+  submissoesDocumento              SubmissaoDocumento[]
+  pareceres                        Parecer[]
+  observacoesDocumento             ObservacaoDocumento[]
+  solicitacoesExclusaoEstagio      SolicitacaoExclusaoEstagio[] @relation("SolicitanteExclusaoEstagio")
+  decisoesExclusaoEstagio          SolicitacaoExclusaoEstagio[] @relation("DecisorExclusaoEstagio")
+  pedidosEnvioDocumento            PedidoEnvioDocumento[]
+  enviosExternos                   EnvioExterno[]
 
   @@index([situacao])
+  @@index([papel])
+  @@index([cursoId])
   @@map("usuarios")
+}
+
+/// Dados pessoais e vínculos acadêmicos explícitos do aluno.
+model DadosPessoaisAluno {
+  id             String   @id @db.VarChar(64)
+  usuarioId      String   @unique @db.VarChar(64)
+  cpf            String   @db.VarChar(14)
+  rg             String   @db.VarChar(20)
+  dataNascimento DateTime @db.Date
+  telefone       String   @db.VarChar(20)
+  celular        String   @db.VarChar(20)
+  /// Endereco validado como objeto JSON (formato variável).
+  endereco       Json
+  cursoId        String   @db.VarChar(64)
+  turmaId        String   @db.VarChar(64)
+  periodoId      String   @db.VarChar(64)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  curso   Curso   @relation(fields: [cursoId], references: [id], onDelete: Restrict)
+  turma   Turma   @relation(fields: [turmaId], references: [id], onDelete: Restrict)
+  periodo Periodo @relation(fields: [periodoId], references: [id], onDelete: Restrict)
+
+  @@index([cursoId])
+  @@index([turmaId])
+  @@index([periodoId])
+  @@map("dados_pessoais_alunos")
+}
+
+model Curso {
+  id           String   @id @db.VarChar(64)
+  nome         String   @db.VarChar(191)
+  codigo       String   @unique @db.VarChar(50)
+  situacao     String   @default("ativo") @db.VarChar(20)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuariosCoordenadores Usuario[]            @relation("CursoCoordenador")
+  turmas                Turma[]
+  dadosPessoaisAlunos   DadosPessoaisAluno[]
+  solicitacoesAcesso    SolicitacaoAcesso[]
+  matriculasImportadas  MatriculaImportada[] @relation("CursoMatriculasImportadas")
+
+  @@index([situacao])
+  @@map("cursos")
+}
+
+model Turma {
+  id           String   @id @db.VarChar(64)
+  nome         String   @db.VarChar(191)
+  cursoId      String   @db.VarChar(64)
+  situacao     String   @default("ativo") @db.VarChar(20)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  curso               Curso                @relation(fields: [cursoId], references: [id], onDelete: Restrict)
+  turmaPeriodos       TurmaPeriodo[]
+  dadosPessoaisAlunos DadosPessoaisAluno[]
+
+  @@index([cursoId])
+  @@index([situacao])
+  @@map("turmas")
+}
+
+model Periodo {
+  id           String   @id @db.VarChar(64)
+  rotulo       String   @db.VarChar(50)
+  ano          Int
+  semestre     Int
+  situacao     String   @default("ativo") @db.VarChar(20)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  turmaPeriodos       TurmaPeriodo[]
+  dadosPessoaisAlunos DadosPessoaisAluno[]
+
+  @@unique([ano, semestre])
+  @@index([situacao])
+  @@map("periodos")
+}
+
+/// Vínculo entre turma e período. A chave composta impede repetição.
+model TurmaPeriodo {
+  turmaId   String   @db.VarChar(64)
+  periodoId String   @db.VarChar(64)
+  criadoEm  DateTime @default(now())
+
+  turma   Turma   @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  periodo Periodo @relation(fields: [periodoId], references: [id], onDelete: Cascade)
+
+  @@id([turmaId, periodoId])
+  @@index([periodoId])
+  @@map("turmas_periodos")
+}
+
+/// Conta de autenticação vinculada à identidade única em `usuarios`.
+model AuthAccount {
+  id                    String    @id
+  accountId             String    @db.VarChar(191)
+  providerId            String    @db.VarChar(191)
+  userId                String    @db.VarChar(64)
+  user                  Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+model AuthSession {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?  @db.Text
+  userAgent String?  @db.Text
+  userId    String   @db.VarChar(64)
+  user      Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model AuthVerification {
+  id         String   @id
+  identifier String   @db.Text
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier(length: 191)])
+  @@map("auth_verifications")
 }
 
 /// Espelha `MatriculaImportada` de `src/lib/domain/types.ts`.
@@ -45,11 +219,436 @@ model MatriculaImportada {
   id          String   @id @db.VarChar(64)
   matricula   String   @unique @db.VarChar(20)
   nome        String   @db.VarChar(191)
+  /// Texto de curso recebido na importação ou no cadastro administrativo.
   curso       String   @db.VarChar(191)
+  cursoId     String?  @db.VarChar(64)
   /// "importacao" | "cadastro_administrador".
   origem      String   @db.VarChar(30)
   importadaEm DateTime @default(now())
 
+  cursoAcademico Curso? @relation("CursoMatriculasImportadas", fields: [cursoId], references: [id], onDelete: SetNull)
+
   @@index([origem])
+  @@index([cursoId])
   @@map("matriculas")
+}
+
+/// Solicitação de acesso de uma conta pendente a um curso.
+model SolicitacaoAcesso {
+  id            String    @id @db.VarChar(64)
+  usuarioId     String    @unique @db.VarChar(64)
+  cursoId       String    @db.VarChar(64)
+  situacao      String    @default("pendente") @db.VarChar(20)
+  motivo        String?   @db.Text
+  decididoPorId String?   @db.VarChar(64)
+  decididoEm    DateTime?
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+
+  usuario     Usuario  @relation("SolicitacaoDoUsuario", fields: [usuarioId], references: [id], onDelete: Restrict)
+  curso       Curso    @relation(fields: [cursoId], references: [id], onDelete: Restrict)
+  decididoPor Usuario? @relation("DecisorAcesso", fields: [decididoPorId], references: [id], onDelete: SetNull)
+
+  @@index([situacao, criadoEm])
+  @@index([cursoId, situacao])
+  @@index([decididoPorId])
+  @@map("solicitacoes_acesso")
+}
+
+/// Lote de importação de matrículas, mantido para consulta posterior.
+model ImportacaoMatriculas {
+  id          String   @id @db.VarChar(64)
+  arquivo     String   @db.VarChar(255)
+  importadoEm DateTime @default(now())
+  validas     Int      @default(0)
+  rejeitadas  Int      @default(0)
+  ignoradas   Int      @default(0)
+
+  itens ItemImportacaoMatricula[]
+
+  @@index([importadoEm])
+  @@map("importacoes_matriculas")
+}
+
+/// Resultado individual de uma linha do lote de importação.
+model ItemImportacaoMatricula {
+  id           String   @id @db.VarChar(64)
+  importacaoId String   @db.VarChar(64)
+  matricula    String   @db.VarChar(20)
+  nome         String   @db.VarChar(191)
+  curso        String   @db.VarChar(191)
+  /// "valida" | "rejeitada" | "ignorada".
+  resultado    String   @db.VarChar(20)
+  motivo       String?  @db.Text
+  criadoEm     DateTime @default(now())
+
+  importacao ImportacaoMatriculas @relation(fields: [importacaoId], references: [id], onDelete: Cascade)
+
+  @@index([importacaoId, resultado])
+  @@index([matricula])
+  @@map("itens_importacao_matricula")
+}
+
+/// Instituição concedente de estágio; referência protegida por convênios.
+model InstituicaoConcedente {
+  id           String   @id @db.VarChar(64)
+  nome         String   @db.VarChar(191)
+  cnpj         String   @unique @db.VarChar(18)
+  campus       String   @default("Pinheiral") @db.VarChar(50)
+  situacao     String   @default("ativo") @db.VarChar(20)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  responsaveis ResponsavelInstituicao[]
+  convenios    Convenio[]
+
+  @@index([situacao])
+  @@map("instituicoes_concedentes")
+}
+
+/// Contato da instituição concedente, sem credencial de acesso ao sistema.
+model ResponsavelInstituicao {
+  id            String   @id @db.VarChar(64)
+  instituicaoId String   @db.VarChar(64)
+  nome          String   @db.VarChar(191)
+  email         String   @db.VarChar(191)
+  telefone      String   @db.VarChar(20)
+  cargo         String?  @db.VarChar(80)
+  situacao      String   @default("ativo") @db.VarChar(20)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  instituicao InstituicaoConcedente @relation(fields: [instituicaoId], references: [id], onDelete: Restrict)
+
+  @@unique([instituicaoId, email])
+  @@index([instituicaoId, situacao])
+  @@map("responsaveis_instituicao")
+}
+
+/// Convênio de estágio vinculado a uma instituição concedente.
+model Convenio {
+  id             String   @id @db.VarChar(64)
+  instituicaoId  String   @db.VarChar(64)
+  nome           String   @db.VarChar(191)
+  inicioVigencia DateTime @db.Date
+  fimVigencia    DateTime @db.Date
+  campus         String   @default("Pinheiral") @db.VarChar(50)
+  situacao       String   @default("ativo") @db.VarChar(20)
+  renovacoes     Int      @default(0)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  instituicao         InstituicaoConcedente @relation(fields: [instituicaoId], references: [id], onDelete: Restrict)
+  historicoRenovacoes RenovacaoConvenio[]
+  estagios            Estagio[]
+
+  @@index([instituicaoId, situacao])
+  @@index([fimVigencia])
+  @@map("convenios")
+}
+
+/// Histórico de renovações de um convênio.
+model RenovacaoConvenio {
+  id             String   @id @db.VarChar(64)
+  convenioId     String   @db.VarChar(64)
+  inicioVigencia DateTime @db.Date
+  fimVigencia    DateTime @db.Date
+  criadoEm       DateTime @default(now())
+
+  convenio Convenio @relation(fields: [convenioId], references: [id], onDelete: Restrict)
+
+  @@unique([convenioId, inicioVigencia])
+  @@index([convenioId, criadoEm])
+  @@map("renovacoes_convenio")
+}
+
+/// Pessoa externa que atua como orientador ou supervisor, sem identidade de login.
+model Pessoa {
+  id           String   @id @db.VarChar(64)
+  nome         String   @db.VarChar(191)
+  email        String   @db.VarChar(191)
+  telefone     String   @db.VarChar(20)
+  /// "orientador" | "supervisor".
+  papel        String   @db.VarChar(20)
+  situacao     String   @default("ativo") @db.VarChar(20)
+  cpf          String?  @db.VarChar(14)
+  rg           String?  @db.VarChar(20)
+  endereco     Json?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  estagiosComoSupervisor Estagio[] @relation("EstagioSupervisor")
+  estagiosComoOrientador Estagio[] @relation("EstagioOrientador")
+
+  @@index([papel, situacao])
+  @@index([email])
+  @@map("pessoas")
+}
+
+/// Estágio mantido no fluxo, com atores e marcos do processo.
+model Estagio {
+  id                          String    @id @db.VarChar(64)
+  alunoId                     String    @db.VarChar(64)
+  convenioId                  String    @db.VarChar(64)
+  supervisorId                String    @db.VarChar(64)
+  orientadorId                String    @db.VarChar(64)
+  dataInicio                  DateTime  @db.Date
+  dataFim                     DateTime  @db.Date
+  situacao                    String    @default("em_preparacao") @db.VarChar(20)
+  cargaHorariaPrevistaMinutos Int?
+  encaminhadoEm               DateTime?
+  encaminhadoPorId            String?   @db.VarChar(64)
+  liberadoEm                  DateTime?
+  liberadoPorId               String?   @db.VarChar(64)
+  canceladoEm                 DateTime?
+  excluidoEm                  DateTime?
+  /// Identificação mínima preservada no histórico, inclusive após exclusão.
+  nomeAlunoHistorico          String?   @db.VarChar(191)
+  cursoIdHistorico            String?   @db.VarChar(64)
+  editadoPorId                String?   @db.VarChar(64)
+  editadoEm                   DateTime?
+  criadoEm                    DateTime  @default(now())
+  atualizadoEm                DateTime  @updatedAt
+
+  aluno          Usuario  @relation("EstagioAluno", fields: [alunoId], references: [id], onDelete: Restrict)
+  convenio       Convenio @relation(fields: [convenioId], references: [id], onDelete: Restrict)
+  supervisor     Pessoa   @relation("EstagioSupervisor", fields: [supervisorId], references: [id], onDelete: Restrict)
+  orientador     Pessoa   @relation("EstagioOrientador", fields: [orientadorId], references: [id], onDelete: Restrict)
+  encaminhadoPor Usuario? @relation("EstagioEncaminhadoPor", fields: [encaminhadoPorId], references: [id], onDelete: Restrict)
+  liberadoPor    Usuario? @relation("EstagioLiberadoPor", fields: [liberadoPorId], references: [id], onDelete: Restrict)
+  editadoPor     Usuario? @relation("EstagioEditadoPor", fields: [editadoPorId], references: [id], onDelete: Restrict)
+
+  templates            EstagioTemplate[]
+  documentos           DocumentoPreenchido[]
+  lancamentos          LancamentoHoras[]
+  submissoes           SubmissaoDocumento[]
+  solicitacoesExclusao SolicitacaoExclusaoEstagio[]
+
+  @@index([alunoId, situacao, dataInicio])
+  @@index([situacao, dataInicio])
+  @@index([convenioId])
+  @@index([supervisorId])
+  @@index([orientadorId])
+  @@map("estagios")
+}
+
+/// Seleção de documentos do catálogo fixo para um estágio.
+model EstagioTemplate {
+  estagioId  String   @db.VarChar(64)
+  templateId String   @db.VarChar(100)
+  criadoEm   DateTime @default(now())
+
+  estagio Estagio @relation(fields: [estagioId], references: [id], onDelete: Cascade)
+
+  @@id([estagioId, templateId])
+  @@index([templateId])
+  @@map("estagios_templates")
+}
+
+/// Preenchimento de uma definição fixa do Kit de Estágio.
+model DocumentoPreenchido {
+  id                          String    @id @db.VarChar(64)
+  templateId                  String    @db.VarChar(100)
+  alunoId                     String    @db.VarChar(64)
+  estagioId                   String?   @db.VarChar(64)
+  versaoTemplate              Int
+  definicaoChecksum           String    @db.VarChar(64)
+  /// Snapshot do descritor usado no preenchimento.
+  definicaoSnapshot           Json
+  valores                     Json
+  situacao                    String    @default("rascunho") @db.VarChar(20)
+  criadoEm                    DateTime  @default(now())
+  atualizadoEm                DateTime  @updatedAt
+  inativadoEm                 DateTime?
+  registradoPorId             String?   @db.VarChar(64)
+  registradoEm                DateTime?
+  assinaturasConfirmadasPorId String?   @db.VarChar(64)
+  assinaturasConfirmadasEm    DateTime?
+  correcaoAberta              Boolean   @default(false)
+
+  aluno                     Usuario  @relation("DocumentoAluno", fields: [alunoId], references: [id], onDelete: Restrict)
+  estagio                   Estagio? @relation(fields: [estagioId], references: [id], onDelete: Restrict)
+  registradoPor             Usuario? @relation("DocumentoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: Restrict)
+  assinaturasConfirmadasPor Usuario? @relation("DocumentoAssinaturasConfirmadasPor", fields: [assinaturasConfirmadasPorId], references: [id], onDelete: Restrict)
+
+  arquivos       Arquivo[]
+  submissoes     SubmissaoDocumento[]
+  pareceres      Parecer[]
+  observacoes    ObservacaoDocumento[]
+  pedidosEnvio   PedidoEnvioDocumento[]
+  enviosExternos EnvioExterno[]
+
+  @@index([estagioId, situacao])
+  @@index([alunoId, situacao])
+  @@index([templateId, situacao])
+  @@index([situacao, criadoEm])
+  @@map("documentos_preenchidos")
+}
+
+/// Arquivo binário privado, com metadados separados do conteúdo.
+model Arquivo {
+  id           String   @id @db.VarChar(64)
+  documentoId  String?  @db.VarChar(64)
+  nome         String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(100)
+  tamanhoBytes Int
+  checksum     String   @db.VarChar(64)
+  conteudo     Bytes
+  autorId      String   @db.VarChar(64)
+  criadoEm     DateTime @default(now())
+
+  documento DocumentoPreenchido? @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  autor     Usuario              @relation(fields: [autorId], references: [id], onDelete: Restrict)
+
+  @@index([documentoId])
+  @@index([autorId])
+  @@index([checksum])
+  @@map("arquivos")
+}
+
+/// Lançamento imutável de horas; correções referenciam o original.
+model LancamentoHoras {
+  id                String   @id @db.VarChar(64)
+  estagioId         String   @db.VarChar(64)
+  alunoId           String   @db.VarChar(64)
+  data              DateTime @db.Date
+  entrada           String   @db.VarChar(5)
+  saida             String   @db.VarChar(5)
+  almocoDesligado   Boolean  @default(false)
+  minutos           Int
+  tipo              String   @default("lancamento") @db.VarChar(20)
+  corrigeId         String?  @db.VarChar(64)
+  sequenciaCorrecao Int      @default(0)
+  criadoEm          DateTime @default(now())
+
+  estagio   Estagio           @relation(fields: [estagioId], references: [id], onDelete: Restrict)
+  aluno     Usuario           @relation(fields: [alunoId], references: [id], onDelete: Restrict)
+  corrige   LancamentoHoras?  @relation("CorrecaoLancamento", fields: [corrigeId], references: [id], onDelete: Restrict)
+  correcoes LancamentoHoras[] @relation("CorrecaoLancamento")
+
+  @@unique([corrigeId, sequenciaCorrecao])
+  @@index([estagioId, data, criadoEm])
+  @@index([alunoId, data])
+  @@map("lancamentos_horas")
+}
+
+/// Registro de cada submissão de um documento para análise.
+model SubmissaoDocumento {
+  id          String   @id @db.VarChar(64)
+  documentoId String   @db.VarChar(64)
+  versao      Int
+  autorId     String   @db.VarChar(64)
+  submetidoEm DateTime @default(now())
+  observacao  String?  @db.Text
+
+  documento DocumentoPreenchido @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  autor     Usuario             @relation(fields: [autorId], references: [id], onDelete: Restrict)
+  estagio   Estagio?            @relation(fields: [estagioId], references: [id])
+  estagioId String?             @db.VarChar(64)
+
+  @@unique([documentoId, versao])
+  @@index([documentoId, submetidoEm])
+  @@index([autorId])
+  @@map("submissoes_documento")
+}
+
+/// Decisão de uma fila de análise sobre um documento.
+model Parecer {
+  id            String   @id @db.VarChar(64)
+  documentoId   String   @db.VarChar(64)
+  decisao       String   @db.VarChar(20)
+  consideracoes String?  @db.Text
+  autorId       String   @db.VarChar(64)
+  fila          String   @db.VarChar(30)
+  data          DateTime @default(now())
+
+  documento DocumentoPreenchido @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  autor     Usuario             @relation(fields: [autorId], references: [id], onDelete: Restrict)
+
+  @@index([documentoId, data])
+  @@index([fila, data])
+  @@index([autorId])
+  @@map("pareceres")
+}
+
+/// Observação isolada sobre um documento, sem alterar sua situação.
+model ObservacaoDocumento {
+  id          String   @id @db.VarChar(64)
+  documentoId String   @db.VarChar(64)
+  conteudo    String   @db.Text
+  autorId     String   @db.VarChar(64)
+  data        DateTime @default(now())
+
+  documento DocumentoPreenchido @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  autor     Usuario             @relation(fields: [autorId], references: [id], onDelete: Restrict)
+
+  @@index([documentoId, data])
+  @@index([autorId])
+  @@map("observacoes_documento")
+}
+
+/// Pedido de exclusão de estágio, com solicitante e decisor.
+model SolicitacaoExclusaoEstagio {
+  id            String    @id @db.VarChar(64)
+  estagioId     String    @db.VarChar(64)
+  solicitanteId String    @db.VarChar(64)
+  situacao      String    @default("pendente") @db.VarChar(20)
+  motivo        String?   @db.Text
+  criadoEm      DateTime  @default(now())
+  decididoEm    DateTime?
+  decididoPorId String?   @db.VarChar(64)
+
+  estagio     Estagio  @relation(fields: [estagioId], references: [id], onDelete: Restrict)
+  solicitante Usuario  @relation("SolicitanteExclusaoEstagio", fields: [solicitanteId], references: [id], onDelete: Restrict)
+  decididoPor Usuario? @relation("DecisorExclusaoEstagio", fields: [decididoPorId], references: [id], onDelete: SetNull)
+
+  @@index([estagioId, situacao])
+  @@index([situacao, criadoEm])
+  @@index([decididoPorId])
+  @@map("solicitacoes_exclusao_estagio")
+}
+
+/// Intenção de envio documental, separada das tentativas de transporte.
+model PedidoEnvioDocumento {
+  id           String   @id @db.VarChar(64)
+  documentoId  String   @db.VarChar(64)
+  pedidoPorId  String   @db.VarChar(64)
+  situacao     String   @default("pendente") @db.VarChar(20)
+  motivo       String?  @db.Text
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  documento DocumentoPreenchido @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  pedidoPor Usuario             @relation(fields: [pedidoPorId], references: [id], onDelete: Restrict)
+  envios    EnvioExterno[]
+
+  @@index([documentoId, situacao])
+  @@index([situacao, criadoEm])
+  @@index([pedidoPorId])
+  @@map("pedidos_envio_documento")
+}
+
+/// Tentativa de envio externo de um documento.
+model EnvioExterno {
+  id                String    @id @db.VarChar(64)
+  documentoId       String    @db.VarChar(64)
+  pedidoId          String?   @db.VarChar(64)
+  destinatario      String    @db.VarChar(191)
+  destinatarioEmail String    @db.VarChar(191)
+  destinatarioPapel String?   @db.VarChar(50)
+  autorId           String    @db.VarChar(64)
+  status            String    @default("pendente") @db.VarChar(20)
+  erro              String?   @db.Text
+  tentativa         Int
+  criadoEm          DateTime  @default(now())
+  enviadoEm         DateTime?
+
+  documento DocumentoPreenchido   @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  pedido    PedidoEnvioDocumento? @relation(fields: [pedidoId], references: [id], onDelete: SetNull)
+  autor     Usuario               @relation(fields: [autorId], references: [id], onDelete: Restrict)
+
+  @@unique([pedidoId, tentativa])
+  @@index([documentoId, criadoEm])
+  @@index([status, criadoEm])
+  @@map("envios_externos")
 }

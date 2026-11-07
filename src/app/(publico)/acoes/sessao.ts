@@ -1,17 +1,20 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { APIError } from "better-auth/api";
 
 import { gravarSessao, encerrarSessao, rotaInicial } from "@/lib/auth/sessao-servidor";
 import { entrar } from "@/lib/services/sessao";
 import { usuarioPorEmail, usuarioPorId } from "@/lib/services/administracao";
 import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 import type { Usuario } from "@/lib/domain/types";
+import { bancoConfigurado } from "@/lib/db/prisma";
+import { entrarComSenha } from "@/lib/auth/sessao-persistente";
 
 /**
- * Server Actions da sessão simulada (D3). O cookie é gravado no servidor para
- * que o layout de servidor e a tela leiam o mesmo estado; o Better Auth vai
- * substituir estas ações.
+ * Com banco, as ações delegam a senha/cookies ao Better Auth. A simulação
+ * permanece um caminho separado, sem ser usada como recuperação de falhas.
  */
 
 export interface EstadoLogin {
@@ -23,26 +26,37 @@ export async function entrarAction(email: string, senha: string): Promise<Estado
   let usuario: Usuario | null;
 
   try {
-    const resultado = await entrar(email, senha);
+    if (bancoConfigurado()) {
+      usuario = await entrarComSenha(email, senha, await headers());
+    } else {
+      const resultado = await entrar(email, senha);
 
-    if (!resultado.ok) return { ok: false, erro: resultado.erro };
+      if (!resultado.ok) return { ok: false, erro: resultado.erro };
 
-    // O usuário vem do estado pelo e-mail, e não da conta de desenvolvimento: a
-    // senha pode ter sido redefinida (5.8) ou o cadastro pode ter vindo do
-    // cadastro público, e o login continua valendo.
-    usuario = await usuarioPorEmail(email);
+      // O usuário vem do estado pelo e-mail, e não da conta de desenvolvimento: a
+      // senha pode ter sido redefinida (5.8) ou o cadastro pode ter vindo do
+      // cadastro público, e o login continua valendo.
+      usuario = await usuarioPorEmail(email);
+    }
   } catch (erro) {
+    if (erro instanceof APIError && erro.body?.code === "CONTA_PENDENTE") {
+      return { ok: false, erro: "Cadastro pendente de autorização." };
+    }
+    if (erro instanceof APIError && erro.statusCode === 401) {
+      return { ok: false, erro: "E-mail ou senha inválidos." };
+    }
     return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
   }
 
   if (!usuario) return { ok: false, erro: "E-mail ou senha inválidos." };
 
-  await gravarSessao(usuario.id);
+  if (!bancoConfigurado()) await gravarSessao(usuario.id);
   redirect(rotaInicial(usuario));
 }
 
 /** Troca a sessão para outra conta, para demonstrar as quatro áreas. */
 export async function trocarSessaoAction(usuarioId: string, destino: string): Promise<void> {
+  if (bancoConfigurado()) redirect("/login");
   let usuario: Usuario | null;
 
   try {

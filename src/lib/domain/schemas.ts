@@ -13,6 +13,14 @@ export const SOMENTE_DIGITOS = /^\d+$/;
 /** Matrícula do SIGAA: onze dígitos, usada no cadastro e no lançamento manual. */
 export const MATRICULA_SIGAA = /^\d{11}$/;
 
+/** Cargo único: listas, valores ausentes e cargos desconhecidos são inválidos. */
+export const esquemaPapel = z.enum([
+  "aluno",
+  "coordenador_curso",
+  "coordenador_estagio",
+  "administrador",
+]);
+
 /** Remove a máscara antes de validar. */
 export function aoValidar(formato?: "cpf" | "data" | "numero") {
   return (valor: string) => {

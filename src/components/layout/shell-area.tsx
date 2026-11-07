@@ -75,7 +75,7 @@ export async function ShellArea({
               contas={contasDeDesenvolvimento().map((conta) => ({
                 id: conta.id,
                 nome: conta.rotulo,
-                papeis: conta.papeis,
+                papel: conta.papel,
               }))}
               usuarioAtual={usuario}
             />

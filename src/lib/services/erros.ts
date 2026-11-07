@@ -1,19 +1,12 @@
 import { BancoIndisponivelError } from "@/lib/db/erros";
+import { ErroDeRegra } from "@/lib/domain/erros";
+
+export { ErroDeRegra } from "@/lib/domain/erros";
 
 /**
  * Erros de regra de negócio. A interface web exibe `mensagem` no formulário e o
  * backend vai mapear `codigo` para o código HTTP correspondente.
  */
-
-export class ErroDeRegra extends Error {
-  constructor(
-    message: string,
-    readonly codigo: string,
-  ) {
-    super(message);
-    this.name = "ErroDeRegra";
-  }
-}
 
 /**
  * Mensagem segura para Server Actions. Erros de regra continuam mostrando o

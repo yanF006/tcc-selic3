@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 export default async function RedefinirSenhaPage({ searchParams }: PageProps<"/redefinir-senha">) {
   const parametros = await searchParams;
   const token = typeof parametros.token === "string" ? parametros.token : "";
+  const invalido = typeof parametros.error === "string";
 
   return (
     <main className="flex min-h-full flex-col items-center justify-center gap-6 px-4 py-10">
@@ -36,15 +37,21 @@ export default async function RedefinirSenhaPage({ searchParams }: PageProps<"/r
         </p>
       </div>
 
-      {token ? (
+      {token && !invalido ? (
         <FormularioRedefinicao token={token} />
       ) : (
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>
-              <h1 className="text-base font-semibold">Link incompleto</h1>
+              <h1 className="text-base font-semibold">
+                {invalido ? "Link inválido" : "Link incompleto"}
+              </h1>
             </CardTitle>
-            <CardDescription>O endereço não traz o código do link de redefinição.</CardDescription>
+            <CardDescription>
+              {invalido
+                ? "Este link é inválido, expirou ou já foi utilizado."
+                : "O endereço não traz o código do link de redefinição."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-muted-foreground flex items-start gap-2 text-sm">

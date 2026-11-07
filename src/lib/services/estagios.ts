@@ -88,18 +88,18 @@ export async function estagioPorId(id: string): Promise<Estagio | null> {
 
 export function podeConsultarEstagio(usuario: Usuario, estagio: Estagio): boolean {
   if (usuario.situacao !== "ativo") return false;
-  if (usuario.papeis.includes("administrador") || usuario.papeis.includes("coordenador_estagio")) {
+  if (usuario.papel === "administrador" || usuario.papel === "coordenador_estagio") {
     return (
       usuario.campus ===
       obterEstado().usuarios.find((aluno) => aluno.id === estagio.alunoId)?.campus
     );
   }
-  if (usuario.papeis.includes("coordenador_curso") && usuario.cursoId) {
+  if (usuario.papel === "coordenador_curso" && usuario.cursoId) {
     const aluno = obterEstado().usuarios.find((registro) => registro.id === estagio.alunoId);
     const cursoId = estagio.excluidoEm ? estagio.cursoIdHistorico : aluno && cursoDoUsuario(aluno);
     if (cursoId === usuario.cursoId) return true;
   }
-  return usuario.papeis.includes("aluno") && estagio.alunoId === usuario.id;
+  return usuario.papel === "aluno" && estagio.alunoId === usuario.id;
 }
 
 export async function exigirAcessoEstagio(usuario: Usuario, estagioId: string): Promise<Estagio> {
@@ -143,7 +143,7 @@ export function lancamentosDoEstagio(estagioId: string): LancamentoHoras[] {
  * convênio vigente, supervisor ativo e não sobreposição de períodos.
  */
 export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<Estagio> {
-  if (aluno.situacao !== "ativo" || !aluno.papeis.includes("aluno")) {
+  if (aluno.situacao !== "ativo" || aluno.papel !== "aluno") {
     throw new ErroDeRegra("Apenas alunos cadastram estágios.", "papel_invalido");
   }
   if (dados.situacao !== undefined && dados.situacao !== "em_preparacao") {
@@ -452,9 +452,7 @@ function exigirCoordenacao(estagio: Estagio, editorId?: string) {
   const editor = obterEstado().usuarios.find((usuario) => usuario.id === editorId);
   if (
     !editor ||
-    !editor.papeis.some(
-      (papel) => papel === "coordenador_curso" || papel === "coordenador_estagio",
-    ) ||
+    !(editor.papel === "coordenador_curso" || editor.papel === "coordenador_estagio") ||
     !podeConsultarEstagio(editor, estagio)
   ) {
     throw new ErroDeRegra("A alteração da situação cabe à coordenação.", "acesso_negado");

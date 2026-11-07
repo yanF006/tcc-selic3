@@ -30,7 +30,7 @@ import {
 } from "@/app/(aluno)/estagio/acoes";
 
 export interface DadosPainelFluxo {
-  papeis: Papel[];
+  papel: Papel;
   autorId: string;
   observacoes: ObservacaoDocumento[];
   pareceres: Parecer[];
@@ -61,8 +61,8 @@ export function PainelFluxo({
   const formulario = iniciais.find((doc) => doc.templateId === DOCUMENTOS_INICIAIS[0]);
   const encerrado = estagioEncerrado(estagio);
   const titular = dados.autorId === estagio.alunoId;
-  const coordCurso = dados.papeis.includes("coordenador_curso");
-  const coordEstagio = dados.papeis.includes("coordenador_estagio");
+  const coordCurso = dados.papel === "coordenador_curso";
+  const coordEstagio = dados.papel === "coordenador_estagio";
   const emPreparacao = estagio.situacao === "em_preparacao" && !encerrado;
   const descricao = encerrado
     ? "Registro encerrado e preservado para histórico."

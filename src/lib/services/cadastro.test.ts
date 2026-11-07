@@ -118,9 +118,29 @@ describe("cadastro público", () => {
 
     const usuario = await usuarioPorId(conclusao.ok ? conclusao.usuarioId : "");
 
-    expect(usuario?.papeis).toEqual(["aluno"]);
+    expect(usuario?.papel).toBe("aluno");
     expect(usuario?.matricula).toBe("20231000788");
     expect(usuario?.dadosPessoais?.turmaId).toBe("turma-ads-2026-1a");
+  });
+
+  it("ignora cargo e comissão enviados pelo cliente no cadastro público", async () => {
+    const primeira = await validarEtapaUm({
+      matricula: "20231000788",
+      email: "cargo.adulterado@teste.local",
+      senha,
+      confirmacao: senha,
+    });
+    const adulterado = {
+      ...etapaDois,
+      papel: "administrador",
+      papeis: ["administrador", "coordenador_estagio"],
+      membroComissaoEstagio: true,
+    };
+    const conclusao = await concluirCadastro(primeira.ok ? primeira.previa.id : "", adulterado);
+    expect(conclusao.ok).toBe(true);
+    const usuario = await usuarioPorId(conclusao.ok ? conclusao.usuarioId : "");
+    expect(usuario?.papel).toBe("aluno");
+    expect(usuario?.membroComissaoEstagio).toBe(false);
   });
 
   it("mantém cadastro pendente e cria a solicitação quando a matrícula não consta", async () => {

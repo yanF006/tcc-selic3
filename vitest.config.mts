@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // O Next resolve este marcador no build; no Vitest ele é um módulo vazio.
+      "server-only": fileURLToPath(new URL("./tests/support/server-only.ts", import.meta.url)),
     },
   },
   test: {

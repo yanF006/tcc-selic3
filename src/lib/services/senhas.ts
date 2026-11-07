@@ -3,6 +3,12 @@ import { agora } from "./store";
 import { usuarioPorEmail } from "./administracao";
 import { esquemaSenha } from "@/lib/domain/schemas";
 import type { Usuario } from "@/lib/domain/types";
+import { headers } from "next/headers";
+import { APIError } from "better-auth/api";
+import { bancoConfigurado } from "@/lib/db/prisma";
+import { obterAutenticacao } from "@/lib/auth/autenticacao";
+import { carregarConfiguracaoAutenticacao } from "@/lib/auth/configuracao";
+import { traduzirErroPersistencia } from "@/lib/db/erros";
 
 /**
  * Senha do usuário (5.8 e 5.9): pedido de redefinição com link de uso único e
@@ -17,8 +23,8 @@ import type { Usuario } from "@/lib/domain/types";
  * - link inválido, expirado e já usado recebem a mesma mensagem;
  * - a troca autenticada só grava quando a senha atual confere, então uma senha
  *   atual errada mantém a anterior;
- * - nada é gravado fora do processo do servidor (D4): a troca de senha depois
- *   desta etapa é o que o backend vai persistir.
+ * - com banco, todas as operações usam os métodos padrão do Better Auth;
+ *   mapas e credenciais locais pertencem exclusivamente à simulação.
  */
 
 /** Validade do link de redefinição, em minutos. */
@@ -26,7 +32,7 @@ export const VALIDADE_LINK_MINUTOS = 60;
 
 /** Confirmação do pedido, igual para e-mail cadastrado e para e-mail inexistente. */
 export const CONFIRMACAO_REDEFINICAO =
-  "Se houver um cadastro com este e-mail, enviamos um link para definir uma nova senha. Confira também a caixa de spam.";
+  "Se houver um cadastro com este e-mail, você receberá um link para definir uma nova senha. Confira também a caixa de spam.";
 
 export const LINK_INVALIDO =
   "Este link é inválido, expirou ou já foi utilizado. Solicite uma nova redefinição de senha.";
@@ -43,11 +49,10 @@ interface LinkRedefinicao {
 export interface PedidoRedefinicao {
   confirmacao: string;
   /**
-   * Link de uso único entregue no e-mail. Sem servidor de e-mail nesta entrega,
-   * a tela de confirmação o exibe para que o fluxo seja demonstrável de ponta a
-   * ponta; com Nodemailer, este campo continua existindo e sai da interface.
+   * Presente somente na demonstração sem banco. O modo persistente nunca
+   * devolve o link ou o token na resposta pública.
    */
-  link: string;
+  link?: string;
   enviadoEm: string;
 }
 
@@ -72,8 +77,20 @@ function novoToken(): string {
  * diferencia o e-mail cadastrado do e-mail que não existe, como faria o
  * Nodemailer.
  */
-export async function solicitarRedefinicao(email: string): Promise<PedidoRedefinicao> {
+export async function solicitarRedefinicao(
+  email: string,
+  cabecalhos?: Headers,
+): Promise<PedidoRedefinicao> {
   const alvo = email.trim().toLowerCase();
+  if (bancoConfigurado()) {
+    const auth = await obterAutenticacao();
+    const configuracao = carregarConfiguracaoAutenticacao();
+    await auth.api.requestPasswordReset({
+      body: { email: alvo, redirectTo: `${configuracao.origem}/redefinir-senha` },
+      headers: cabecalhos ?? (await headers()),
+    });
+    return { confirmacao: CONFIRMACAO_REDEFINICAO, enviadoEm: agora() };
+  }
   const token = novoToken();
   const enviadoEm = agora();
 
@@ -127,10 +144,27 @@ export async function redefinirSenhaComLink(
   token: string,
   senha: string,
   confirmacao: string,
+  cabecalhos?: Headers,
 ): Promise<ResultadoSenha> {
   const problema = conferirNovaSenha(senha, confirmacao);
 
   if (problema) return problema;
+
+  if (bancoConfigurado()) {
+    try {
+      const auth = await obterAutenticacao();
+      await auth.api.resetPassword({
+        body: { token: token.trim(), newPassword: senha },
+        headers: cabecalhos ?? (await headers()),
+      });
+      return { ok: true, mensagem: "Senha redefinida. Entre com a nova senha." };
+    } catch (erro) {
+      if (erro instanceof APIError && erro.body?.code === "INVALID_TOKEN") {
+        return { ok: false, campo: "link", erro: LINK_INVALIDO };
+      }
+      throw traduzirErroPersistencia(erro);
+    }
+  }
 
   const link = links.get(token.trim());
 
@@ -155,6 +189,8 @@ export async function redefinirSenhaComLink(
 
 /** true quando o link existe, não foi usado e não venceu. */
 export function linkValido(token: string): boolean {
+  if (bancoConfigurado())
+    throw new Error("Tokens persistentes são validados somente pelo provedor.");
   const link = links.get(token.trim());
 
   return Boolean(link && link.usadoEm === null && link.expiraEm > Date.now());
@@ -169,10 +205,35 @@ export async function trocarSenha(
   senhaAtual: string,
   senha: string,
   confirmacao: string,
+  cabecalhos?: Headers,
 ): Promise<ResultadoTrocaSenha> {
   const problema = conferirNovaSenha(senha, confirmacao);
 
   if (problema) return problema;
+
+  if (bancoConfigurado()) {
+    try {
+      const auth = await obterAutenticacao();
+      const atuais = cabecalhos ?? (await headers());
+      const sessao = await auth.api.getSession({
+        headers: atuais,
+        query: { disableCookieCache: true, disableRefresh: true },
+      });
+      if (!sessao || sessao.user.id !== usuario.id) {
+        return { ok: false, campo: "senhaAtual", erro: "Sessão expirada. Entre novamente." };
+      }
+      await auth.api.changePassword({
+        headers: atuais,
+        body: { currentPassword: senhaAtual, newPassword: senha, revokeOtherSessions: true },
+      });
+      return { ok: true, mensagem: "Senha alterada. Use a nova senha no próximo acesso." };
+    } catch (erro) {
+      if (erro instanceof APIError && erro.body?.code === "INVALID_PASSWORD") {
+        return { ok: false, campo: "senhaAtual", erro: "A senha atual não confere." };
+      }
+      throw traduzirErroPersistencia(erro);
+    }
+  }
 
   if (!(await conferirSenha(usuario.email, senhaAtual))) {
     return { ok: false, campo: "senhaAtual", erro: "A senha atual não confere." };

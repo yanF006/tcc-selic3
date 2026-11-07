@@ -302,11 +302,7 @@ export function TabelaUsuarios({
                 <TableCell className="font-medium">{usuario.nome}</TableCell>
                 <TableCell>{usuario.email}</TableCell>
                 <TableCell className="flex flex-wrap gap-1">
-                  {usuario.papeis.map((papelUsuario) => (
-                    <Badge key={papelUsuario} variant="outline">
-                      {rotuloPapel(papelUsuario)}
-                    </Badge>
-                  ))}
+                  <Badge variant="outline">{rotuloPapel(usuario.papel)}</Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={varianteSituacaoUsuario(usuario.situacao)}>
@@ -459,7 +455,7 @@ function FormularioUsuario({
   const [nome, setNome] = React.useState(usuario?.nome ?? "");
   const [email, setEmail] = React.useState(usuario?.email ?? "");
   const [matricula, setMatricula] = React.useState(usuario?.matricula ?? "");
-  const [papel, setPapel] = React.useState<Papel | "">(usuario?.papeis[0] ?? "");
+  const [papel, setPapel] = React.useState<Papel | "">(usuario?.papel ?? "");
   const [cursoId, setCursoId] = React.useState(usuario?.cursoId ?? "");
   const [erro, setErro] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
@@ -486,7 +482,7 @@ function FormularioUsuario({
       nome,
       email,
       matricula: matricula || undefined,
-      papeis: [papel] as Papel[],
+      papel: papel as Papel,
       cursoId: papel === "coordenador_curso" ? cursoId || undefined : undefined,
     };
 

@@ -13,7 +13,7 @@ import type { DadosPessoais, Endereco, SituacaoUsuario, Usuario } from "@/lib/do
 
 import { agora, obterEstado, novoId } from "./store";
 import { definirSenha } from "./credenciais";
-import { garantirHidratacao, gravarUsuario } from "@/lib/db/persistencia";
+import { criarUsuario, garantirHidratacao } from "@/lib/db/persistencia";
 
 /**
  * Cadastro público do aluno em duas etapas (5.2 a 5.7).
@@ -253,7 +253,7 @@ export async function concluirCadastro(
     id: novoId("usr"),
     nome: previa.nome || dados.nomeCompleto.trim(),
     email: previa.email,
-    papeis: ["aluno"],
+    papel: "aluno",
     situacao,
     campus: "Pinheiral",
     matricula: previa.matricula,
@@ -262,7 +262,7 @@ export async function concluirCadastro(
     criadoEm: agora(),
   };
 
-  await gravarUsuario(usuario);
+  await criarUsuario(usuario);
   estado.usuarios.push(usuario);
 
   // A senha escolhida na primeira etapa vira credencial: sem isso o cadastro

@@ -4,7 +4,7 @@ import type { DadosPessoais, Usuario } from "@/lib/domain/types";
 import { opcoesSelecao } from "./catalogo";
 import { moverCredencial } from "./credenciais";
 import { obterEstado } from "./store";
-import { garantirHidratacao, gravarUsuario } from "@/lib/db/persistencia";
+import { atualizarUsuario, garantirHidratacao } from "@/lib/db/persistencia";
 
 /**
  * Dados pessoais do aluno (6.6 e 6.7): leitura e edição do próprio cadastro.
@@ -38,9 +38,9 @@ export async function dadosDoAluno(usuario: Usuario): Promise<DadosPessoais | nu
 
 /** Erros por campo, no formato que o formulário usa para marcar cada input. */
 function errosPorCampo(
-  erros: { path: (string | number)[]; message: string }[],
+  erros: readonly { path: readonly PropertyKey[]; message: string }[],
 ): Record<string, string> {
-  return Object.fromEntries(erros.map((erro) => [erro.path.join("."), erro.message]));
+  return Object.fromEntries(erros.map((erro) => [erro.path.map(String).join("."), erro.message]));
 }
 
 /**
@@ -110,7 +110,7 @@ export async function atualizarDadosPessoais(
     registro.nome = validado.data.nomeCompleto;
     registro.email = validado.data.email;
     registro.dadosPessoais = validado.data;
-    await gravarUsuario(registro);
+    await atualizarUsuario(registro);
   } catch (erro) {
     Object.assign(registro, anterior);
 

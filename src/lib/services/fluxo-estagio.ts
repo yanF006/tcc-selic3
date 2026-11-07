@@ -96,9 +96,7 @@ export async function enviarParaAssinaturas(
     throw new ErroDeRegra("Estágio cancelado ou excluído.", "estagio_encerrado");
   if (
     autor.id !== documento.alunoId &&
-    !autor.papeis.some((papel) =>
-      ["coordenador_curso", "coordenador_estagio", "administrador"].includes(papel),
-    )
+    !["coordenador_curso", "coordenador_estagio", "administrador"].includes(autor.papel)
   ) {
     throw new ErroDeRegra("Envio não permitido para este usuário.", "acesso_negado");
   }
@@ -134,7 +132,7 @@ export async function enviarParaAssinaturas(
           ? estado.usuarios.find(
               (usuario) =>
                 usuario.situacao === "ativo" &&
-                usuario.papeis.includes("coordenador_curso") &&
+                usuario.papel === "coordenador_curso" &&
                 aluno &&
                 usuario.cursoId === cursoDoUsuario(aluno),
             )
@@ -195,7 +193,7 @@ export async function confirmarAssinaturas(
   confirmacoes: { documentoId: string; confirmado: boolean; observacao?: string }[],
 ) {
   const estagio = await exigirAcessoEstagio(autor, estagioId);
-  if (!autor.papeis.includes("coordenador_estagio"))
+  if (autor.papel !== "coordenador_estagio")
     throw new ErroDeRegra("A conferência cabe ao Coordenador de Estágio.", "acesso_negado");
   if (estagioEncerrado(estagio) || estagio.situacao !== "em_preparacao")
     throw new ErroDeRegra("Solicitação não disponível para conferência.", "solicitacao_invalida");
@@ -286,7 +284,7 @@ export async function dadosDoPainelFluxo(autor: Usuario, estagioIds: string[]) {
       .map((doc) => doc.assinaturasConfirmadasPorId),
   ]);
   return {
-    papeis: autor.papeis,
+    papel: autor.papel,
     autorId: autor.id,
     observacoes,
     pareceres,

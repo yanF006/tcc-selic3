@@ -30,6 +30,7 @@ next-env.d.ts
 
 # cliente Prisma gerado (recriado por `prisma generate` / postinstall)
 /src/generated
+/tests/integracao/generated
 
 # sistema
 .DS_Store

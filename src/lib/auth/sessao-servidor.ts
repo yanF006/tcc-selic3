@@ -1,23 +1,24 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { areaDe } from "@/lib/auth/permissions";
 import type { Usuario } from "@/lib/domain/types";
 import { usuarioPorId } from "@/lib/services/administracao";
+import { bancoConfigurado } from "@/lib/db/prisma";
+import { obterAutenticacao } from "./autenticacao";
+import { consultarUsuarioAutenticado } from "./sessao-persistente";
 
 /**
- * Sessão simulada em cookie (D3). Layouts de servidor e componentes de cliente
- * leem o mesmo estado porque a sessão não vive em contexto React.
- *
- * O cookie guarda apenas o identificador do usuário: o backend vai trocar isto
- * por cookie assinada do Better Auth.
+ * Com banco, valida a sessão persistida e consulta a conta atual em cada
+ * requisição. O cookie de ID existe exclusivamente no adapter simulado.
  */
 
 export const COOKIE_SESSAO = "selic-sessao";
 
 /** Usuário da requisição atual, ou null quando não há sessão válida. */
 export async function usuarioDaRequisicao(): Promise<Usuario | null> {
+  if (bancoConfigurado()) return consultarUsuarioAutenticado(await headers());
   const usuarioId = (await cookies()).get(COOKIE_SESSAO)?.value;
 
   if (!usuarioId) return null;
@@ -40,6 +41,7 @@ export async function usuarioDaRequisicaoObrigatorio(): Promise<Usuario> {
 }
 
 export async function gravarSessao(usuarioId: string): Promise<void> {
+  if (bancoConfigurado()) throw new Error("Sessão persistente exige autenticação pelo provedor.");
   const loja = await cookies();
 
   loja.set(COOKIE_SESSAO, usuarioId, {
@@ -53,6 +55,11 @@ export async function gravarSessao(usuarioId: string): Promise<void> {
 }
 
 export async function encerrarSessao(): Promise<void> {
+  if (bancoConfigurado()) {
+    const auth = await obterAutenticacao();
+    await auth.api.signOut({ headers: await headers() });
+    return;
+  }
   (await cookies()).delete(COOKIE_SESSAO);
 }
 

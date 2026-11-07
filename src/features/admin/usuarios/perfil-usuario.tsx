@@ -90,12 +90,8 @@ export function PerfilUsuario({
               </dl>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-sm">Papéis:</span>
-                {usuario.papeis.map((papel) => (
-                  <Badge key={papel} variant="outline">
-                    {rotuloPapel(papel)}
-                  </Badge>
-                ))}
+                <span className="text-muted-foreground text-sm">Cargo:</span>
+                <Badge variant="outline">{rotuloPapel(usuario.papel)}</Badge>
               </div>
             </section>
 

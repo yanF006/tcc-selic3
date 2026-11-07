@@ -36,7 +36,7 @@ it("hidrata o banco antes de preparar o endereço do titular, mesmo para autor c
   try {
     const coordenador = obterEstado().usuarios.find((u) => u.id === "usr-ana")!;
     const doc = await criarRascunho(
-      { ...coordenador, papeis: ["administrador"] },
+      { ...coordenador, papel: "administrador" },
       "tpl-formulario-liberacao",
       "est-maria-tecnoweb",
     );

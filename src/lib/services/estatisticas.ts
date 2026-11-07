@@ -144,11 +144,10 @@ export function recorteDeEstatisticas(usuario: Usuario): RecorteEstatisticas {
     throw new ErroDeRegra("Estatísticas indisponíveis para este usuário.", "acesso_negado");
   }
 
-  const campus =
-    usuario.papeis.includes("administrador") || usuario.papeis.includes("coordenador_estagio");
+  const campus = usuario.papel === "administrador" || usuario.papel === "coordenador_estagio";
 
   if (!campus) {
-    if (usuario.papeis.includes("coordenador_curso") && usuario.cursoId) {
+    if (usuario.papel === "coordenador_curso" && usuario.cursoId) {
       const curso = obterEstado().cursos.find((registro) => registro.id === usuario.cursoId);
 
       return {

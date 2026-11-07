@@ -35,8 +35,12 @@ const adapter = new PrismaMariaDb({
   connectTimeout: 60_000,
   acquireTimeout: 60_000,
   initializationTimeout: 60_000,
-  // O certificado gerenciado do Aiven não está na cadeia local.
-  ssl: { rejectUnauthorized: false },
+  ssl: {
+    rejectUnauthorized: true,
+    ...(process.env.SELIC_DB_CA_CERT?.trim()
+      ? { ca: process.env.SELIC_DB_CA_CERT.trim().replace(/\\n/g, "\n") }
+      : {}),
+  },
 });
 
 const prisma = new PrismaClient({ adapter });
@@ -46,7 +50,7 @@ async function main() {
     const dados = {
       nome: usuario.nome,
       email: usuario.email,
-      papeis: usuario.papeis,
+      papel: usuario.papel,
       situacao: usuario.situacao,
       campus: usuario.campus,
       matricula: usuario.matricula ?? null,

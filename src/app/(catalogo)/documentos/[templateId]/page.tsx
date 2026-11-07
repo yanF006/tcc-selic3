@@ -152,11 +152,12 @@ export default async function Page({
 
   // 8.10: documentos vinculados exigem a seleção do estágio.
   if (metadados.exigeEstagio) {
-    const estagios = usuario.papeis.includes("aluno")
-      ? await estagiosDoAluno(usuario.id)
-      : (await listarEstagios({ tamanho: 100 })).itens.filter((estagio) =>
-          podeConsultarEstagio(usuario, estagio),
-        );
+    const estagios =
+      usuario.papel === "aluno"
+        ? await estagiosDoAluno(usuario.id)
+        : (await listarEstagios({ tamanho: 100 })).itens.filter((estagio) =>
+            podeConsultarEstagio(usuario, estagio),
+          );
 
     if (estagios.length === 0) {
       return (

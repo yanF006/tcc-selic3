@@ -1,6 +1,7 @@
 "use server";
 
 import { esquemaEmail } from "@/lib/domain/schemas";
+import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 import {
   redefinirSenhaComLink,
   solicitarRedefinicao,
@@ -12,7 +13,8 @@ import {
  * link são públicos; a troca autenticada fica em `app/(conta)/conta/senha/acoes.ts`,
  * porque exige a sessão do cookie.
  *
- * Nenhuma delas guarda a senha: quem grava é `services/credenciais`, em digest.
+ * Nenhuma delas guarda a senha: no modo persistente, a biblioteca controla
+ * hash, verificação e consumo do token.
  */
 
 export interface EstadoRecuperacao {
@@ -20,7 +22,7 @@ export interface EstadoRecuperacao {
   erro?: string;
   /** Mensagem genérica, idêntica para e-mail cadastrado e inexistente. */
   confirmacao?: string;
-  /** Link de uso único entregue; sem servidor de e-mail, a tela o exibe. */
+  /** Link de demonstração, disponível exclusivamente no modo sem banco. */
   link?: string;
 }
 
@@ -41,9 +43,16 @@ export async function solicitarRedefinicaoAction(email: string): Promise<EstadoR
     return { ok: false, erro: valido.error.issues[0]?.message ?? "Informe um e-mail válido." };
   }
 
-  const pedido = await solicitarRedefinicao(valido.data);
-
-  return { ok: true, confirmacao: pedido.confirmacao, link: pedido.link };
+  try {
+    const pedido = await solicitarRedefinicao(valido.data);
+    return {
+      ok: true,
+      confirmacao: pedido.confirmacao,
+      ...(pedido.link ? { link: pedido.link } : {}),
+    };
+  } catch (erro) {
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
+  }
 }
 
 export async function redefinirSenhaAction(
@@ -51,9 +60,11 @@ export async function redefinirSenhaAction(
   senha: string,
   confirmacao: string,
 ): Promise<EstadoRedefinicao> {
-  const resultado = await redefinirSenhaComLink(token, senha, confirmacao);
-
-  if (!resultado.ok) return { ok: false, erro: resultado.erro, campo: resultado.campo };
-
-  return { ok: true, mensagem: resultado.mensagem };
+  try {
+    const resultado = await redefinirSenhaComLink(token, senha, confirmacao);
+    if (!resultado.ok) return { ok: false, erro: resultado.erro, campo: resultado.campo };
+    return { ok: true, mensagem: resultado.mensagem };
+  } catch (erro) {
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
+  }
 }

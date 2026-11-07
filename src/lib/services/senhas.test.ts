@@ -23,7 +23,8 @@ const ALUNO = "joao.lima@aluno.ifrj.edu.br";
 const SENHA = "selic123";
 
 /** Token do link de redefinição, para as chamadas de serviço. */
-function tokenDoLink(link: string): string {
+function tokenDoLink(link: string | undefined): string {
+  if (!link) throw new Error("A simulação deve fornecer o link de demonstração.");
   return new URL(link, "http://localhost").searchParams.get("token") ?? "";
 }
 

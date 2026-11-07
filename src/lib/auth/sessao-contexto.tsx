@@ -13,7 +13,7 @@ import type { Papel, Usuario } from "@/lib/domain/types";
 
 export interface SessaoCliente {
   usuario: Usuario;
-  papeis: Papel[];
+  papel: Papel;
   area: "aluno" | "coordenacao" | "admin";
   ehAdministrador: boolean;
 }
@@ -28,17 +28,18 @@ export function ProvedorSessao({
   children: React.ReactNode;
 }) {
   const valor = React.useMemo<SessaoCliente>(() => {
-    const area = usuario.papeis.includes("administrador")
-      ? "admin"
-      : usuario.papeis.some((papel) => papel.startsWith("coordenador"))
-        ? "coordenacao"
-        : "aluno";
+    const area =
+      usuario.papel === "administrador"
+        ? "admin"
+        : usuario.papel.startsWith("coordenador")
+          ? "coordenacao"
+          : "aluno";
 
     return {
       usuario,
-      papeis: usuario.papeis,
+      papel: usuario.papel,
       area,
-      ehAdministrador: usuario.papeis.includes("administrador"),
+      ehAdministrador: usuario.papel === "administrador",
     };
   }, [usuario]);
 

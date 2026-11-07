@@ -62,7 +62,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/doc
     >
       <p className="text-muted-foreground text-sm">
         Pareceres pendentes: {pendentes.size}.{" "}
-        {usuario.papeis.includes("coordenador_estagio")
+        {usuario.papel === "coordenador_estagio"
           ? "Documentos do campus."
           : "Documentos dos alunos do seu curso."}
       </p>

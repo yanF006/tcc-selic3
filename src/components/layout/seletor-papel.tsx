@@ -26,7 +26,7 @@ export function SeletorPapel({
   contas,
   usuarioAtual,
 }: {
-  contas: { id: string; nome: string; papeis: Usuario["papeis"] }[];
+  contas: { id: string; nome: string; papel: Usuario["papel"] }[];
   usuarioAtual: Usuario;
 }) {
   if (!contas.length) return null;
@@ -36,7 +36,7 @@ export function SeletorPapel({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <span className="hidden md:inline">Ver como</span>
-          <span>{rotuloPapel(usuarioAtual.papeis[0])}</span>
+          <span>{rotuloPapel(usuarioAtual.papel)}</span>
           <ChevronsUpDownIcon className="size-4" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
@@ -46,14 +46,12 @@ export function SeletorPapel({
         {contas.map((conta) => (
           <DropdownMenuItem key={conta.id} asChild>
             <form
-              action={trocarSessaoAction.bind(null, conta.id, rotaDe(conta.papeis))}
+              action={trocarSessaoAction.bind(null, conta.id, rotaDe(conta.papel))}
               className="w-full"
             >
               <button type="submit" className="flex w-full flex-col text-left">
                 <span>{conta.nome}</span>
-                <span className="text-muted-foreground text-xs">
-                  {conta.papeis.map((papel) => rotuloPapel(papel)).join(", ")}
-                </span>
+                <span className="text-muted-foreground text-xs">{rotuloPapel(conta.papel)}</span>
               </button>
             </form>
           </DropdownMenuItem>
@@ -63,9 +61,9 @@ export function SeletorPapel({
   );
 }
 
-function rotaDe(papeis: Usuario["papeis"]): string {
-  if (papeis.includes("administrador")) return "/admin/usuarios";
-  if (papeis.some((papel) => papel.startsWith("coordenador"))) return "/coordenacao/estagios";
+function rotaDe(papel: Usuario["papel"]): string {
+  if (papel === "administrador") return "/admin/usuarios";
+  if (papel.startsWith("coordenador")) return "/coordenacao/estagios";
 
   return "/documentos";
 }

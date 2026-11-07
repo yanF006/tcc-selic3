@@ -52,7 +52,7 @@ export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  papeis: Papel[];
+  papel: Papel;
   situacao: SituacaoUsuario;
   campus: Campus;
   /** Matrícula do aluno no SIGAA. Imutável após o cadastro. */

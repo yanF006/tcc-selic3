@@ -4,11 +4,12 @@ import { BancoIndisponivelError, detalhesDoErro, redigir } from "./erros";
 import { MENSAGEM_BANCO_INDISPONIVEL } from "./mensagens";
 import {
   garantirHidratacao,
-  gravarUsuario,
+  atualizarUsuario,
   reiniciarPersistenciaParaTestes,
   estadoDaPersistencia,
 } from "./persistencia";
-import { listarUsuarios } from "@/lib/services/administracao";
+import { cadastrarUsuario, editarUsuario, listarUsuarios } from "@/lib/services/administracao";
+import { ErroDeRegra } from "@/lib/services/erros";
 import { obterEstado, reiniciarEstado } from "@/lib/services/store";
 
 const mocks = vi.hoisted(() => {
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => {
       createMany: vi.fn(),
       findMany: vi.fn(),
       updateMany: vi.fn(),
+      update: vi.fn(),
       create: vi.fn(),
       deleteMany: vi.fn(),
     },
@@ -28,6 +30,8 @@ const mocks = vi.hoisted(() => {
       updateMany: vi.fn(),
       create: vi.fn(),
     },
+    authSession: { deleteMany: vi.fn() },
+    $transaction: vi.fn(),
   };
 
   return {
@@ -48,7 +52,7 @@ const usuarioDoBanco = {
   id: "usr-do-banco",
   nome: "Usuário do Banco",
   email: "usuario.do.banco@ifrj.edu.br",
-  papeis: ["aluno"],
+  papel: "aluno",
   situacao: "ativo",
   campus: "Pinheiral",
   matricula: "20260000001",
@@ -72,6 +76,10 @@ beforeEach(() => {
   mocks.prisma.usuario.findMany.mockResolvedValue([usuarioDoBanco]);
   mocks.prisma.matriculaImportada.findMany.mockResolvedValue([]);
   mocks.prisma.usuario.updateMany.mockResolvedValue({ count: 1 });
+  mocks.prisma.usuario.update.mockResolvedValue(usuarioDoBanco);
+  mocks.prisma.$transaction.mockImplementation(
+    async (operacao: (tx: typeof mocks.prisma) => Promise<unknown>) => operacao(mocks.prisma),
+  );
   mocks.prisma.matriculaImportada.updateMany.mockResolvedValue({ count: 1 });
   process.env.SELIC_DB_SNAPSHOT_TTL_MS = "2000";
   process.env.SELIC_DB_RETRY_COOLDOWN_MS = "1000";
@@ -152,7 +160,9 @@ describe("máquina de estados da persistência", () => {
 
   it("mantém a falha durante o cooldown sem consultar o banco", async () => {
     process.env.SELIC_DB_RETRY_COOLDOWN_MS = "1000";
-    mocks.prisma.usuario.count.mockRejectedValueOnce(new Error("sem conexão"));
+    mocks.prisma.usuario.count.mockRejectedValueOnce(
+      Object.assign(new Error("sem conexão"), { code: "ECONNREFUSED" }),
+    );
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await expect(garantirHidratacao()).rejects.toBeInstanceOf(BancoIndisponivelError);
@@ -167,7 +177,7 @@ describe("máquina de estados da persistência", () => {
     mocks.prisma.usuario.count.mockClear();
 
     vi.setSystemTime(11_500);
-    await gravarUsuario({ ...obterEstado().usuarios[0], nome: "Nome Atualizado" });
+    await atualizarUsuario({ ...obterEstado().usuarios[0], nome: "Nome Atualizado" });
 
     vi.setSystemTime(12_500);
     await garantirHidratacao();
@@ -176,7 +186,9 @@ describe("máquina de estados da persistência", () => {
   });
 
   it("devolve erro em vez de fixtures quando o banco configurado falha", async () => {
-    mocks.prisma.usuario.count.mockRejectedValue(new Error("connect timeout"));
+    mocks.prisma.usuario.count.mockRejectedValue(
+      Object.assign(new Error("connect timeout"), { code: "ETIMEDOUT" }),
+    );
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await expect(listarUsuarios()).rejects.toBeInstanceOf(BancoIndisponivelError);
@@ -192,6 +204,32 @@ describe("máquina de estados da persistência", () => {
 
     expect(estadoDaPersistencia().modo).toBe("simulado");
     expect(mocks.carregarCliente).not.toHaveBeenCalled();
+  });
+
+  it("informa conflito de e-mail no serviço sem descartar o cliente nem marcar indisponibilidade", async () => {
+    await garantirHidratacao();
+    mocks.prisma.usuario.create.mockRejectedValueOnce({
+      code: "P2002",
+      meta: { target: ["email"] },
+    });
+    await expect(
+      cadastrarUsuario({ nome: "Novo", email: "novo@teste.local", papel: "administrador" }),
+    ).rejects.toMatchObject({ codigo: "e_mail_ja_utilizado_por_outro_cadastro" });
+    expect(estadoDaPersistencia().modo).toBe("pronto");
+    expect(mocks.descartarCliente).not.toHaveBeenCalled();
+    expect(obterEstado().usuarios).toHaveLength(1);
+  });
+
+  it("informa alvo removido concorrente sem criar outro registro", async () => {
+    await garantirHidratacao();
+    mocks.prisma.usuario.update.mockRejectedValueOnce({ code: "P2025" });
+    const anterior = structuredClone(obterEstado().usuarios[0]);
+    await expect(editarUsuario(anterior.id, { nome: "Nome alterado" })).rejects.toBeInstanceOf(
+      ErroDeRegra,
+    );
+    expect(obterEstado().usuarios[0]).toEqual(anterior);
+    expect(mocks.prisma.usuario.create).not.toHaveBeenCalled();
+    expect(mocks.descartarCliente).not.toHaveBeenCalled();
   });
 });
 

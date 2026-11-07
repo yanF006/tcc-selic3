@@ -13,6 +13,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:integration": "sh scripts/banco-teste.sh iniciar && sh scripts/preparar-auth-teste.sh && sh scripts/preparar-app-teste.sh && vitest run --config vitest.integration.config.mts",
     "test:e2e": "playwright test",
     "test:e2e:seletor": "NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true playwright test e2e/seletor-papel.spec.ts",
     "db:generate": "prisma generate",
@@ -20,19 +21,22 @@
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma generate --schema prisma/auth-teste.prisma",
     "test:e2e:banco-indisponivel": "SELIC_E2E_BANCO_INDISPONIVEL=1 PLAYWRIGHT_PORT=3101 DATABASE_URL='mysql://selic:selic@192.0.2.1:3306/selic' SELIC_DB_CONNECT_TIMEOUT_MS=3000 SELIC_DB_ACQUIRE_TIMEOUT_MS=4000 SELIC_DB_INITIALIZATION_TIMEOUT_MS=2500 SELIC_DB_RETRY_COOLDOWN_MS=250 playwright test e2e/banco-indisponivel.spec.ts"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "1.7.18",
     "@hookform/resolvers": "^5.9.1",
     "@prisma/adapter-mariadb": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "better-auth": "1.7.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^18.0.7",
     "lucide-react": "^1.50.0",
     "next": "16.3.8",
     "next-themes": "^0.4.6",
+    "nodemailer": "10.3.1",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -40,7 +44,7 @@
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "tw-animate-css": "^1.4.0",
-    "zod": "^3.25.76"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -49,6 +53,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.19.1",
+    "@types/nodemailer": "8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",

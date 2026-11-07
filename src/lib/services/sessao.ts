@@ -20,7 +20,7 @@ export interface ContaDesenvolvimento {
   id: string;
   email: string;
   senha: string;
-  papeis: Papel[];
+  papel: Papel;
   rotulo: string;
 }
 
@@ -35,7 +35,7 @@ let sessaoAtual: Sessao | null = null;
 export function contasDeDesenvolvimento(): ContaDesenvolvimento[] {
   return CONTAS_DE_DESENVOLVIMENTO.map((conta) => ({
     ...conta,
-    papeis: [...conta.papeis] as Papel[],
+    papel: conta.papel as Papel,
   }));
 }
 
@@ -51,22 +51,19 @@ export function estaAutenticado(): boolean {
   return sessaoAtual !== null;
 }
 
-export function papeisAtuais(): Papel[] {
-  return sessaoAtual?.usuario.papeis ?? [];
+export function papelAtual(): Papel | null {
+  return sessaoAtual?.usuario.papel ?? null;
 }
 
 export function temPapel(...papeis: Papel[]): boolean {
-  return papeis.some((papel) => papeisAtuais().includes(papel));
+  return papeis.some((papel) => papelAtual() === papel);
 }
 
 /** true quando o Coordenador de Estágio atua como membro da Comissão. */
 export function membroComissaoEstagio(): boolean {
   const usuario = usuarioAtual();
 
-  return (
-    usuario?.papeis.includes("coordenador_estagio") === true &&
-    usuario.membroComissaoEstagio === true
-  );
+  return usuario?.papel === "coordenador_estagio" && usuario.membroComissaoEstagio === true;
 }
 
 export async function entrar(email: string, senha: string): Promise<ResultadoLogin> {
@@ -112,7 +109,7 @@ export function rotuloSessao(): string {
 
   if (!usuario) return "Visitante";
 
-  return `${usuario.nome} — ${usuario.papeis.map(rotuloPapel).join(", ")}`;
+  return `${usuario.nome} — ${rotuloPapel(usuario.papel)}`;
 }
 
 export function usuarioPorId(id: string): Usuario | null {

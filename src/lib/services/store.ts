@@ -87,13 +87,9 @@ export function reiniciarEstado(): EstadoSimulado {
   return estado;
 }
 
-let sequencia = 1000;
-
-/** Identificador curto e estável dentro da sessão simulada. */
+/** Identificador global; não depende do contador ou da memória do processo. */
 export function novoId(prefixo: string): string {
-  sequencia += 1;
-
-  return `${prefixo}-${sequencia}`;
+  return `${prefixo}-${globalThis.crypto.randomUUID()}`;
 }
 
 export function agora(): string {

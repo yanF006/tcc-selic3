@@ -12,12 +12,12 @@ import {
   satisfazTodas,
 } from "./permissions";
 
-function usuario(papeis: Papel[], situacao: Usuario["situacao"] = "ativo"): Usuario {
+function usuario([papel]: [Papel], situacao: Usuario["situacao"] = "ativo"): Usuario {
   return {
-    id: `usr-${papeis.join("-")}`,
+    id: `usr-${papel}`,
     nome: "Usuário de Teste",
     email: "teste@ifrj.edu.br",
-    papeis,
+    papel,
     situacao,
     campus: "Pinheiral",
     criadoEm: "2026-01-01T00:00:00.000Z",
@@ -25,6 +25,17 @@ function usuario(papeis: Papel[], situacao: Usuario["situacao"] = "ativo"): Usua
 }
 
 describe("matriz de autorização", () => {
+  it.each([undefined, null, [], ["aluno"], ["aluno", "administrador"], "cargo_invalido"])(
+    "nega permissões para cargo inválido: %j",
+    (papel) => {
+      const adulterado = { ...usuario(["aluno"]), papel } as unknown as Usuario;
+      expect(podeAcessar(adulterado, [])).toBe(false);
+      expect(podeAcessarAlgum(adulterado, ["aluno", "administrador"])).toBe(false);
+      expect(avaliarAcesso(adulterado, ["aluno"]).permitido).toBe(false);
+      expect(areaDe(adulterado)).toBeNull();
+    },
+  );
+
   it("nega acesso a quem não tem sessão", () => {
     expect(podeAcessar(null, [])).toBe(false);
     expect(avaliarAcesso(null, ["aluno"])).toEqual({
@@ -37,7 +48,7 @@ describe("matriz de autorização", () => {
     expect(podeAcessar(usuario(["aluno"]), ["aluno"])).toBe(true);
     expect(podeAcessar(usuario(["aluno"]), ["aluno", "coordenador_curso"])).toBe(false);
     expect(podeAcessar(usuario(["aluno"]), [])).toBe(true);
-    expect(satisfazTodas(["coordenador_curso"], ["aluno"])).toBe(false);
+    expect(satisfazTodas("coordenador_curso", ["aluno"])).toBe(false);
   });
 
   it("dá ao administrador acesso a qualquer área", () => {
@@ -94,7 +105,9 @@ describe("matriz de autorização", () => {
     expect(areaDe(usuario(["coordenador_estagio"]))).toBe("coordenacao");
     expect(areaDe(usuario(["coordenador_curso"]))).toBe("coordenacao");
     expect(areaDe(usuario(["administrador"]))).toBe("admin");
-    expect(areaDe(usuario(["administrador", "aluno"]))).toBe("admin");
+    expect(
+      areaDe({ ...usuario(["aluno"]), papel: ["administrador", "aluno"] as unknown as Papel }),
+    ).toBe(null);
     expect(areaDe(null)).toBe(null);
     expect(areaDe(usuario(["aluno"], "inativo"))).toBe(null);
   });

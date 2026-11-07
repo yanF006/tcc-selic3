@@ -11,7 +11,7 @@ export type TipoCadastro = "convenio" | "curso" | "turma" | "periodo" | "orienta
 export function exigirGestaoCadastros(autor: Usuario) {
   if (
     autor.situacao !== "ativo" ||
-    !autor.papeis.some((papel) => papel === "coordenador_estagio" || papel === "administrador")
+    !(autor.papel === "coordenador_estagio" || autor.papel === "administrador")
   ) {
     throw new ErroDeRegra(
       "A gestão destes cadastros cabe à coordenação de estágio ou administração.",

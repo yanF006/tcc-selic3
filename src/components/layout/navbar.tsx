@@ -250,11 +250,7 @@ export function Navbar({
             <DropdownMenuContent align="end" className="min-w-56">
               <DropdownMenuLabel>{usuario.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {usuario.papeis.map((papel) => (
-                <DropdownMenuItem key={papel} disabled>
-                  {rotuloPapel(papel)}
-                </DropdownMenuItem>
-              ))}
+              <DropdownMenuItem disabled>{rotuloPapel(usuario.papel)}</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link className="flex items-center gap-2" href="/conta/senha">

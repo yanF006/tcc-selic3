@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
     <PaginaArea
       titulo="Estágios"
       descricao={
-        usuario.papeis.includes("coordenador_estagio") || usuario.papeis.includes("administrador")
+        usuario.papel === "coordenador_estagio" || usuario.papel === "administrador"
           ? "Estágios do campus."
           : "Estágios dos alunos do seu curso."
       }

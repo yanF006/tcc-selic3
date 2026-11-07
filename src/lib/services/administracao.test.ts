@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { Campus } from "@/lib/domain/types";
+import type { Campus, Papel } from "@/lib/domain/types";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
+import { participaDaComissaoDeEstagio, podeAcessar } from "@/lib/auth/permissions";
 
 import {
   cadastrarUsuario,
@@ -17,6 +18,7 @@ import {
   registrarMatricula,
   reativarUsuario,
   usuarioPorId,
+  type CadastroUsuario,
 } from "./administracao";
 import { convenioPorId } from "./catalogo";
 import { entrar, temPapel, usuarioAtual } from "./sessao";
@@ -24,6 +26,54 @@ import { obterEstado, reiniciarEstado } from "./store";
 
 beforeEach(() => {
   reiniciarEstado();
+});
+
+describe("cargo único nas mutações administrativas", () => {
+  it.each([undefined, null, [], ["aluno"], ["aluno", "administrador"], "desconhecido"])(
+    "recusa cargo inválido sem criar ou alterar conta: %j",
+    async (papel) => {
+      const total = obterEstado().usuarios.length;
+      const existente = structuredClone(obterEstado().usuarios[0]);
+      await expect(
+        cadastrarUsuario({
+          nome: "Inválido",
+          email: "cargo@teste.local",
+          papel,
+        } as CadastroUsuario),
+      ).rejects.toThrow();
+      await expect(
+        editarUsuario(existente.id, { nome: "Não deve mudar", papel } as Partial<CadastroUsuario>),
+      ).rejects.toThrow();
+      expect(obterEstado().usuarios).toHaveLength(total);
+      expect(await usuarioPorId(existente.id)).toEqual(existente);
+    },
+  );
+
+  it("remove comissão e permissões anteriores ao substituir o cargo", async () => {
+    const coordenador = obterEstado().usuarios.find(
+      (usuario) => usuario.papel === "coordenador_estagio",
+    )!;
+    await editarUsuario(coordenador.id, { membroComissaoEstagio: true });
+    expect(participaDaComissaoDeEstagio(coordenador)).toBe(true);
+    await editarUsuario(coordenador.id, { papel: "coordenador_curso", cursoId: "curso-ads" });
+    expect(coordenador.membroComissaoEstagio).toBe(false);
+    expect(participaDaComissaoDeEstagio(coordenador)).toBe(false);
+    expect(podeAcessar(coordenador, ["coordenador_estagio"])).toBe(false);
+    expect(podeAcessar(coordenador, ["coordenador_curso"])).toBe(true);
+    await editarUsuario(coordenador.id, { papel: "administrador", membroComissaoEstagio: true });
+    expect(coordenador.membroComissaoEstagio).toBe(false);
+    expect(coordenador.cursoId).toBeUndefined();
+  });
+
+  it("recusa payload legado de múltiplos cargos mesmo acompanhado de cargo válido", async () => {
+    const cadastro = {
+      nome: "Legado",
+      email: "legado@teste.local",
+      papel: "administrador",
+      papeis: ["administrador", "aluno"],
+    };
+    await expect(cadastrarUsuario(cadastro as CadastroUsuario)).rejects.toThrow();
+  });
 });
 
 async function entrarComoAdministrador() {
@@ -36,7 +86,7 @@ describe("usuários", () => {
   it("lista por papel, por situação e por busca", async () => {
     const alunos = await listarUsuarios({ papel: "aluno" });
 
-    expect(alunos.itens.every((usuario) => usuario.papeis.includes("aluno"))).toBe(true);
+    expect(alunos.itens.every((usuario) => usuario.papel === "aluno")).toBe(true);
     expect(alunos.total).toBeGreaterThanOrEqual(2);
 
     const inativos = await listarUsuarios({ papel: "aluno", situacao: "inativo" });
@@ -86,7 +136,7 @@ describe("usuários", () => {
       await cadastrarUsuario({
         nome: `Zz Fora dos 50 ${numero}`,
         email: `fora.dos.50.${numero}@ifrj.edu.br`,
-        papeis: ["coordenador_estagio"],
+        papel: "coordenador_estagio",
       });
     }
 
@@ -105,7 +155,7 @@ describe("usuários", () => {
     const aluno = await cadastrarUsuario({
       nome: "Novo Aluno",
       email: "novo.aluno@aluno.ifrj.edu.br",
-      papeis: ["aluno"],
+      papel: "aluno",
       matricula: "20260009999",
     });
 
@@ -135,7 +185,7 @@ describe("usuários", () => {
     await cadastrarUsuario({
       nome: "Aluno Do Lançamento Manual",
       email: "manual@aluno.ifrj.edu.br",
-      papeis: ["aluno"],
+      papel: "aluno",
       matricula: "20260008888",
     });
 
@@ -152,7 +202,7 @@ describe("usuários", () => {
         cadastrarUsuario({
           nome: "Aluno Sem Formato",
           email: "formato@aluno.ifrj.edu.br",
-          papeis: ["aluno"],
+          papel: "aluno",
           matricula,
         }),
       ).rejects.toThrow(/11 dígitos/);
@@ -176,20 +226,24 @@ describe("usuários", () => {
     await entrarComoAdministrador();
 
     await expect(
-      cadastrarUsuario({ nome: "Sem Papel", email: "sem.papel@ifrj.edu.br", papeis: [] }),
+      cadastrarUsuario({
+        nome: "Sem Papel",
+        email: "sem.papel@ifrj.edu.br",
+        papel: undefined as unknown as Papel,
+      }),
     ).rejects.toThrow(/papel/);
     await expect(
       cadastrarUsuario({
         nome: "Ana Correia",
         email: "ana.correia@ifrj.edu.br",
-        papeis: ["coordenador_estagio"],
+        papel: "coordenador_estagio",
       }),
     ).rejects.toThrow(/já utilizado/);
     await expect(
       cadastrarUsuario({
         nome: "Outro Campus",
         email: "outro.campus@ifrj.edu.br",
-        papeis: ["administrador"],
+        papel: "administrador",
         campus: "Volta Redonda" as Campus,
       }),
     ).rejects.toThrow(/Pinheiral/);
@@ -339,7 +393,7 @@ describe("importação manual de matrículas", () => {
     const aluno = await cadastrarUsuario({
       nome: "Aluno Lançado",
       email: "aluno.lancado@aluno.ifrj.edu.br",
-      papeis: ["aluno"],
+      papel: "aluno",
       matricula: "20260444888",
     });
 

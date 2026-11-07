@@ -162,9 +162,7 @@ export async function documentosDoAluno(alunoId: string): Promise<DocumentoPreen
 export async function documentosDaCoordenacao(usuario: Usuario, consulta: ConsultaDocumentos = {}) {
   if (
     usuario.situacao !== "ativo" ||
-    !usuario.papeis.some((papel) =>
-      ["administrador", "coordenador_curso", "coordenador_estagio"].includes(papel),
-    )
+    !["administrador", "coordenador_curso", "coordenador_estagio"].includes(usuario.papel)
   )
     return paginar([], consulta);
   const permitidos: DocumentoPreenchido[] = [];
@@ -320,9 +318,9 @@ export function podePreencher(usuario: Usuario, template: TemplateDocumento): bo
   if (usuario.situacao !== "ativo" || template.situacao !== "ativo") return false;
   const papeis = template.metadados?.papeisPreenchimento ?? [];
 
-  if (usuario.papeis.includes(PAPEL_COM_TODAS_AS_PERMISSOES)) return true;
+  if (usuario.papel === PAPEL_COM_TODAS_AS_PERMISSOES) return true;
 
-  return papeis.some((papel) => usuario.papeis.includes(papel));
+  return papeis.includes(usuario.papel);
 }
 
 export async function podeConsultarDocumento(
@@ -336,8 +334,8 @@ export async function podeConsultarDocumento(
   }
   return (
     documento.alunoId === usuario.id ||
-    usuario.papeis.includes("administrador") ||
-    usuario.papeis.includes("coordenador_estagio")
+    usuario.papel === "administrador" ||
+    usuario.papel === "coordenador_estagio"
   );
 }
 
@@ -659,10 +657,10 @@ export async function submeter(documentoId: string): Promise<DocumentoPreenchido
   )) {
     if (
       (tipoParecer === "coordenador_curso" &&
-        responsavel.papeis.includes("coordenador_curso") &&
+        responsavel.papel === "coordenador_curso" &&
         responsavel.cursoId === cursoDoDocumento(documento)) ||
       (tipoParecer === "comissao_estagio" &&
-        responsavel.papeis.includes("coordenador_estagio") &&
+        responsavel.papel === "coordenador_estagio" &&
         responsavel.membroComissaoEstagio)
     ) {
       notificar(
@@ -700,15 +698,15 @@ export async function documentosParaParecer(
   autor: Usuario,
   consulta: ConsultaDocumentos = {},
 ): Promise<Pagina<DocumentoPreenchido>> {
-  const administrador = autor.papeis.includes("administrador") && autor.situacao === "ativo";
+  const administrador = autor.papel === "administrador" && autor.situacao === "ativo";
   const podeVerFila =
     autor.situacao === "ativo" &&
     (administrador ||
       (fila === "coordenador_curso" &&
-        autor.papeis.includes("coordenador_curso") &&
+        autor.papel === "coordenador_curso" &&
         Boolean(autor.cursoId)) ||
       (fila === "comissao_estagio" &&
-        autor.papeis.includes("coordenador_estagio") &&
+        autor.papel === "coordenador_estagio" &&
         autor.membroComissaoEstagio));
   if (!podeVerFila || fila === "externo" || fila === "nenhum") return paginar([], consulta);
   const emAnalise = obterEstado()
@@ -761,13 +759,13 @@ export async function registrarParecer(
     throw new ErroDeRegra("Estágio cancelado ou excluído.", "estagio_encerrado");
   const autorizado =
     autor.situacao === "ativo" &&
-    (autor.papeis.includes("administrador") ||
+    (autor.papel === "administrador" ||
       (fila === "coordenador_curso" &&
-        autor.papeis.includes("coordenador_curso") &&
+        autor.papel === "coordenador_curso" &&
         Boolean(autor.cursoId) &&
         cursoDoDocumento(documento) === autor.cursoId) ||
       (fila === "comissao_estagio" &&
-        autor.papeis.includes("coordenador_estagio") &&
+        autor.papel === "coordenador_estagio" &&
         autor.membroComissaoEstagio));
   if (
     !autorizado ||
@@ -820,7 +818,7 @@ export async function registrarParecer(
 
   if (
     consideracoes?.trim() &&
-    autor.papeis.some((papel) => papel === "coordenador_curso" || papel === "coordenador_estagio")
+    (autor.papel === "coordenador_curso" || autor.papel === "coordenador_estagio")
   ) {
     const { acrescentarObservacao } = await import("./observacoes");
     await acrescentarObservacao(documento.id, consideracoes, autor);

@@ -1,5 +1,5 @@
 import { metadadoUsuario } from "@/lib/domain/status";
-import { MATRICULA_SIGAA } from "@/lib/domain/schemas";
+import { MATRICULA_SIGAA, esquemaPapel } from "@/lib/domain/schemas";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
 import type {
   Campus,
@@ -16,10 +16,11 @@ import { agora, obterEstado, novoId } from "./store";
 import { filtrarPorTexto, paginar } from "./paginacao";
 
 import {
+  atualizarUsuario,
+  criarMatricula,
+  criarUsuario,
   excluirUsuarioDoBanco,
   garantirHidratacao,
-  gravarMatricula,
-  gravarUsuario,
 } from "@/lib/db/persistencia";
 
 import { ErroDeRegra } from "./erros";
@@ -56,7 +57,7 @@ export interface ConsultaSolicitacoes {
 export interface CadastroUsuario {
   nome: string;
   email: string;
-  papeis: Papel[];
+  papel: Papel;
   campus?: Campus;
   matricula?: string;
   cursoId?: string;
@@ -98,7 +99,7 @@ export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<P
   ]);
 
   const filtrados = busca
-    .filter((usuario) => !consulta.papel || usuario.papeis.includes(consulta.papel))
+    .filter((usuario) => !consulta.papel || usuario.papel === consulta.papel)
     .filter((usuario) => !consulta.situacao || usuario.situacao === consulta.situacao)
     .filter((usuario) => !consulta.cursoId || cursoDoUsuario(usuario) === consulta.cursoId)
     .sort(porNome);
@@ -145,7 +146,7 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     throw new ErroDeRegra("Informe o nome do usuário.", "informe_o_nome_do_usuario");
   if (!email.includes("@"))
     throw new ErroDeRegra("Informe um e-mail válido.", "informe_um_e_mail_valido");
-  if (cadastro.papeis.length === 0) {
+  if (!esquemaPapel.safeParse(cadastro.papel).success || "papeis" in cadastro) {
     throw new ErroDeRegra(
       "Escolha o papel antes de concluir o cadastro.",
       "escolha_o_papel_antes_de_concluir_o_cadastro",
@@ -170,7 +171,7 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
 
   const matricula = cadastro.matricula?.trim();
 
-  if (cadastro.papeis.includes("aluno")) {
+  if (cadastro.papel === "aluno") {
     if (!matricula)
       throw new ErroDeRegra("Informe a matrícula do aluno.", "informe_a_matricula_do_aluno");
 
@@ -194,7 +195,7 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
         importadaEm: agora(),
       };
 
-      await gravarMatricula(registro);
+      await criarMatricula(registro);
       estado.matriculas.push(registro);
     }
   }
@@ -203,16 +204,16 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     id: novoId("usr"),
     nome: cadastro.nome.trim(),
     email,
-    papeis: [...cadastro.papeis],
+    papel: cadastro.papel,
     situacao: "ativo",
     campus,
     matricula,
-    cursoId: cadastro.cursoId,
+    cursoId: cadastro.papel === "coordenador_curso" ? cadastro.cursoId : undefined,
     membroComissaoEstagio: false,
     criadoEm: agora(),
   };
 
-  await gravarUsuario(usuario);
+  await criarUsuario(usuario);
   estado.usuarios.push(usuario);
 
   return usuario;
@@ -222,6 +223,11 @@ export async function editarUsuario(
   id: string,
   alteracoes: Partial<CadastroUsuario> & { nome?: string; situacao?: SituacaoUsuario },
 ): Promise<Usuario> {
+  if (Object.hasOwn(alteracoes, "papel") || "papeis" in alteracoes) {
+    if (!esquemaPapel.safeParse(alteracoes.papel).success || "papeis" in alteracoes) {
+      throw new ErroDeRegra("Escolha um único papel válido.", "papel_invalido");
+    }
+  }
   await garantirHidratacao();
 
   const estado = obterEstado();
@@ -244,7 +250,7 @@ export async function editarUsuario(
   }
 
   if (alteracoes.nome?.trim()) usuario.nome = alteracoes.nome.trim();
-  if (alteracoes.papeis?.length) usuario.papeis = [...alteracoes.papeis];
+  if (alteracoes.papel !== undefined) usuario.papel = alteracoes.papel;
   if (alteracoes.cursoId !== undefined) usuario.cursoId = alteracoes.cursoId;
   if (alteracoes.membroComissaoEstagio !== undefined) {
     usuario.membroComissaoEstagio = alteracoes.membroComissaoEstagio;
@@ -252,8 +258,11 @@ export async function editarUsuario(
 
   if (alteracoes.situacao) usuario.situacao = alteracoes.situacao;
 
+  if (usuario.papel !== "coordenador_estagio") usuario.membroComissaoEstagio = false;
+  if (usuario.papel !== "coordenador_curso") usuario.cursoId = undefined;
+
   try {
-    await gravarUsuario(usuario);
+    await atualizarUsuario(usuario);
   } catch (erro) {
     Object.assign(usuario, anterior);
     throw erro;
@@ -284,7 +293,7 @@ export async function inativarUsuario(id: string): Promise<Usuario> {
   usuario.situacao = "inativo";
 
   try {
-    await gravarUsuario(usuario);
+    await atualizarUsuario(usuario);
   } catch (erro) {
     usuario.situacao = situacaoAnterior;
     throw erro;
@@ -305,7 +314,7 @@ export async function reativarUsuario(id: string): Promise<Usuario> {
   usuario.situacao = "ativo";
 
   try {
-    await gravarUsuario(usuario);
+    await atualizarUsuario(usuario);
   } catch (erro) {
     usuario.situacao = situacaoAnterior;
     throw erro;
@@ -339,7 +348,7 @@ export async function excluirUsuario(id: string): Promise<void> {
     });
 
     try {
-      await gravarUsuario(usuario);
+      await atualizarUsuario(usuario);
     } catch (erro) {
       Object.assign(usuario, anterior);
       throw erro;
@@ -364,9 +373,9 @@ export async function excluirUsuario(id: string): Promise<void> {
 export function podeDecidirSolicitacao(usuario: Usuario, solicitacao: SolicitacaoAcesso): boolean {
   if (usuario.situacao !== "ativo") return false;
   return (
-    usuario.papeis.includes("administrador") ||
-    usuario.papeis.includes("coordenador_estagio") ||
-    (usuario.papeis.includes("coordenador_curso") &&
+    usuario.papel === "administrador" ||
+    usuario.papel === "coordenador_estagio" ||
+    (usuario.papel === "coordenador_curso" &&
       Boolean(usuario.cursoId) &&
       usuario.cursoId === solicitacao.dadosPessoais.cursoId)
   );
@@ -445,7 +454,7 @@ export async function decidirSolicitacao(
           importadaEm: agora(),
         };
 
-        await gravarMatricula(registro);
+        await criarMatricula(registro);
         estado.matriculas.push(registro);
       }
 
@@ -455,13 +464,13 @@ export async function decidirSolicitacao(
 
       if (existente) {
         existente.situacao = "ativo";
-        await gravarUsuario(existente);
+        await atualizarUsuario(existente);
       } else {
         const usuario: Usuario = {
           id: novoId("usr"),
           nome: solicitacao.nome,
           email: solicitacao.email.toLowerCase(),
-          papeis: ["aluno"],
+          papel: "aluno",
           situacao: "ativo",
           campus: "Pinheiral",
           matricula: solicitacao.matricula,
@@ -475,7 +484,7 @@ export async function decidirSolicitacao(
           criadoEm: agora(),
         };
 
-        await gravarUsuario(usuario);
+        await criarUsuario(usuario);
         estado.usuarios.push(usuario);
       }
     }
@@ -486,7 +495,7 @@ export async function decidirSolicitacao(
     if (aluno) {
       if (decisao === "recusado") {
         aluno.situacao = "inativo";
-        await gravarUsuario(aluno);
+        await atualizarUsuario(aluno);
       }
       estado.notificacoes.push({
         id: novoId("ntf"),
@@ -609,7 +618,7 @@ export async function importarMatriculas(
       importadaEm: agora(),
     };
 
-    await gravarMatricula(registro);
+    await criarMatricula(registro);
     estado.matriculas.push(registro);
     resultado.validas += 1;
     resultado.itens.push({ matricula, nome, resultado: "valida" });
@@ -663,7 +672,7 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
     importadaEm: agora(),
   };
 
-  await gravarMatricula(registro);
+  await criarMatricula(registro);
   estado.matriculas.push(registro);
 
   return registro;

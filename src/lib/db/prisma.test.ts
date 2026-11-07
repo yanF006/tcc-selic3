@@ -10,6 +10,16 @@ import {
 const URL_BANCO = "mysql://usuario:senha@db.invalid:3307/selic";
 
 describe("opções de conexão", () => {
+  it("valida TLS por padrão e aceita CA explícita sem desabilitar a validação", () => {
+    expect(opcoesDeConexao(URL_BANCO, {}).ssl).toEqual({ rejectUnauthorized: true });
+    const certificado = "-----BEGIN CERTIFICATE-----\\nconteudo\\n-----END CERTIFICATE-----";
+    const opcoes = opcoesDeConexao(URL_BANCO, {
+      SELIC_DB_CA_CERT: certificado,
+      SELIC_DB_CONNECTION_LIMIT: "3",
+    });
+    expect(opcoes.ssl).toEqual({ rejectUnauthorized: true, ca: certificado.replace(/\\n/g, "\n") });
+    expect(opcoes.connectionLimit).toBe(3);
+  });
   it("usa timeouts de 8–12 s com initializationTimeout menor que acquireTimeout", () => {
     const opcoes = opcoesDeConexao(URL_BANCO, {});
 
