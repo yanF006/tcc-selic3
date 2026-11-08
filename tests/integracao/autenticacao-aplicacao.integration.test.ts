@@ -58,7 +58,7 @@ function cookies(resposta: Response) {
 
 async function consultarEmOutroProcesso(cookie: string) {
   const script = fileURLToPath(new URL("../support/consultar-sessao-processo.ts", import.meta.url));
-  const contexto = fileURLToPath(new URL("../support/contexto-servidor.mjs", import.meta.url));
+  const contexto = new URL("../support/contexto-servidor.mjs", import.meta.url).href;
   const { stdout } = await promisify(execFile)(
     process.execPath,
     ["--import", "tsx", "--import", contexto, script],

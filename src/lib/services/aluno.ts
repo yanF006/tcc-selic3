@@ -1,3 +1,6 @@
+import { headers } from "next/headers";
+import { APIError } from "better-auth/api";
+
 import { esquemaDadosPessoais } from "@/lib/domain/schemas";
 import type { DadosPessoais, Usuario } from "@/lib/domain/types";
 
@@ -5,6 +8,10 @@ import { opcoesSelecao } from "./catalogo";
 import { moverCredencial } from "./credenciais";
 import { obterEstado } from "./store";
 import { atualizarUsuario, garantirHidratacao } from "@/lib/db/persistencia";
+import { bancoConfigurado } from "@/lib/db/prisma";
+import { traduzirErroPersistencia } from "@/lib/db/erros";
+import { obterAutenticacao } from "@/lib/auth/autenticacao";
+import { carregarConfiguracaoAutenticacao } from "@/lib/auth/configuracao";
 
 /**
  * Dados pessoais do aluno (6.6 e 6.7): leitura e edição do próprio cadastro.
@@ -29,11 +36,26 @@ export type ResultadoDadosPessoais =
 export async function dadosDoAluno(usuario: Usuario): Promise<DadosPessoais | null> {
   await garantirHidratacao();
 
-  const dados = obterEstado().usuarios.find(
-    (registro) => registro.id === usuario.id,
-  )?.dadosPessoais;
+  const registro = obterEstado().usuarios.find((item) => item.id === usuario.id);
 
-  return dados ? structuredClone(dados) : null;
+  if (!registro?.dadosPessoais) return null;
+
+  // `usuarios.email` é a identidade única confirmada pelo provedor; o JSON do
+  // perfil só espelha os demais dados e nunca é uma segunda fonte de e-mail.
+  return { ...structuredClone(registro.dadosPessoais), email: registro.email };
+}
+
+async function solicitarTrocaDeEmail(novoEmail: string, cabecalhos?: Headers): Promise<void> {
+  const auth = await obterAutenticacao();
+  const configuracao = carregarConfiguracaoAutenticacao();
+
+  await auth.api.changeEmail({
+    body: {
+      newEmail: novoEmail,
+      callbackURL: `${configuracao.origem}/perfil?email=confirmado`,
+    },
+    headers: cabecalhos ?? (await headers()),
+  });
 }
 
 /** Erros por campo, no formato que o formulário usa para marcar cada input. */
@@ -52,6 +74,7 @@ function errosPorCampo(
 export async function atualizarDadosPessoais(
   usuario: Usuario,
   dados: DadosPessoais,
+  cabecalhos?: Headers,
 ): Promise<ResultadoDadosPessoais> {
   if (usuario.situacao !== "ativo") {
     return { ok: false, erro: "Cadastro não autorizado para edição.", erros: {} };
@@ -83,12 +106,57 @@ export async function atualizarDadosPessoais(
     };
   }
 
-  const emailAnterior = registro.dadosPessoais.email;
+  const emailAnterior = registro.email;
+  const mudouEmail = validado.data.email.toLowerCase() !== emailAnterior.toLowerCase();
+
+  if (bancoConfigurado()) {
+    if (mudouEmail) {
+      try {
+        // A identidade só muda pelo fluxo de confirmação do titular; o perfil
+        // nunca grava o novo endereço diretamente.
+        await solicitarTrocaDeEmail(validado.data.email, cabecalhos);
+      } catch (erro) {
+        if (erro instanceof APIError) {
+          return {
+            ok: false,
+            erro: "Não foi possível solicitar a troca de e-mail.",
+            erros: { email: "Não foi possível solicitar a confirmação do novo e-mail." },
+          };
+        }
+
+        throw traduzirErroPersistencia(erro);
+      }
+    }
+
+    const anterior = structuredClone(registro);
+    const dadosPersistidos = { ...validado.data, email: emailAnterior };
+
+    try {
+      registro.nome = dadosPersistidos.nomeCompleto;
+      registro.dadosPessoais = dadosPersistidos;
+      await atualizarUsuario(registro);
+    } catch (erro) {
+      Object.assign(registro, anterior);
+      throw erro;
+    }
+
+    const { sincronizarDadosDoPerfil } = await import("./documentos");
+    await sincronizarDadosDoPerfil(anterior, registro);
+
+    return {
+      ok: true,
+      dados: structuredClone(registro.dadosPessoais),
+      mensagem: mudouEmail
+        ? "Dados atualizados. Se o novo e-mail estiver disponível, enviaremos um link de confirmação; a troca só vale depois da confirmação."
+        : "Dados atualizados.",
+    };
+  }
+
   const anterior = structuredClone(registro);
   let credencialMovida = false;
 
   try {
-    if (validado.data.email !== emailAnterior) {
+    if (mudouEmail) {
       const emUso = obterEstado().usuarios.some(
         (outro) =>
           outro.id !== registro.id &&
