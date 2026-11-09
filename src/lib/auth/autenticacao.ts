@@ -8,7 +8,12 @@ import { APIError } from "better-auth/api";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { esquemaPapel } from "@/lib/domain/schemas";
-import { agendarLinkRecuperacao, type EntregaAutenticacao } from "./email";
+import type { DadosPessoais } from "@/lib/domain/types";
+import {
+  agendarConfirmacaoDeEmail,
+  agendarLinkRecuperacao,
+  type EntregaAutenticacao,
+} from "./email";
 import { carregarConfiguracaoAutenticacao, type ConfiguracaoAutenticacao } from "./configuracao";
 
 function opcoesComuns(configuracao: ConfiguracaoAutenticacao) {
@@ -48,6 +53,31 @@ function opcoesComuns(configuracao: ConfiguracaoAutenticacao) {
   } satisfies BetterAuthOptions;
 }
 
+/**
+ * Mantém o e-mail do JSON de dados pessoais alinhado à identidade do provedor.
+ * A confirmação do titular altera `usuarios.email`; o perfil é apenas um espelho
+ * de leitura, nunca uma segunda fonte editável de e-mail.
+ */
+async function sincronizarEmailDoPerfil(
+  cliente: PrismaClient,
+  usuario: { id: string; email: string },
+) {
+  const registro = await cliente.usuario.findUnique({
+    where: { id: usuario.id },
+    select: { dadosPessoais: true },
+  });
+  const dados = registro?.dadosPessoais as DadosPessoais | null | undefined;
+
+  if (!dados || typeof dados !== "object" || dados.email === usuario.email) return;
+
+  await cliente.usuario.update({
+    where: { id: usuario.id },
+    data: {
+      dadosPessoais: { ...dados, email: usuario.email } as unknown as Prisma.InputJsonValue,
+    },
+  });
+}
+
 /** Instância normal: os campos de domínio não são entradas genéricas do provedor. */
 export function criarAutenticacao(
   cliente: PrismaClient,
@@ -69,8 +99,27 @@ export function criarAutenticacao(
       return Reflect.get(alvo, propriedade, receptor);
     },
   });
+  const comuns = opcoesComuns(configuracao);
   return betterAuth({
-    ...opcoesComuns(configuracao),
+    ...comuns,
+    user: {
+      ...comuns.user,
+      changeEmail: {
+        enabled: true,
+        // Titular com e-mail já verificado confirma a troca a partir do
+        // endereço antigo; o novo endereço só passa a valer após o clique.
+        sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+          agendarConfirmacaoDeEmail(user.email, url, newEmail, entrega);
+        },
+      },
+    },
+    emailVerification: {
+      // Contas ainda não verificadas confirmam o novo endereço diretamente
+      // nele, mantendo o mesmo fluxo padrão do provedor.
+      sendVerificationEmail: async ({ user, url }) => {
+        agendarConfirmacaoDeEmail(user.email, url, user.email, entrega);
+      },
+    },
     database: prismaAdapter(clienteAuth, { provider: "mysql", transaction: true }),
     emailAndPassword: {
       enabled: true,
@@ -87,11 +136,17 @@ export function criarAutenticacao(
     disabledPaths: [
       "/sign-up/email",
       "/update-user",
-      "/change-email",
       "/delete-user",
       "/delete-user/callback",
     ],
     databaseHooks: {
+      user: {
+        update: {
+          after: async (usuario) => {
+            await sincronizarEmailDoPerfil(cliente, usuario);
+          },
+        },
+      },
       session: {
         create: {
           // No login por senha, o provedor chama este hook somente depois de

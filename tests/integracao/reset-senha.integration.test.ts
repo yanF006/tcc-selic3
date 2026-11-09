@@ -226,6 +226,103 @@ describe("reset de senha padrão com transações", () => {
     expect(login.user.id).toBe(id);
   });
 
+  it("recusa senha atual incorreta sem alterar a credencial nem revogar a sessão", async () => {
+    const email = emailNovo("troca-senha-atual");
+    const senhaAtual = "SenhaAtual123!";
+    const senhaNova = "SenhaNova123!";
+    const id = await criarContaComCredencial(email, senhaAtual);
+    const login = await auth.api.signInEmail({ body: { email, password: senhaAtual } });
+    expect(login.token).toBeTruthy();
+
+    const cabecalhos = new Headers({
+      cookie: `better-auth.session_token=${login.token}`,
+    });
+    const contaAntes = await prisma.account.findFirstOrThrow({
+      where: { userId: id, providerId: "credential" },
+    });
+
+    await expect(
+      auth.api.changePassword({
+        headers: cabecalhos,
+        body: {
+          currentPassword: "SenhaErrada123!",
+          newPassword: senhaNova,
+          revokeOtherSessions: true,
+        },
+      }),
+    ).rejects.toBeTruthy();
+
+    const contaDepois = await prisma.account.findFirstOrThrow({
+      where: { userId: id, providerId: "credential" },
+    });
+    expect(contaDepois.password).toBe(contaAntes.password);
+    expect(await prisma.session.count({ where: { userId: id } })).toBe(1);
+
+    const loginAntigo = await auth.api.signInEmail({
+      body: { email, password: senhaAtual },
+    });
+    expect(loginAntigo.user.id).toBe(id);
+    await expect(
+      auth.api.signInEmail({ body: { email, password: senhaNova } }),
+    ).rejects.toBeTruthy();
+  });
+
+  it("recusa token adulterado ou expirado sem alterar a senha", async () => {
+    const email = emailNovo("reset-token-invalido");
+    const senhaAntiga = "SenhaAntiga123!";
+    const id = await criarContaComCredencial(email, senhaAntiga);
+
+    const adulterado = await solicitarToken(email);
+    const identificadorAdulterado = `reset-password:${adulterado}`;
+    await expect(
+      auth.api.resetPassword({
+        body: { newPassword: "SenhaAdulterada123!", token: `${adulterado}x` },
+      }),
+    ).rejects.toBeTruthy();
+    expect(
+      await prisma.verification.count({ where: { identifier: identificadorAdulterado } }),
+    ).toBe(1);
+
+    const expirado = await solicitarToken(email);
+    const identificadorExpirado = `reset-password:${expirado}`;
+    await prisma.verification.updateMany({
+      where: { identifier: identificadorExpirado },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    await expect(
+      auth.api.resetPassword({
+        body: { newPassword: "SenhaExpirada123!", token: expirado },
+      }),
+    ).rejects.toBeTruthy();
+
+    const login = await auth.api.signInEmail({
+      body: { email, password: senhaAntiga },
+    });
+    expect(login.user.id).toBe(id);
+  });
+
+  it("faz a nova senha valer em outra instância e recusa a anterior", async () => {
+    const email = emailNovo("reset-outra-instancia");
+    const senhaAntiga = "SenhaAntiga123!";
+    const senhaNova = "SenhaNova123!";
+    const id = await criarContaComCredencial(email, senhaAntiga);
+    const token = await solicitarToken(email);
+
+    const resultado = await auth.api.resetPassword({
+      body: { newPassword: senhaNova, token },
+    });
+    expect(resultado.status).toBe(true);
+
+    const { auth: outraInstancia } = criarAutenticacaoParaReset(prisma);
+    await expect(
+      outraInstancia.api.signInEmail({ body: { email, password: senhaAntiga } }),
+    ).rejects.toBeTruthy();
+    const login = await outraInstancia.api.signInEmail({
+      body: { email, password: senhaNova },
+    });
+    expect(login.user.id).toBe(id);
+  });
+
   it("permite no máximo um resgate concorrente do mesmo token", async () => {
     const email = emailNovo("reset-concorrente");
     await criarContaComCredencial(email, "SenhaAntiga123!");

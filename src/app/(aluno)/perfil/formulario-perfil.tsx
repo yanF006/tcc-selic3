@@ -155,6 +155,8 @@ export function FormularioPerfil({
       }
 
       consultaEndereco.invalidar();
+      // O e-mail só muda após a confirmação; o retorno traz o endereço atual.
+      setEmail(resultado.dados.email);
       setSucesso(resultado.mensagem);
     });
   }
@@ -166,7 +168,8 @@ export function FormularioPerfil({
           <h2 className="text-base font-semibold">Dados Pessoais e Perfil</h2>
         </CardTitle>
         <CardDescription>
-          Mantenha seus dados atualizados. A matrícula é exibida em modo somente leitura.
+          Mantenha seus dados atualizados. A matrícula é exibida em modo somente leitura e a
+          troca de e-mail só vale após a confirmação do novo endereço.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -201,6 +204,7 @@ export function FormularioPerfil({
           <CampoTexto
             id="perfil-email"
             rotulo="E-mail"
+            descricao="A troca só vale depois que o titular confirmar o novo endereço."
             obrigatorio
             tipo="email"
             valor={email}
