@@ -3,12 +3,12 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import * as mariadb from "mariadb";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PrismaClient } from "@/generated/prisma/client";
 import { descartarCliente } from "@/lib/db/prisma";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
+import { criarExecutorDdl } from "./ddl";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
 const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
@@ -131,19 +131,7 @@ afterAll(async () => {
   vi.unstubAllEnvs();
 });
 
-async function executarDdl(sql: string) {
-  const conexao = await mariadb.createConnection({
-    socketPath: join(base, "run/mysql.sock"),
-    user: "root",
-    database: configuracao.banco,
-    multipleStatements: true,
-  });
-  try {
-    await conexao.query(sql);
-  } finally {
-    await conexao.end();
-  }
-}
+const executarDdl = criarExecutorDdl(configuracao);
 
 describe("cadastro público persistente", () => {
   it("consulta a primeira etapa sem criar registros e matrícula registrada livre gera conta ativa", async () => {

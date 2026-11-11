@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import * as mariadb from "mariadb";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PrismaClient } from "@/generated/prisma/client";
@@ -18,6 +17,7 @@ import {
   listarSolicitacoes,
 } from "@/lib/services/administracao";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
+import { criarExecutorDdl } from "./ddl";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
 const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
@@ -53,19 +53,7 @@ function matricula(sufixo: string) {
   return valor;
 }
 
-async function executarDdl(sql: string) {
-  const conexao = await mariadb.createConnection({
-    socketPath: join(base, "run/mysql.sock"),
-    user: "root",
-    database: configuracao.banco,
-    multipleStatements: true,
-  });
-  try {
-    await conexao.query(sql);
-  } finally {
-    await conexao.end();
-  }
-}
+const executarDdl = criarExecutorDdl(configuracao);
 
 async function criarPendente(opcoes: {
   email: string;

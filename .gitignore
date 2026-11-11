@@ -5,6 +5,7 @@
 
 # build
 /.next/
+/.next-*/
 /out/
 /build
 /dist

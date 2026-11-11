@@ -13,7 +13,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:integration": "sh scripts/banco-teste.sh iniciar && sh scripts/preparar-auth-teste.sh && sh scripts/preparar-app-teste.sh && vitest run --config vitest.integration.config.mts",
+    "test:integration": "node scripts/integracao.mjs",
     "test:e2e": "playwright test",
     "test:e2e:seletor": "NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true playwright test e2e/seletor-papel.spec.ts",
     "db:generate": "prisma generate",

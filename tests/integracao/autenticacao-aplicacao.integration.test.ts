@@ -133,7 +133,9 @@ describe("Better Auth no modelo único da aplicação", () => {
     },
   );
 
-  it("relê cargo/curso atuais em outro processo e revoga sessões na inativação", async () => {
+  // Cada consulta em outro processo sobe um Node com tsx; no Windows isso
+  // custa vários segundos por spawn, acima do testTimeout padrão de 30s.
+  it("relê cargo/curso atuais em outro processo e revoga sessões na inativação", { timeout: 120_000 }, async () => {
     const cursoId = `curso-${crypto.randomUUID()}`;
     await prisma.curso.create({ data: { id: cursoId, nome: "Curso da Sessão", codigo: cursoId } });
     try {
@@ -160,7 +162,7 @@ describe("Better Auth no modelo único da aplicação", () => {
     }
   });
 
-  it("valida sessão em outro processo e rejeita cookie legado, adulteração, expiração e logout", async () => {
+  it("valida sessão em outro processo e rejeita cookie legado, adulteração, expiração e logout", { timeout: 120_000 }, async () => {
     const login = await POST(requisicao("/sign-in/email", { email, password: senha }));
     expect(login.status).toBe(200);
     const cookie = cookies(login);

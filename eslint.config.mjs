@@ -9,6 +9,8 @@ export default defineConfig([
   prettier,
   globalIgnores([
     ".next/**",
+    // Builds de produção dedicados aos E2E (SELIC_DIST_DIR, ex.: .next-e2e-producao).
+    ".next-*/**",
     ".opencode/**",
     "out/**",
     "build/**",

@@ -5,7 +5,6 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import * as mariadb from "mariadb";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PrismaClient, type Prisma } from "@/generated/prisma/client";
@@ -15,6 +14,7 @@ import { LIMITE_ARQUIVO_BYTES } from "@/lib/domain/arquivos";
 import { baixarArquivo, listarArquivos, salvarArquivo } from "@/lib/services/arquivos";
 import * as store from "@/lib/services/store";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
+import { criarExecutorDdl } from "./ddl";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
 const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
@@ -28,10 +28,7 @@ const prisma = new PrismaClient({ adapter: new PrismaMariaDb({ host: configuraca
 const pdf = Buffer.from("%PDF-1.7\nArquivo recebido de teste\n%%EOF");
 const entrada = { nome: "documento.pdf", mimeType: "application/pdf", finalidade: "assinado", conteudo: pdf };
 
-async function ddl(sql: string) {
-  const conexao = await mariadb.createConnection({ socketPath: join(base, "run/mysql.sock"), user: "root", database: configuracao.banco });
-  try { await conexao.query(sql); } finally { await conexao.end(); }
-}
+const ddl = criarExecutorDdl(configuracao);
 beforeAll(async () => {
   vi.stubEnv("SELIC_PERSISTENCIA", "persistente"); vi.stubEnv("DATABASE_URL", configuracao.url); vi.stubEnv("SELIC_DB_CA_CERT", ca);
   vi.spyOn(store, "obterEstado").mockImplementation(() => { throw new Error("Fixtures proibidas."); });

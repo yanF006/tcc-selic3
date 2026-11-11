@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import * as mariadb from "mariadb";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import type { Usuario } from "@/lib/domain/types";
@@ -17,6 +16,7 @@ import { acrescentarObservacao, observacoesDoDocumento } from "@/lib/services/ob
 import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
 import * as store from "@/lib/services/store";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
+import { criarExecutorDdl } from "./ddl";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
 const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
@@ -31,10 +31,7 @@ const outro = entrada("outro");
 const coordenador = entrada("coordenador", "coordenador_curso");
 const estagiario = entrada("comissao", "coordenador_estagio");
 const gatilho = `probe_parecer_${prefixo.replaceAll("-", "_")}`;
-async function ddl(sql: string) {
-  const conexao = await mariadb.createConnection({ socketPath: join(base, "run/mysql.sock"), user: "root", database: configuracao.banco });
-  try { await conexao.query(sql); } finally { await conexao.end(); }
-}
+const ddl = criarExecutorDdl(configuracao);
 
 beforeAll(async () => {
   vi.stubEnv("SELIC_PERSISTENCIA", "persistente");
