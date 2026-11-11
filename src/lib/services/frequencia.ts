@@ -12,6 +12,7 @@ import {
 import { ErroDeRegra } from "./erros";
 import { exigirAcessoEstagio } from "./estagios";
 import { agora, novoId, obterEstado } from "./store";
+import { bancoConfigurado } from "@/lib/db/prisma";
 
 /**
  * Registro da Ficha de Frequência já recebida assinada pela concedente (8.12).
@@ -49,6 +50,10 @@ export async function iniciarRegistroFicha(
   autor: Usuario,
   estagioId: string,
 ): Promise<PreparacaoRegistro> {
+  if (bancoConfigurado()) {
+    const { iniciarRegistroFichaPersistente } = await import("./frequencia-persistentes");
+    return iniciarRegistroFichaPersistente(autor, estagioId);
+  }
   const template = await templatePorId(TEMPLATE_FICHA_FREQUENCIA);
 
   if (!template) {
@@ -98,6 +103,10 @@ export async function registrarFichaFrequencia(
   estagioId: string,
   valores: Record<string, unknown>,
 ): Promise<ResultadoRegistroFicha> {
+  if (bancoConfigurado()) {
+    const { registrarFichaFrequenciaPersistente } = await import("./frequencia-persistentes");
+    return registrarFichaFrequenciaPersistente(autor, estagioId, valores);
+  }
   let contexto: PreparacaoRegistro;
 
   try {

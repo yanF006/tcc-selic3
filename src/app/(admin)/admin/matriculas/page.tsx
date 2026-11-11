@@ -4,7 +4,7 @@ import { PaginaArea } from "@/components/layout/pagina-area";
 import { TabelaMatriculas } from "@/features/admin/matriculas/tabela-matriculas";
 import { exigirPapeis } from "@/lib/auth/guard";
 import type { MatriculaImportada } from "@/lib/domain/types";
-import { listarMatriculas } from "@/lib/services/administracao";
+import { listarImportacoesMatriculas, listarMatriculas } from "@/lib/services/administracao";
 import { listarCursos } from "@/lib/services/catalogo";
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export default async function PaginaMatriculas({ searchParams }: PageProps<"/adm
   const origem = ehOrigem(origemBruta) ? origemBruta : undefined;
   const paginaSolicitada = numeroDaPagina(texto(parametros.pagina));
 
-  const [pagina, cursos] = await Promise.all([
+  const [pagina, cursos, importacoes] = await Promise.all([
     listarMatriculas({
       busca,
       origem,
@@ -50,6 +50,7 @@ export default async function PaginaMatriculas({ searchParams }: PageProps<"/adm
       tamanho: TAMANHO_PAGINA_MATRICULAS,
     }),
     listarCursos("ativo"),
+    listarImportacoesMatriculas(),
   ]);
 
   return (
@@ -65,6 +66,29 @@ export default async function PaginaMatriculas({ searchParams }: PageProps<"/adm
         filtros={{ busca, origem: origem ?? "todas" }}
         cursos={cursos}
       />
+      {importacoes.length > 0 && (
+        <section aria-labelledby="historico-importacoes" className="mt-6 flex flex-col gap-3">
+          <h2 id="historico-importacoes" className="text-lg font-semibold">Histórico de importações</h2>
+          {importacoes.map((lote) => (
+            <details key={lote.id} className="rounded-lg border p-4">
+              <summary className="cursor-pointer rounded font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
+                {lote.arquivo} — {new Date(lote.importadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                <span className="text-muted-foreground ml-2 text-sm">
+                  {lote.validas} válidas · {lote.ignoradas} ignoradas · {lote.rejeitadas} rejeitadas
+                </span>
+              </summary>
+              <ul className="mt-3 flex flex-col gap-2 text-sm">
+                {lote.itens.map((item, indice) => (
+                  <li key={indice} className="break-words">
+                    <strong>{item.matricula} — {item.nome}</strong>: {item.resultado === "valida" ? "Válida" : item.resultado === "ignorada" ? "Ignorada" : "Rejeitada"}
+                    {item.motivo && <p className="text-muted-foreground">{item.motivo}</p>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
+        </section>
+      )}
     </PaginaArea>
   );
 }

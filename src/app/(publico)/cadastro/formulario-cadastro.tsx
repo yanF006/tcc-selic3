@@ -25,7 +25,6 @@ import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
 import {
   concluirCadastroAction,
   validarEtapaUmAction,
-  type PreviaCadastro,
 } from "@/app/(publico)/cadastro/acoes";
 
 import {
@@ -63,7 +62,6 @@ export function FormularioCadastro({
   periodos: Periodo[];
 }) {
   const [etapa, setEtapa] = React.useState<1 | 2>(1);
-  const [previa, setPrevia] = React.useState<PreviaCadastro | null>(null);
   const [erro, setErro] = React.useState<{ campo?: string; texto: string } | null>(null);
   const [errosCampo, setErrosCampo] = React.useState<Record<string, string>>({});
   const [aviso, setAviso] = React.useState<string | null>(null);
@@ -155,9 +153,8 @@ export function FormularioCadastro({
         return;
       }
 
-      setPrevia(resultado.previa);
       setAviso(resultado.mensagem);
-      setNomeCompleto((nome) => nome || resultado.previa.nome);
+      setNomeCompleto((nome) => nome || resultado.nome);
       setEtapa(2);
     });
   }
@@ -173,10 +170,12 @@ export function FormularioCadastro({
     evento.preventDefault();
     setErro(null);
 
-    if (!previa) return;
-
     iniciar(async () => {
-      const resultado = await concluirCadastroAction(previa.id, {
+      const resultado = await concluirCadastroAction({
+        matricula,
+        email,
+        senha,
+        confirmacao,
         nomeCompleto,
         cpf,
         rg,

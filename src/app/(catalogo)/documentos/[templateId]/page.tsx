@@ -26,7 +26,7 @@ import {
   estagioPorId,
   podeConsultarEstagio,
   estagiosDoAluno,
-  listarEstagios,
+  consultarEstagios,
 } from "@/lib/services/estagios";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
 import { usuarioPorId } from "@/lib/services/administracao";
@@ -34,6 +34,9 @@ import { documentoInicial, estagioEncerrado, estagioLiberado } from "@/lib/domai
 import { correcaoInicialPermitida } from "@/lib/services/estagios";
 import { observacoesDoDocumento, podeAcrescentarObservacao } from "@/lib/services/observacoes";
 import { ObservacoesDocumento } from "@/components/documentos/observacoes-documento";
+import { AnexosDocumento } from "@/components/documentos/anexos-documento";
+import { bancoConfigurado } from "@/lib/db/prisma";
+import { listarArquivos } from "@/lib/services/arquivos";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +79,7 @@ export default async function Page({
     notFound();
   const estagioParam =
     documentoEscolhido?.estagioId ?? (typeof estagioBruto === "string" ? estagioBruto : undefined);
-  const descriptor = descritorDaVersao(templateId);
+  const descriptor = documentoEscolhido ? descritorDoDocumento(documentoEscolhido) : descritorDaVersao(templateId);
   const template = await templatePorId(templateId);
 
   if (!descriptor || !template) notFound();
@@ -103,7 +106,7 @@ export default async function Page({
   const estagioSelecionado = estagioParam ? await estagioPorId(estagioParam) : null;
   const documentoExistente =
     documentoEscolhido ??
-    (estagioSelecionado && podeConsultarEstagio(usuario, estagioSelecionado)
+    (estagioSelecionado && await podeConsultarEstagio(usuario, estagioSelecionado)
       ? (await documentosDoEstagio(estagioSelecionado.id)).find(
           (doc) => doc.templateId === templateId && doc.situacao !== "inativo",
         )
@@ -155,9 +158,7 @@ export default async function Page({
     const estagios =
       usuario.papel === "aluno"
         ? await estagiosDoAluno(usuario.id)
-        : (await listarEstagios({ tamanho: 100 })).itens.filter((estagio) =>
-            podeConsultarEstagio(usuario, estagio),
-          );
+        : (await consultarEstagios(usuario, { tamanho: 100 })).itens;
 
     if (estagios.length === 0) {
       return (
@@ -211,7 +212,7 @@ export default async function Page({
 
     const estagio = await estagioPorId(estagioParam);
 
-    if (!estagio || !podeConsultarEstagio(usuario, estagio)) {
+    if (!estagio || !(await podeConsultarEstagio(usuario, estagio))) {
       return (
         <PaginaArea titulo={descriptor.titulo} descricao={descriptor.descricao}>
           <Alert variant="destructive">
@@ -250,6 +251,7 @@ export default async function Page({
 
   const preenchidos = documento.estagioId ? await documentosDoEstagio(documento.estagioId) : [];
   const titular = await usuarioPorId(documento.alunoId);
+  const arquivos = bancoConfigurado() ? await listarArquivos(usuario.id, documento.id) : null;
   const observacoes = await observacoesDoDocumento(documento.id, usuario);
   const nomesAutores = Object.fromEntries(
     await Promise.all(
@@ -285,10 +287,18 @@ export default async function Page({
           Boolean(
             estagioSelecionado &&
             documentoInicial(templateId) &&
-            !correcaoInicialPermitida(estagioSelecionado),
+            !(await correcaoInicialPermitida(estagioSelecionado)),
           )
         }
       />
+      {arquivos && <AnexosDocumento
+        documentoId={documento.id}
+        arquivosIniciais={arquivos}
+        comprovantesPermitidos={documento.situacao === "rascunho"}
+        podeAnexar={documento.situacao !== "inativo" && titular?.situacao === "ativo" &&
+          !estagioSelecionado?.canceladoEm && !estagioSelecionado?.excluidoEm &&
+          (usuario.papel === "administrador" || (descritorDoDocumento(documento)?.metadados?.papeisPreenchimento.includes(usuario.papel) ?? false))}
+      />}
       {documento.estagioId ? (
         <div>
           <Badge variant="outline">Estágio #{documento.estagioId.slice(-6)}</Badge>
@@ -298,7 +308,7 @@ export default async function Page({
         documentoId={documento.id}
         observacoes={observacoes}
         nomesAutores={nomesAutores}
-        podeAcrescentar={podeAcrescentarObservacao(usuario, documento)}
+        podeAcrescentar={await podeAcrescentarObservacao(usuario, documento)}
       />
     </PaginaArea>
   );

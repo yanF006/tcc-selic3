@@ -19,12 +19,14 @@ import type {
   TipoParecer,
   TipoTemplate,
   Usuario,
+  Estagio,
 } from "@/lib/domain/types";
 import {
   camposDoTemplate,
   classificacaoDoCampo,
   DESCRITORES,
   fonteParecer,
+  type DescriptorDocumento,
 } from "@/lib/templates/descriptors";
 
 import { PAPEL_COM_TODAS_AS_PERMISSOES } from "@/lib/auth/permissions";
@@ -50,6 +52,10 @@ import type { OpcoesPaginacao } from "./paginacao";
 import { notificar } from "./sessao";
 import { agora, obterEstado, novoId } from "./store";
 import { descritorDaVersao } from "./templates";
+import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
+import { checksumDefinicao, templatesFixos } from "@/lib/templates/manifesto";
+import { buscarDocumento, paraDominioDocumento } from "@/lib/db/repositorios/documentos";
+import { criarRascunhoPersistente, podeConsultarDocumentoNoBanco, salvarRascunhoPersistente } from "./documentos-persistentes";
 
 /** Documentos preenchidos: rascunho, submissão, parecer e inativação. */
 
@@ -61,12 +67,17 @@ export interface ProblemaValidacao {
 export async function listarTemplates(
   tipo?: TemplateDocumento["tipo"],
 ): Promise<TemplateDocumento[]> {
+  if (bancoConfigurado()) {
+    return templatesFixos().filter((template) => template.situacao === "ativo")
+      .filter((template) => !tipo || template.tipo === tipo);
+  }
   return obterEstado()
     .templates.filter((template) => template.situacao === "ativo")
     .filter((template) => !tipo || template.tipo === tipo);
 }
 
 export async function templatePorId(id: string): Promise<TemplateDocumento | null> {
+  if (bancoConfigurado()) return templatesFixos().find((template) => template.id === id) ?? null;
   return obterEstado().templates.find((template) => template.id === id) ?? null;
 }
 
@@ -143,6 +154,14 @@ export async function listarDocumentos(
   alunoId: string,
   consulta: ConsultaDocumentos = {},
 ): Promise<Pagina<DocumentoPreenchido>> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    const linhas = await prisma.documentoPreenchido.findMany({
+      where: { alunoId, ...(consulta.estagioId ? { estagioId: consulta.estagioId } : {}), ...(consulta.situacao ? { situacao: consulta.situacao } : {}), ...(consulta.busca?.trim() ? { templateId: { contains: consulta.busca.trim() } } : {}) },
+      orderBy: [{ atualizadoEm: "desc" }, { id: "asc" }],
+    });
+    return paginar(linhas.map(paraDominioDocumento), consulta);
+  }
   const filtrados = obterEstado()
     .documentos.filter((documento) => documento.alunoId === alunoId)
     .filter((documento) => !consulta.estagioId || documento.estagioId === consulta.estagioId)
@@ -156,10 +175,18 @@ export async function listarDocumentos(
 }
 
 export async function documentosDoAluno(alunoId: string): Promise<DocumentoPreenchido[]> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return (await prisma.documentoPreenchido.findMany({ where: { alunoId }, orderBy: [{ atualizadoEm: "desc" }, { id: "asc" }] })).map(paraDominioDocumento);
+  }
   return (await listarDocumentos(alunoId, { tamanho: 100 })).itens;
 }
 
 export async function documentosDaCoordenacao(usuario: Usuario, consulta: ConsultaDocumentos = {}) {
+  if (bancoConfigurado()) {
+    const { documentosDaCoordenacaoPersistente } = await import("./fluxo-consultas-persistentes");
+    return documentosDaCoordenacaoPersistente(usuario, consulta);
+  }
   if (
     usuario.situacao !== "ativo" ||
     !["administrador", "coordenador_curso", "coordenador_estagio"].includes(usuario.papel)
@@ -193,14 +220,24 @@ export async function documentosDaCoordenacao(usuario: Usuario, consulta: Consul
 }
 
 export async function documentosDoEstagio(estagioId: string): Promise<DocumentoPreenchido[]> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return (await prisma.documentoPreenchido.findMany({ where: { estagioId }, orderBy: [{ criadoEm: "asc" }, { id: "asc" }] })).map(paraDominioDocumento);
+  }
   return obterEstado().documentos.filter((documento) => documento.estagioId === estagioId);
 }
 
 export async function documentoPorId(id: string): Promise<DocumentoPreenchido | null> {
+  if (bancoConfigurado()) return buscarDocumento((await carregarCliente()).prisma, id);
   return obterEstado().documentos.find((documento) => documento.id === id) ?? null;
 }
 
 export async function documentoDoTemplate(templateId: string, autorId: string, estagioId?: string) {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    const linha = await prisma.documentoPreenchido.findFirst({ where: { templateId, alunoId: autorId, estagioId: estagioId ?? null, situacao: { not: "inativo" } }, orderBy: [{ criadoEm: "asc" }, { id: "asc" }] });
+    return linha ? paraDominioDocumento(linha) : null;
+  }
   return (
     obterEstado().documentos.find(
       (documento) =>
@@ -217,9 +254,10 @@ export function validarValores(
   templateId: string,
   valores: Record<string, unknown>,
   versao?: number,
+  snapshot?: DescriptorDocumento,
 ): ProblemaValidacao[] {
   const problemas: ProblemaValidacao[] = [];
-  const campos = camposDoTemplate(templateId, descritorDaVersao(templateId, versao));
+  const campos = camposDoTemplate(templateId, snapshot ?? descritorDaVersao(templateId, versao));
 
   for (const campo of campos) {
     if (fonteParecer(templateId, campo)) continue;
@@ -327,10 +365,11 @@ export async function podeConsultarDocumento(
   usuario: Usuario,
   documento: DocumentoPreenchido,
 ): Promise<boolean> {
+  if (bancoConfigurado()) return podeConsultarDocumentoNoBanco(usuario.id, documento.id);
   if (usuario.situacao !== "ativo") return false;
   if (documento.estagioId) {
     const estagio = await estagioPorId(documento.estagioId);
-    return Boolean(estagio && podeConsultarEstagio(usuario, estagio));
+    return Boolean(estagio && await podeConsultarEstagio(usuario, estagio));
   }
   return (
     documento.alunoId === usuario.id ||
@@ -345,6 +384,7 @@ export async function criarRascunho(
   estagioId?: string,
   valores: Record<string, unknown> = {},
 ): Promise<DocumentoPreenchido> {
+  if (bancoConfigurado()) return criarRascunhoPersistente(aluno, templateId, estagioId, valores, { preparar: valoresDoPreenchimento, validar: validarValores });
   const template = await templatePorId(templateId);
 
   if (!template || template.tipo !== "preenchivel" || !template.metadados) {
@@ -430,15 +470,27 @@ export async function criarRascunho(
   return documento;
 }
 
+export interface ContextoPreenchimento {
+  descritor: DescriptorDocumento;
+  estagio: Estagio | null;
+  curso: { nome: string } | null;
+  turma: { nome: string } | null;
+  periodo: { ano: number; semestre: number; rotulo: string } | null;
+  convenio: { instituicao: string } | null;
+  supervisor: { nome: string } | null;
+  orientador: { nome: string } | null;
+}
+
 /** Campos `somenteLeitura` do descritor, preenchidos a partir do cadastro e do estágio. */
 export async function valoresAutomaticos(
   templateId: string,
   aluno: Usuario,
   estagioId?: string,
   versao?: number,
+  contexto?: ContextoPreenchimento,
 ): Promise<Record<string, unknown>> {
-  const descriptor = descritorDaVersao(templateId, versao);
-  const estagio = estagioId ? await estagioPorId(estagioId) : null;
+  const descriptor = contexto?.descritor ?? descritorDaVersao(templateId, versao);
+  const estagio = contexto ? contexto.estagio : estagioId ? await estagioPorId(estagioId) : null;
   if (estagio?.excluidoEm) {
     return {
       nomeCompleto: estagio.nomeAlunoHistorico ?? "",
@@ -446,7 +498,7 @@ export async function valoresAutomaticos(
     };
   }
   const dados = aluno.dadosPessoais;
-  const [curso, turma, periodo] = dados
+  const [curso, turma, periodo] = contexto ? [contexto.curso, contexto.turma, contexto.periodo] : dados
     ? await Promise.all([
         cursoPorId(dados.cursoId),
         turmaPorId(dados.turmaId),
@@ -489,7 +541,7 @@ export async function valoresAutomaticos(
   };
 
   if (estagio) {
-    const [convenio, supervisor, orientador] = await Promise.all([
+    const [convenio, supervisor, orientador] = contexto ? [contexto.convenio, contexto.supervisor, contexto.orientador] : await Promise.all([
       convenioPorId(estagio.convenioId),
       pessoaPorId(estagio.supervisorId),
       pessoaPorId(estagio.orientadorId),
@@ -543,9 +595,10 @@ export async function valoresDoPreenchimento(
   estagioId: string | undefined,
   valores: Record<string, unknown>,
   versao?: number,
+  contexto?: ContextoPreenchimento,
 ) {
-  const descriptor = descritorDaVersao(templateId, versao);
-  const automaticos = await valoresAutomaticos(templateId, aluno, estagioId, versao);
+  const descriptor = contexto?.descritor ?? descritorDaVersao(templateId, versao);
+  const automaticos = await valoresAutomaticos(templateId, aluno, estagioId, versao, contexto);
   const grupos = descriptor?.gruposEndereco ?? [];
   const enderecos = new Set(grupos.flatMap(idsDoGrupo));
   const protegidos = Object.fromEntries(
@@ -576,7 +629,10 @@ export async function valoresDoPreenchimento(
 export async function salvarRascunho(
   documentoId: string,
   valores: Record<string, unknown>,
+  autor?: Usuario,
+  validarCompleto = false,
 ): Promise<DocumentoPreenchido> {
+  if (bancoConfigurado()) return salvarRascunhoPersistente(documentoId, valores, autor, { preparar: valoresDoPreenchimento, validar: validarValores }, validarCompleto);
   const documento = await documentoPorId(documentoId);
 
   if (!documento) throw new Error("Documento não encontrado.");
@@ -597,7 +653,7 @@ export async function salvarRascunho(
       "liberacao_pendente",
     );
   }
-  if (estagio && documentoInicial(documento.templateId) && !correcaoInicialPermitida(estagio)) {
+  if (estagio && documentoInicial(documento.templateId) && !(await correcaoInicialPermitida(estagio))) {
     throw new ErroDeRegra(
       "Os documentos iniciais só podem ser corrigidos após indeferimento.",
       "dados_iniciais_bloqueados",
@@ -623,7 +679,12 @@ export async function salvarRascunho(
   return documento;
 }
 
-export async function submeter(documentoId: string): Promise<DocumentoPreenchido> {
+export async function submeter(documentoId: string, autor?: Usuario): Promise<DocumentoPreenchido> {
+  if (bancoConfigurado()) {
+    if (!autor) throw new ErroDeRegra("Autor autenticado obrigatório.", "acesso_negado");
+    const { submeterPersistente } = await import("./fluxo-estagio-persistentes");
+    return submeterPersistente(documentoId, autor.id);
+  }
   const documento = await documentoPorId(documentoId);
 
   if (!documento) throw new Error("Documento não encontrado.");
@@ -698,6 +759,10 @@ export async function documentosParaParecer(
   autor: Usuario,
   consulta: ConsultaDocumentos = {},
 ): Promise<Pagina<DocumentoPreenchido>> {
+  if (bancoConfigurado()) {
+    const { documentosParaParecerPersistente } = await import("./fluxo-consultas-persistentes");
+    return documentosParaParecerPersistente(fila, autor, consulta);
+  }
   const administrador = autor.papel === "administrador" && autor.situacao === "ativo";
   const podeVerFila =
     autor.situacao === "ativo" &&
@@ -749,6 +814,10 @@ export async function registrarParecer(
   autor: Usuario,
   consideracoes?: string,
 ): Promise<DocumentoPreenchido> {
+  if (bancoConfigurado()) {
+    const { registrarParecerPersistente } = await import("./fluxo-estagio-persistentes");
+    return registrarParecerPersistente(documentoId, decisao, autor.id, consideracoes);
+  }
   const documento = await documentoPorId(documentoId);
 
   if (!documento) throw new Error("Documento não encontrado.");
@@ -868,6 +937,12 @@ export function contarPalavras(texto: string): number {
 }
 
 export function descritorDoDocumento(documento: DocumentoPreenchido) {
+  if (documento.definicaoSnapshot) {
+    if (documento.definicaoSnapshot.templateId !== documento.templateId || checksumDefinicao(documento.definicaoSnapshot) !== documento.definicaoChecksum) {
+      throw new ErroDeRegra("A definição salva deste documento está indisponível.", "definicao_indisponivel");
+    }
+    return structuredClone(documento.definicaoSnapshot);
+  }
   return descritorDaVersao(documento.templateId, documento.versaoTemplate);
 }
 

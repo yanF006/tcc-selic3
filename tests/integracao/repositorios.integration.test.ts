@@ -128,6 +128,59 @@ describe("repositórios persistentes", () => {
     expect(await repositorio.buscarPorId(usuario.id)).toBeNull();
   });
 
+  it("lista com busca, filtros, paginação e totais no recorte completo", async () => {
+    const prefixo = `lista-${crypto.randomUUID().slice(0, 8)}`;
+    const cursoId = `${prefixo}-curso`;
+    const usuarios = Array.from({ length: 12 }, (_, indice) => {
+      const usuario = usuarioNovo();
+      return {
+        ...usuario,
+        nome: `Busca ${String(indice + 1).padStart(2, "0")} ${prefixo}`,
+        email: `${prefixo}-${indice}@teste.local`,
+        situacao: indice === 0 ? ("inativo" as const) : ("ativo" as const),
+        papel: indice === 1 ? ("coordenador_curso" as const) : ("aluno" as const),
+        cursoId: indice === 1 ? cursoId : undefined,
+      };
+    });
+
+    try {
+      await prisma.curso.create({
+        data: { id: cursoId, nome: "Curso da Listagem", codigo: `${prefixo}-C1` },
+      });
+      for (const usuario of usuarios) await repositorio.criar(usuario);
+
+      const busca = await repositorio.listarPaginado({
+        busca: `Busca 12 ${prefixo}`,
+        tamanho: 10,
+      });
+      expect(busca.total).toBe(1);
+      expect(busca.itens[0]?.email).toBe(usuarios[11].email);
+
+      const segunda = await repositorio.listarPaginado({ tamanho: 5, pagina: 2 });
+      expect(segunda.total).toBeGreaterThanOrEqual(12);
+      expect(segunda.itens).toHaveLength(5);
+      expect(segunda.pagina).toBe(2);
+
+      const inativos = await repositorio.listarPaginado({ situacao: "inativo" });
+      expect(inativos.itens.some((usuario) => usuario.email === usuarios[0].email)).toBe(true);
+
+      const doCurso = await repositorio.listarPaginado({ cursoId });
+      expect(doCurso.itens).toHaveLength(1);
+      expect(doCurso.itens[0]?.email).toBe(usuarios[1].email);
+
+      expect(await repositorio.buscarPorEmail(usuarios[11].email)).toMatchObject({
+        id: usuarios[11].id,
+      });
+      expect((await repositorio.contarPorSituacao()).ativo).toBeGreaterThanOrEqual(11);
+    } finally {
+      await repositorio.excluir(usuarios[0].id);
+      await prisma.usuario.deleteMany({
+        where: { email: { in: usuarios.map((usuario) => usuario.email) } },
+      });
+      await prisma.curso.deleteMany({ where: { id: cursoId } });
+    }
+  });
+
   it("recusa colisão de ID sem sobrescrever a conta existente", async () => {
     const usuario = usuarioNovo();
     try {

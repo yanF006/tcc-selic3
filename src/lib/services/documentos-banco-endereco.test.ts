@@ -1,50 +1,36 @@
-import { expect, it, vi } from "vitest";
-import { usuarios, matriculasImportadas } from "@/lib/fixtures/base";
-import { obterEstado, reiniciarEstado } from "./store";
-import { criarRascunho } from "./documentos";
-import { carregarCliente } from "@/lib/db/prisma";
+import { expect, it } from "vitest";
+import type { DocumentoPreenchido as LinhaDocumento, Prisma } from "@/generated/prisma/client";
+import { paraDominioDocumento } from "@/lib/db/repositorios/documentos";
+import { checksumDefinicao, definicaoKit } from "@/lib/templates/manifesto";
+import { descritorDoDocumento } from "./documentos";
 
-vi.mock("@/lib/db/prisma", () => ({ bancoConfigurado: () => true, carregarCliente: vi.fn() }));
+// A preparação relacional do endereço do titular é exercitada no MySQL por
+// documentos-persistentes.integration.test.ts; reabrir não depende de hidratação.
+function registro(): LinhaDocumento {
+  const snapshot = definicaoKit("tpl-relatorio-semestral")!.descritor;
+  snapshot.titulo = "Definição histórica salva";
+  return {
+    id: "doc-salvo", templateId: snapshot.templateId, alunoId: "titular", estagioId: "estagio",
+    versaoTemplate: 1, definicaoChecksum: checksumDefinicao(snapshot),
+    definicaoSnapshot: snapshot as unknown as Prisma.JsonValue,
+    valores: { logradouro: "Endereço corrigido no documento", numero: "42", complemento: "Sala 2" },
+    situacao: "rascunho", criadoEm: new Date("2026-11-10"), atualizadoEm: new Date("2026-11-10"),
+    inativadoEm: null, registradoPorId: null, registradoEm: null,
+    assinaturasConfirmadasPorId: null, assinaturasConfirmadasEm: null, correcaoAberta: false,
+  };
+}
 
-it("hidrata o banco antes de preparar o endereço do titular, mesmo para autor coordenador", async () => {
-  reiniciarEstado();
-  obterEstado().documentos = [];
-  const registros = structuredClone(usuarios).map((u) => ({
-    ...u,
-    matricula: u.matricula ?? null,
-    cursoId: u.cursoId ?? null,
-    membroComissaoEstagio: u.membroComissaoEstagio ?? false,
-    dadosPessoais: u.dadosPessoais ?? null,
-    criadoEm: new Date(u.criadoEm),
-  }));
-  registros.find((u) => u.id === "usr-maria")!.dadosPessoais!.endereco.logradouro =
-    "Endereço do banco";
-  const consultarUsuarios = vi.fn().mockResolvedValue(registros);
-  vi.mocked(carregarCliente).mockResolvedValue({
-    prisma: {
-      usuario: { count: async () => 1, findMany: consultarUsuarios },
-      matriculaImportada: {
-        count: async () => 1,
-        findMany: async () =>
-          matriculasImportadas.map((m) => ({ ...m, importadaEm: new Date(m.importadaEm) })),
-      },
-    },
-    Prisma: {},
-  } as unknown as Awaited<ReturnType<typeof carregarCliente>>);
-  const rede = vi.fn();
-  vi.stubGlobal("fetch", rede);
-  try {
-    const coordenador = obterEstado().usuarios.find((u) => u.id === "usr-ana")!;
-    const doc = await criarRascunho(
-      { ...coordenador, papel: "administrador" },
-      "tpl-formulario-liberacao",
-      "est-maria-tecnoweb",
-    );
-    expect(consultarUsuarios).toHaveBeenCalledOnce();
-    expect(doc.alunoId).toBe("usr-maria");
-    expect(doc.valores.logradouroAluno).toBe("Endereço do banco");
-    expect(rede).not.toHaveBeenCalled();
-  } finally {
-    vi.unstubAllGlobals();
-  }
+it("reabre valores finais e a definição histórica sem reinterpretar pelo catálogo atual", () => {
+  const linha = registro();
+  const documento = paraDominioDocumento(linha);
+  expect(documento.valores).toEqual({ logradouro: "Endereço corrigido no documento", numero: "42", complemento: "Sala 2" });
+  expect(descritorDoDocumento(documento)?.titulo).toBe("Definição histórica salva");
+  documento.valores.logradouro = "Alteração local";
+  expect(paraDominioDocumento(linha).valores.logradouro).toBe("Endereço corrigido no documento");
+});
+
+it("recusa definição salva divergente em vez de usar a definição atual como fallback", () => {
+  const linha = registro();
+  linha.definicaoChecksum = "0".repeat(64);
+  expect(() => paraDominioDocumento(linha)).toThrow(/definição salva/);
 });

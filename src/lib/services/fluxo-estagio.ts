@@ -20,6 +20,7 @@ import { acrescentarObservacao, podeAcrescentarObservacao } from "./observacoes"
 import { notificar } from "./sessao";
 import { agora, novoId, obterEstado } from "./store";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
+import { bancoConfigurado } from "@/lib/db/prisma";
 
 export type ValoresDocumentosIniciais = Record<string, Record<string, unknown>>;
 
@@ -40,6 +41,10 @@ export async function prepararDocumentosIniciais(
 }
 
 export async function solicitarEncaminhamento(estagioId: string, aluno: Usuario) {
+  if (bancoConfigurado()) {
+    const { solicitarEncaminhamentoPersistente } = await import("./fluxo-estagio-persistentes");
+    return solicitarEncaminhamentoPersistente(estagioId, aluno.id);
+  }
   const estagio = await exigirAcessoEstagio(aluno, estagioId);
   if (
     estagio.alunoId !== aluno.id ||
@@ -84,6 +89,10 @@ export async function enviarParaAssinaturas(
   documentoId: string,
   autor: Usuario,
 ): Promise<EnvioExterno[]> {
+  if (bancoConfigurado()) {
+    const { enviarParaAssinaturasPersistente } = await import("./fluxo-estagio-persistentes");
+    return enviarParaAssinaturasPersistente(documentoId, autor.id);
+  }
   const documento = await documentoPorId(documentoId);
   if (!documento || !(await podeConsultarDocumento(autor, documento))) {
     throw new ErroDeRegra("Documento não disponível.", "acesso_negado");
@@ -192,6 +201,11 @@ export async function confirmarAssinaturas(
   autor: Usuario,
   confirmacoes: { documentoId: string; confirmado: boolean; observacao?: string }[],
 ) {
+  if (bancoConfigurado()) {
+    if (autor.papel !== "coordenador_estagio") throw new ErroDeRegra("A conferência cabe ao Coordenador de Estágio.", "acesso_negado");
+    const { confirmarAssinaturasPersistente } = await import("./fluxo-estagio-persistentes");
+    return confirmarAssinaturasPersistente(estagioId, autor.id, confirmacoes);
+  }
   const estagio = await exigirAcessoEstagio(autor, estagioId);
   if (autor.papel !== "coordenador_estagio")
     throw new ErroDeRegra("A conferência cabe ao Coordenador de Estágio.", "acesso_negado");
@@ -221,7 +235,7 @@ export async function confirmarAssinaturas(
     );
   }
   for (const doc of iniciais) {
-    if (!podeAcrescentarObservacao(autor, doc!))
+    if (!(await podeAcrescentarObservacao(autor, doc!)))
       throw new ErroDeRegra("Documento não disponível.", "acesso_negado");
   }
   const momento = agora();
@@ -243,6 +257,10 @@ export async function confirmarAssinaturas(
 }
 
 export async function reabrirParaCorrecao(estagioId: string, aluno: Usuario) {
+  if (bancoConfigurado()) {
+    const { reabrirParaCorrecaoPersistente } = await import("./fluxo-estagio-persistentes");
+    return reabrirParaCorrecaoPersistente(estagioId, aluno.id);
+  }
   const estagio = await exigirAcessoEstagio(aluno, estagioId);
   const documentos = await documentosDoEstagio(estagioId);
   const formulario = documentos.find(
@@ -265,6 +283,10 @@ export async function reabrirParaCorrecao(estagioId: string, aluno: Usuario) {
 }
 
 export async function dadosDoPainelFluxo(autor: Usuario, estagioIds: string[]) {
+  if (bancoConfigurado()) {
+    const { dadosDoPainelFluxoPersistente } = await import("./fluxo-consultas-persistentes");
+    return dadosDoPainelFluxoPersistente(autor, estagioIds);
+  }
   for (const id of estagioIds) await exigirAcessoEstagio(autor, id);
   const ids = new Set(estagioIds);
   const estado = obterEstado();

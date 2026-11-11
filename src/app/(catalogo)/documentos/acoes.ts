@@ -18,6 +18,8 @@ import {
 import { ErroDeRegra } from "@/lib/services/erros";
 import { usuarioPorId } from "@/lib/services/administracao";
 import { solicitarEncaminhamento } from "@/lib/services/fluxo-estagio";
+import { bancoConfigurado } from "@/lib/db/prisma";
+import { ErroValidacaoDocumento } from "@/lib/services/documentos-persistentes";
 
 export interface ResultadoDocumento {
   ok: boolean;
@@ -48,7 +50,7 @@ export async function submeterDocumentoAction(
   try {
     if (documento.templateId === "tpl-formulario-liberacao" && documento.estagioId)
       await solicitarEncaminhamento(documento.estagioId, usuario);
-    else await submeter(documentoId);
+    else await submeter(documentoId, usuario);
     revalidatePath(`/documentos/${documento.templateId}`);
     return salvo;
   } catch (erro) {
@@ -70,6 +72,11 @@ export async function salvarDocumentoAction(
 ): Promise<ResultadoDocumento> {
   try {
     const usuario = await usuarioDaRequisicaoObrigatorio();
+    if (bancoConfigurado()) {
+      const salvo = await salvarRascunho(documentoId, valores, usuario, true);
+      revalidatePath(`/documentos/${salvo.templateId}`);
+      return { ok: true, valores: salvo.valores };
+    }
     const documento = await documentoPorId(documentoId);
 
     if (!documento) return { ok: false, erro: "Documento não encontrado." };
@@ -110,6 +117,9 @@ export async function salvarDocumentoAction(
 
     return { ok: true, valores: salvo.valores };
   } catch (erro) {
+    if (erro instanceof ErroValidacaoDocumento) {
+      return { ok: false, erro: erro.message, problemas: erro.problemas };
+    }
     if (erro instanceof ErroDeRegra) {
       return { ok: false, erro: erro.message };
     }
@@ -153,7 +163,7 @@ export async function baixarDocumentoAction(
 
     const aluno = await usuarioPorId(documento.alunoId);
     const valores =
-      documento.situacao === "rascunho" && aluno?.situacao === "ativo"
+      !documento.definicaoSnapshot && documento.situacao === "rascunho" && aluno?.situacao === "ativo"
         ? await valoresDoPreenchimento(
             templateId,
             aluno,

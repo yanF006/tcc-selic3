@@ -88,7 +88,7 @@ test.describe("cadastro público", () => {
 
   test("confirma matrícula importada e conclui cadastro", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "20231000788",
+      matricula: "20231000555",
       email: email("importada"),
       senha: SENHA,
       confirmacao: SENHA,
@@ -96,7 +96,7 @@ test.describe("cadastro público", () => {
 
     await expect(page.getByText("Etapa 1 conferida")).toBeVisible();
     await expect(page.getByText(/Matrícula registrada no sistema/)).toBeVisible();
-    await expect(page.getByLabel("Nome completo")).toHaveValue("João Pedro Lima");
+    await expect(page.getByLabel("Nome completo")).toHaveValue("Aluno Sem Conta");
 
     await preencherEtapaDois(page);
 
@@ -140,7 +140,7 @@ test.describe("cadastro público", () => {
 
   test("limpa turma e período ao trocar o curso", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "20231000999",
+      matricula: "20230444557",
       email: email("dependentes"),
       senha: SENHA,
       confirmacao: SENHA,
@@ -166,7 +166,7 @@ test.describe("cadastro público", () => {
 
   test("oferece apenas opções cadastradas e recusa valor não cadastrado", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "20231000999",
+      matricula: "20230444556",
       email: email("selecao"),
       senha: SENHA,
       confirmacao: SENHA,
@@ -208,5 +208,72 @@ test.describe("cadastro público", () => {
     await page.keyboard.press("Escape");
 
     await expect(page.getByLabel("Turma", { exact: true })).toContainText("INF 2026.1");
+  });
+
+  test("não persiste prévia, senha ou token no navegador", async ({ page, context }) => {
+    await preencherEtapaUm(page, {
+      matricula: "20230444560",
+      email: email("sem-previa"),
+      senha: SENHA,
+      confirmacao: SENHA,
+    });
+
+    await expect(page.getByText("Etapa 1 conferida")).toBeVisible();
+
+    const cookies = await context.cookies();
+    expect(cookies.filter((cookie) => /previa|cadastro|token/i.test(cookie.name))).toHaveLength(0);
+
+    const armazenamento = await page.evaluate(() => ({
+      local: { ...localStorage },
+      sessao: { ...sessionStorage },
+      cookie: document.cookie,
+    }));
+    const serializado = JSON.stringify(armazenamento);
+
+    expect(serializado).not.toContain(SENHA);
+    expect(serializado).not.toMatch(/previa|token/i);
+  });
+
+  test("outro contexto conclui sem depender da consulta inicial", async ({ page, browser }) => {
+    const matricula = "20230444559";
+    const emailCompartilhado = email("processos");
+
+    await preencherEtapaUm(page, {
+      matricula,
+      email: emailCompartilhado,
+      senha: SENHA,
+      confirmacao: SENHA,
+    });
+    await expect(page.getByText("Etapa 1 conferida")).toBeVisible();
+
+    const outroContexto = await browser.newContext();
+
+    try {
+      const outraPagina = await outroContexto.newPage();
+      await outraPagina.goto("/cadastro");
+      await preencherEtapaUm(outraPagina, {
+        matricula,
+        email: emailCompartilhado,
+        senha: SENHA,
+        confirmacao: SENHA,
+      });
+
+      await expect(outraPagina.getByText("Etapa 1 conferida")).toBeVisible();
+      await preencherEtapaDois(outraPagina);
+
+      await outraPagina.getByLabel("Curso", { exact: true }).click();
+      await outraPagina.getByRole("option", { name: "Informática" }).click();
+      await outraPagina.getByLabel("Turma", { exact: true }).click();
+      await outraPagina.getByRole("option", { name: "INF 2026.1 — 1º período" }).first().click();
+      await outraPagina.getByLabel("Período", { exact: true }).click();
+      await outraPagina.getByRole("option", { name: "2026.1", exact: true }).first().click();
+
+      await outraPagina.getByRole("button", { name: "Concluir cadastro" }).click();
+
+      await expect(outraPagina.getByRole("heading", { name: "Cadastro enviado" })).toBeVisible();
+      await expect(outraPagina.getByText("Aguarde a autorização")).toBeVisible();
+    } finally {
+      await outroContexto.close();
+    }
   });
 });

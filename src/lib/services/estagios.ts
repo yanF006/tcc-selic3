@@ -27,6 +27,10 @@ import { ErroDeRegra } from "./erros";
 import { filtrarPorTexto, paginar } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
 import { agora, obterEstado, novoId } from "./store";
+import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
+import { buscarEstagio, paraDominioEstagio, podeConsultarEstagioNoBanco, recorteEstagios } from "@/lib/db/repositorios/estagios";
+import { executarTransacao } from "@/lib/db/transacoes";
+import type { Prisma } from "@/generated/prisma/client";
 
 export { ErroDeRegra };
 
@@ -43,6 +47,30 @@ export interface EstagioContexto {
 export interface ConsultaEstagios extends OpcoesPaginacao {
   situacao?: Estagio["situacao"];
   busca?: string;
+}
+
+/** Entrada das telas: o recorte é aplicado no banco antes de contar/paginar. */
+export async function consultarEstagios(usuario: Usuario, consulta: ConsultaEstagios = {}): Promise<Pagina<Estagio>> {
+  if (!bancoConfigurado()) {
+    const permitidos = await filtrarEstagiosPermitidos(usuario, obterEstado().estagios);
+    const filtrados = permitidos.filter((estagio) => !consulta.situacao || estagio.situacao === consulta.situacao)
+      .sort((a, b) => b.dataInicio.localeCompare(a.dataInicio) || a.id.localeCompare(b.id));
+    return paginar(filtrarPorTexto(filtrados, consulta.busca ?? "", (estagio) => [estagio.id, estagio.alunoId]), consulta);
+  }
+  const { prisma } = await carregarCliente();
+  return executarTransacao(async (tx) => {
+    const recorte = await recorteEstagios(tx, usuario.id);
+    const termo = consulta.busca?.trim();
+    const where: Prisma.EstagioWhereInput = { AND: [recorte, {
+      ...(consulta.situacao ? { situacao: consulta.situacao } : {}),
+      ...(termo ? { OR: [{ id: { contains: termo } }, { alunoId: { contains: termo } }] } : {}),
+    }] };
+    const total = await tx.estagio.count({ where });
+    const tamanho = Math.max(1, consulta.tamanho ?? 10);
+    const pagina = Math.min(Math.max(1, consulta.pagina ?? 1), Math.max(1, Math.ceil(total / tamanho)));
+    const linhas = await tx.estagio.findMany({ where, include: { templates: true }, orderBy: [{ dataInicio: "desc" }, { id: "asc" }], take: tamanho, skip: (pagina - 1) * tamanho });
+    return { itens: linhas.map(paraDominioEstagio), total, pagina, tamanhoPagina: tamanho };
+  }, { cliente: prisma }, { isolationLevel: "RepeatableRead" });
 }
 
 export interface NovoEstagio {
@@ -62,12 +90,31 @@ function sobrepoe(inicioA: string, fimA: string, inicioB: string, fimB: string):
 }
 
 export async function estagiosDoAluno(alunoId: string): Promise<Estagio[]> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return (await prisma.estagio.findMany({ where: { alunoId }, include: { templates: true }, orderBy: [{ dataInicio: "desc" }, { id: "asc" }] })).map(paraDominioEstagio);
+  }
   return obterEstado()
     .estagios.filter((estagio) => estagio.alunoId === alunoId)
     .sort((a, b) => b.dataInicio.localeCompare(a.dataInicio));
 }
 
 export async function listarEstagios(consulta: ConsultaEstagios = {}): Promise<Pagina<Estagio>> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    const termo = consulta.busca?.trim();
+    const where: Prisma.EstagioWhereInput = {
+      ...(consulta.situacao ? { situacao: consulta.situacao } : {}),
+      ...(termo ? { OR: [{ id: { contains: termo } }, { alunoId: { contains: termo } }] } : {}),
+    };
+    return executarTransacao(async (tx) => {
+      const total = await tx.estagio.count({ where });
+      const tamanho = Math.max(1, consulta.tamanho ?? 10);
+      const pagina = Math.min(Math.max(1, consulta.pagina ?? 1), Math.max(1, Math.ceil(total / tamanho)));
+      const linhas = await tx.estagio.findMany({ where, include: { templates: true }, orderBy: [{ dataInicio: "desc" }, { id: "asc" }], skip: (pagina - 1) * tamanho, take: tamanho });
+      return { itens: linhas.map(paraDominioEstagio), total, pagina, tamanhoPagina: tamanho };
+    }, { cliente: prisma }, { isolationLevel: "RepeatableRead" });
+  }
   const filtrados = obterEstado()
     .estagios.filter((estagio) => !consulta.situacao || estagio.situacao === consulta.situacao)
     .sort((a, b) => b.dataInicio.localeCompare(a.dataInicio));
@@ -79,14 +126,20 @@ export async function listarEstagios(consulta: ConsultaEstagios = {}): Promise<P
 }
 
 export async function estagiosPorSituacao(situacao: Estagio["situacao"]): Promise<Estagio[]> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return (await prisma.estagio.findMany({ where: { situacao }, include: { templates: true }, orderBy: [{ dataInicio: "desc" }, { id: "asc" }] })).map(paraDominioEstagio);
+  }
   return obterEstado().estagios.filter((estagio) => estagio.situacao === situacao);
 }
 
 export async function estagioPorId(id: string): Promise<Estagio | null> {
+  if (bancoConfigurado()) return buscarEstagio((await carregarCliente()).prisma, id);
   return obterEstado().estagios.find((estagio) => estagio.id === id) ?? null;
 }
 
-export function podeConsultarEstagio(usuario: Usuario, estagio: Estagio): boolean {
+export async function podeConsultarEstagio(usuario: Usuario, estagio: Estagio): Promise<boolean> {
+  if (bancoConfigurado()) return podeConsultarEstagioNoBanco((await carregarCliente()).prisma, usuario.id, estagio.id);
   if (usuario.situacao !== "ativo") return false;
   if (usuario.papel === "administrador" || usuario.papel === "coordenador_estagio") {
     return (
@@ -104,10 +157,16 @@ export function podeConsultarEstagio(usuario: Usuario, estagio: Estagio): boolea
 
 export async function exigirAcessoEstagio(usuario: Usuario, estagioId: string): Promise<Estagio> {
   const estagio = await estagioPorId(estagioId);
-  if (!estagio || !podeConsultarEstagio(usuario, estagio)) {
+  if (!estagio || !(await podeConsultarEstagio(usuario, estagio))) {
     throw new ErroDeRegra("Estágio não disponível para este usuário.", "acesso_negado");
   }
   return estagio;
+}
+
+export async function filtrarEstagiosPermitidos(usuario: Usuario, estagios: Estagio[]): Promise<Estagio[]> {
+  const permitidos: Estagio[] = [];
+  for (const estagio of estagios) if (await podeConsultarEstagio(usuario, estagio)) permitidos.push(estagio);
+  return permitidos;
 }
 
 export async function estagioComContexto(id: string): Promise<EstagioContexto | null> {
@@ -126,6 +185,13 @@ export async function estagioComContexto(id: string): Promise<EstagioContexto | 
 }
 
 export async function totalHorasDoEstagio(estagioId: string): Promise<number> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    const linhas = await prisma.lancamentoHoras.findMany({ where: { estagioId }, orderBy: [{ sequenciaCorrecao: "asc" }, { criadoEm: "asc" }, { id: "asc" }], select: { id: true, corrigeId: true, minutos: true } });
+    const efetivos = new Map<string, number>();
+    for (const linha of linhas) efetivos.set(linha.corrigeId ?? linha.id, linha.minutos);
+    return [...efetivos.values()].reduce((total, minutos) => total + minutos, 0) / 60;
+  }
   return lancamentosEfetivos(lancamentosDoEstagio(estagioId)).reduce(
     (total, lancamento) => total + lancamento.horas,
     0,
@@ -143,6 +209,10 @@ export function lancamentosDoEstagio(estagioId: string): LancamentoHoras[] {
  * convênio vigente, supervisor ativo e não sobreposição de períodos.
  */
 export async function criarEstagio(aluno: Usuario, dados: NovoEstagio): Promise<Estagio> {
+  if (bancoConfigurado()) {
+    const { criarEstagioPersistente } = await import("./estagios-persistentes");
+    return criarEstagioPersistente(aluno, dados);
+  }
   if (aluno.situacao !== "ativo" || aluno.papel !== "aluno") {
     throw new ErroDeRegra("Apenas alunos cadastram estágios.", "papel_invalido");
   }
@@ -258,7 +328,12 @@ function documentosValidos(templateIds: string[], papel: Papel): string[] {
 export async function selecionarDocumentos(
   estagioId: string,
   templateIds: string[],
+  autorId?: string,
 ): Promise<Estagio> {
+  if (bancoConfigurado()) {
+    const { selecionarDocumentosPersistentes } = await import("./estagios-persistentes");
+    return selecionarDocumentosPersistentes(estagioId, templateIds, autorId);
+  }
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
@@ -277,7 +352,12 @@ export async function selecionarDocumentos(
 export async function removerDocumentoEstagio(
   estagioId: string,
   templateId: string,
+  autorId?: string,
 ): Promise<Estagio> {
+  if (bancoConfigurado()) {
+    const { removerDocumentoPersistente } = await import("./estagios-persistentes");
+    return removerDocumentoPersistente(estagioId, templateId, autorId);
+  }
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
@@ -307,10 +387,14 @@ export async function removerDocumentoEstagio(
 }
 
 export async function concluirEstagio(estagioId: string, editorId?: string): Promise<Estagio> {
+  if (bancoConfigurado()) {
+    const { alterarSituacaoPersistente } = await import("./estagios-persistentes");
+    return alterarSituacaoPersistente(estagioId, "concluido", editorId);
+  }
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
-  exigirCoordenacao(estagio, editorId);
+  await exigirCoordenacao(estagio, editorId);
   if (!estagioLiberado(estagio) || estagio.situacao !== "em_andamento")
     throw new ErroDeRegra("O estágio precisa estar liberado e em andamento.", "liberacao_pendente");
   esquemaEstagio().parse({ ...estagio, situacao: "concluido" });
@@ -324,11 +408,15 @@ export async function concluirEstagio(estagioId: string, editorId?: string): Pro
 
 /** Reabre o estágio para correção; o histórico de lançamentos é preservado. */
 export async function reabrirEstagio(estagioId: string, editorId?: string): Promise<Estagio> {
+  if (bancoConfigurado()) {
+    const { alterarSituacaoPersistente } = await import("./estagios-persistentes");
+    return alterarSituacaoPersistente(estagioId, "em_andamento", editorId);
+  }
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
 
-  exigirCoordenacao(estagio, editorId);
+  await exigirCoordenacao(estagio, editorId);
   if (!estagioLiberado(estagio) || estagio.situacao !== "concluido")
     throw new ErroDeRegra("A reabertura exige estágio liberado e concluído.", "liberacao_pendente");
   estagio.situacao = "em_andamento";
@@ -343,11 +431,15 @@ export async function editarEstagio(
   dados: Partial<NovoEstagio>,
   editorId?: string,
 ): Promise<Estagio> {
+  if (bancoConfigurado()) {
+    const { editarEstagioPersistente } = await import("./estagios-persistentes");
+    return editarEstagioPersistente(estagioId, dados, editorId);
+  }
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
   const editor = obterEstado().usuarios.find((usuario) => usuario.id === editorId);
-  if (!editor || !podeConsultarEstagio(editor, estagio) || estagioEncerrado(estagio))
+  if (!editor || !(await podeConsultarEstagio(editor, estagio)) || estagioEncerrado(estagio))
     throw new ErroDeRegra("Edição não disponível.", "acesso_negado");
   if (dados.situacao !== undefined && dados.situacao !== estagio.situacao) {
     throw new ErroDeRegra(
@@ -355,7 +447,7 @@ export async function editarEstagio(
       "situacao_nao_permitida",
     );
   }
-  if (editor.id === estagio.alunoId && !correcaoInicialPermitida(estagio)) {
+  if (editor.id === estagio.alunoId && !(await correcaoInicialPermitida(estagio))) {
     throw new ErroDeRegra(
       "Os dados iniciais só podem ser corrigidos após indeferimento.",
       "dados_iniciais_bloqueados",
@@ -448,19 +540,23 @@ export async function editarEstagio(
   return estagio;
 }
 
-function exigirCoordenacao(estagio: Estagio, editorId?: string) {
+async function exigirCoordenacao(estagio: Estagio, editorId?: string) {
   const editor = obterEstado().usuarios.find((usuario) => usuario.id === editorId);
   if (
     !editor ||
     !(editor.papel === "coordenador_curso" || editor.papel === "coordenador_estagio") ||
-    !podeConsultarEstagio(editor, estagio)
+    !(await podeConsultarEstagio(editor, estagio))
   ) {
     throw new ErroDeRegra("A alteração da situação cabe à coordenação.", "acesso_negado");
   }
 }
 
-export function correcaoInicialPermitida(estagio: Estagio): boolean {
+export async function correcaoInicialPermitida(estagio: Estagio): Promise<boolean> {
   if (estagio.situacao !== "em_preparacao" || estagioEncerrado(estagio)) return false;
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return (await prisma.documentoPreenchido.count({ where: { estagioId: estagio.id, templateId: DOCUMENTOS_INICIAIS[0], OR: [{ situacao: "indeferido" }, { situacao: "rascunho", correcaoAberta: true }] } })) > 0;
+  }
   return obterEstado().documentos.some(
     (doc) =>
       doc.estagioId === estagio.id &&

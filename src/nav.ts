@@ -141,14 +141,6 @@ export const NAV: ItemNav[] = [
     grupo: "gestao",
     ordem: 5,
   },
-  {
-    href: "/coordenacao/templates",
-    icone: "documentos",
-    rotulo: "Templates de documentos",
-    requiredRoles: ["coordenador_estagio"],
-    grupo: "gestao",
-    ordem: 6,
-  },
 ];
 
 /** Itens visíveis para o usuário, na ordem declarada. */

@@ -15,6 +15,7 @@ import type { OpcoesPaginacao } from "./paginacao";
 import { ErroDeRegra } from "./erros";
 import { estagioPorId, lancamentosDoEstagio } from "./estagios";
 import { agora, obterEstado, novoId } from "./store";
+import { bancoConfigurado } from "@/lib/db/prisma";
 
 /**
  * Lançamento de horas (D3): correção preserva o histórico, jornada de 6 h por
@@ -41,6 +42,10 @@ export async function lancamentoEfetivoDoDia(
   estagioId: string,
   data: string,
 ): Promise<LancamentoHoras | null> {
+  if (bancoConfigurado()) {
+    const { lancamentosDoEstagioPersistente } = await import("./lancamentos-persistentes");
+    return lancamentosEfetivos((await lancamentosDoEstagioPersistente(estagioId)).filter((lancamento) => lancamento.data === data)).at(-1) ?? null;
+  }
   return (
     lancamentosEfetivos(
       lancamentosDoEstagio(estagioId).filter((lancamento) => lancamento.data === data),
@@ -58,6 +63,10 @@ export async function horasEfetivasDoDia(
   data: string,
   ignorarId?: string,
 ): Promise<number> {
+  if (bancoConfigurado()) {
+    const { horasEfetivasDoDiaPersistente } = await import("./lancamentos-persistentes");
+    return horasEfetivasDoDiaPersistente(estagioId, data, ignorarId);
+  }
   const lancamentos = lancamentosDoEstagio(estagioId).filter(
     (lancamento) =>
       lancamento.data === data &&
@@ -71,6 +80,10 @@ export async function horasEfetivasDoDia(
 }
 
 export async function horasDaSemana(estagioId: string, semana: string): Promise<number> {
+  if (bancoConfigurado()) {
+    const { horasDaSemanaPersistente } = await import("./lancamentos-persistentes");
+    return horasDaSemanaPersistente(estagioId, semana);
+  }
   const dias = new Set(
     lancamentosDoEstagio(estagioId)
       .filter((lancamento) => chaveSemana(lancamento.data) === semana)
@@ -90,6 +103,10 @@ export async function resumoDaSemana(estagioId: string, data: string): Promise<R
 }
 
 export async function lancarHoras(dados: NovoLancamento): Promise<LancamentoHoras> {
+  if (bancoConfigurado()) {
+    const { lancarHorasPersistente } = await import("./lancamentos-persistentes");
+    return lancarHorasPersistente(dados);
+  }
   const estagio = await estagioPorId(dados.estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
@@ -166,6 +183,10 @@ export async function corrigirLancamento(
   lancamentoId: string,
   dados: Pick<NovoLancamento, "entrada" | "saida" | "almocoDesligado">,
 ): Promise<LancamentoHoras> {
+  if (bancoConfigurado()) {
+    const { corrigirLancamentoPersistente } = await import("./lancamentos-persistentes");
+    return corrigirLancamentoPersistente(lancamentoId, dados);
+  }
   const original = obterEstado().lancamentos.find((lancamento) => lancamento.id === lancamentoId);
 
   if (!original) throw new ErroDeRegra("Lançamento não encontrado.", "lancamento_inexistente");
@@ -260,13 +281,30 @@ export interface ConsultaLancamentos extends OpcoesPaginacao {
 }
 
 export async function lancamentoPorId(id: string): Promise<LancamentoHoras | null> {
+  if (bancoConfigurado()) {
+    const { lancamentoPorIdPersistente } = await import("./lancamentos-persistentes");
+    return lancamentoPorIdPersistente(id);
+  }
   return obterEstado().lancamentos.find((lancamento) => lancamento.id === id) ?? null;
+}
+
+/** Lista persistente/atual dos lançamentos, usada pelas telas em ambos os modos. */
+export async function lancamentosDoEstagioAtuais(estagioId: string): Promise<LancamentoHoras[]> {
+  if (bancoConfigurado()) {
+    const { lancamentosDoEstagioPersistente } = await import("./lancamentos-persistentes");
+    return lancamentosDoEstagioPersistente(estagioId);
+  }
+  return lancamentosDoEstagio(estagioId);
 }
 
 export async function listarLancamentos(
   estagioId: string,
   consulta: ConsultaLancamentos = {},
 ): Promise<Pagina<LancamentoHoras>> {
+  if (bancoConfigurado()) {
+    const { listarLancamentosPersistentes } = await import("./lancamentos-persistentes");
+    return listarLancamentosPersistentes(estagioId, consulta);
+  }
   const filtrados = lancamentosDoEstagio(estagioId).filter(
     (lancamento) => !consulta.data || lancamento.data === consulta.data,
   );

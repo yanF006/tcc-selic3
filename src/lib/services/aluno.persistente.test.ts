@@ -10,9 +10,17 @@ const mocks = vi.hoisted(() => ({
   changeEmail: vi.fn(),
   moverCredencial: vi.fn(async () => undefined),
   sincronizarDadosDoPerfil: vi.fn(async () => undefined),
+  carregarCliente: vi.fn(async () => ({ prisma: {} })),
+  listarOpcoesAcademicas: vi.fn(),
 }));
 
-vi.mock("@/lib/db/prisma", () => ({ bancoConfigurado: mocks.bancoConfigurado }));
+vi.mock("@/lib/db/prisma", () => ({
+  bancoConfigurado: mocks.bancoConfigurado,
+  carregarCliente: mocks.carregarCliente,
+}));
+vi.mock("@/lib/db/repositorios/catalogo", () => ({
+  listarOpcoesAcademicas: mocks.listarOpcoesAcademicas,
+}));
 vi.mock("@/lib/db/persistencia", () => ({
   garantirHidratacao: mocks.garantirHidratacao,
   atualizarUsuario: mocks.atualizarUsuario,
@@ -39,6 +47,7 @@ vi.mock("./documentos", () => ({
 
 import { dadosDoAluno, atualizarDadosPessoais } from "./aluno";
 import { obterEstado, reiniciarEstado } from "./store";
+import { cursos, periodos, turmas } from "@/lib/fixtures/base";
 
 /**
  * Perfil persistente (4.6): a edição comum grava no banco, a matrícula continua
@@ -65,6 +74,7 @@ beforeEach(() => {
   mocks.garantirHidratacao.mockResolvedValue(undefined);
   mocks.atualizarUsuario.mockResolvedValue(undefined);
   mocks.changeEmail.mockResolvedValue({ status: true });
+  mocks.listarOpcoesAcademicas.mockResolvedValue({ cursos, turmas, periodos });
   reiniciarEstado();
 });
 

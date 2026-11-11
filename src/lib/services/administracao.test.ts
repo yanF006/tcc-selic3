@@ -262,6 +262,24 @@ describe("usuários", () => {
     expect(editado.cursoId).toBe("cur-informatica");
   });
 
+  it("edita a matrícula do aluno, registra a nova matrícula e limpa o vínculo ao trocar de cargo", async () => {
+    const lista = await listarUsuarios({ papel: "aluno" });
+    const [aluno] = lista.itens;
+
+    const editado = await editarUsuario(aluno.id, { matricula: "20260007777" });
+
+    expect(editado.matricula).toBe("20260007777");
+    expect((await listarMatriculas({ busca: "20260007777" })).itens[0]).toMatchObject({
+      nome: aluno.nome,
+      origem: "cadastro_administrador",
+    });
+
+    const coordenador = await editarUsuario(aluno.id, { papel: "coordenador_estagio" });
+
+    expect(coordenador.papel).toBe("coordenador_estagio");
+    expect(coordenador.matricula).toBeUndefined();
+  });
+
   it("inativa preservando os registros criados pelo usuário", async () => {
     const administrador = await entrarComoAdministrador();
     const loginAntes = await usuarioPorId(administrador.id);
@@ -371,7 +389,7 @@ describe("importação manual de matrículas", () => {
 
     const importadas = await listarMatriculas({ origem: "importacao" });
 
-    expect(importadas.total).toBe(2);
+    expect(importadas.total).toBe(3);
     expect(importadas.itens.every((matricula) => matricula.matricula.length === 11)).toBe(true);
   });
 

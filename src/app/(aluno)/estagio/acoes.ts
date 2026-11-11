@@ -101,8 +101,9 @@ export async function solicitarExclusaoEstagioAction(estagioId: string, motivo: 
 
 export async function selecionarDocumentosAction(estagioId: string, templateIds: string[]) {
   try {
-    await exigirAcessoEstagio(await usuarioDaRequisicaoObrigatorio(), estagioId);
-    await selecionarDocumentos(estagioId, templateIds);
+    const usuario = await usuarioDaRequisicaoObrigatorio();
+    await exigirAcessoEstagio(usuario, estagioId);
+    await selecionarDocumentos(estagioId, templateIds, usuario.id);
     revalidatePath("/estagio");
     return { ok: true };
   } catch (erro) {
@@ -115,8 +116,9 @@ export async function selecionarDocumentosAction(estagioId: string, templateIds:
 
 export async function removerDocumentoEstagioAction(estagioId: string, templateId: string) {
   try {
-    await exigirAcessoEstagio(await usuarioDaRequisicaoObrigatorio(), estagioId);
-    await removerDocumentoEstagio(estagioId, templateId);
+    const usuario = await usuarioDaRequisicaoObrigatorio();
+    await exigirAcessoEstagio(usuario, estagioId);
+    await removerDocumentoEstagio(estagioId, templateId, usuario.id);
     revalidatePath("/estagio");
     return { ok: true };
   } catch (erro) {

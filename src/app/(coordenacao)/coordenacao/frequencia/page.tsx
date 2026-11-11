@@ -20,7 +20,7 @@ import { usuarioPorId } from "@/lib/services/administracao";
 import { convenioPorId } from "@/lib/services/catalogo";
 import { templatePorId } from "@/lib/services/documentos";
 import { ErroDeRegra } from "@/lib/services/erros";
-import { listarEstagios, podeConsultarEstagio } from "@/lib/services/estagios";
+import { consultarEstagios } from "@/lib/services/estagios";
 import {
   fichaDoEstagio,
   iniciarRegistroFicha,
@@ -86,9 +86,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/fre
     );
   }
 
-  const estagios = (await listarEstagios({ tamanho: 100 })).itens.filter((estagio) =>
-    podeConsultarEstagio(usuario, estagio),
-  );
+  const estagios = (await consultarEstagios(usuario, { tamanho: 100 })).itens;
 
   if (estagios.length === 0) {
     return (

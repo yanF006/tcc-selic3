@@ -36,7 +36,7 @@ export function arquivoDoDocumento(
     return { ok: false, erro: "Documento não encontrado." };
   }
 
-  const problemas = validarValores(templateId, documento.valores, documento.versaoTemplate);
+  const problemas = validarValores(templateId, documento.valores, documento.versaoTemplate, descriptor);
 
   if (problemas.length > 0) {
     return { ok: false, erro: "Há campos obrigatórios pendentes.", problemas };

@@ -2,27 +2,38 @@ import {
   MATRICULA_SIGAA,
   esquemaCpf,
   esquemaData,
+  esquemaDadosPessoais,
   esquemaEmail,
   esquemaEndereco,
   esquemaCelular,
   esquemaTelefone,
   esquemaRg,
   esquemaSenha,
+  type OpcoesSelecao,
 } from "@/lib/domain/schemas";
-import type { DadosPessoais, Endereco, SituacaoUsuario, Usuario } from "@/lib/domain/types";
+import type { DadosPessoais, SituacaoUsuario, Usuario } from "@/lib/domain/types";
+import type { Prisma } from "@/generated/prisma/client";
+import { periodosDoCurso } from "@/lib/domain/selecoes";
+import { ErroDeRegra } from "@/lib/domain/erros";
 
 import { agora, obterEstado, novoId } from "./store";
 import { definirSenha } from "./credenciais";
-import { criarUsuario, garantirHidratacao } from "@/lib/db/persistencia";
+import { criarUsuario } from "@/lib/db/persistencia";
+import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
+import { executarTransacao } from "@/lib/db/transacoes";
+import { traduzirErroPersistencia } from "@/lib/db/erros";
+import { listarOpcoesAcademicas, type OpcoesAcademicas } from "@/lib/db/repositorios/catalogo";
 
 /**
- * Cadastro público do aluno em duas etapas (5.2 a 5.7).
+ * Cadastro público do aluno em duas etapas visuais (5.1 a 5.5).
  *
- * A primeira etapa confere e-mail e matrícula; a segunda grava os dados
- * pessoais e o vínculo com curso, turma e período. Tudo fica em memória (D4) e
- * a matrícula é imutável depois do cadastro (D3).
+ * A primeira etapa apenas confere formato e disponibilidade; nada é reservado
+ * nem gravado. Todo o preenchimento permanece no estado temporário do
+ * formulário do navegador. Na conclusão, o servidor recebe o formulário inteiro,
+ * revalida todos os campos e grava a conta, a credencial e a solicitação (quando
+ * exigida) como uma única operação de negócio.
  *
- * Regras que a implementação precisa respeitar:
+ * Regras preservadas:
  *
  * - a confirmação de senha divergente bloqueia o avanço com erro no campo;
  * - e-mail já cadastrado é recusado sem revelar se a conta existe;
@@ -46,62 +57,119 @@ export interface EtapaDoisCadastro {
   dataNascimento: string;
   telefone: string;
   celular: string;
-  endereco: Endereco;
+  endereco: DadosPessoais["endereco"];
   cursoId: string;
   turmaId: string;
   periodoId: string;
 }
 
-export interface PreviaCadastro {
-  id: string;
-  matricula: string;
-  email: string;
-  nome: string;
-  /** true quando a matrícula ainda não está registrada no sistema. */
-  matriculaNaoRegistrada: boolean;
-  criadoEm: string;
-}
+/** Formulário completo recebido na conclusão; não existe prévia no servidor. */
+export type DadosCadastroCompleto = EtapaUmCadastro & EtapaDoisCadastro;
+
+export type CampoErro =
+  | "matricula"
+  | "email"
+  | "senha"
+  | "confirmacao"
+  | "dados";
 
 export type ResultadoCadastro =
   | {
       ok: true;
-      previa: PreviaCadastro;
+      matriculaNaoRegistrada: boolean;
+      nome: string;
       mensagem: string;
     }
   | {
       ok: false;
-      campo: "matricula" | "email" | "senha" | "confirmacao" | "dados";
+      campo: CampoErro;
       erro: string;
     };
 
 export type ResultadoConclusao =
   | { ok: true; usuarioId: string; situacao: SituacaoUsuario; solicitacaoId?: string }
-  | { ok: false; campo: "previa" | "dados"; erro: string };
+  | { ok: false; campo: CampoErro; erro: string };
 
-/** Prévia mantida em memória entre as duas etapas do cadastro. */
-const previas = new Map<string, PreviaCadastro & { senha: string }>();
-
-/** E-mail normalizado para comparação. */
+/** E-mail normalizado para comparação e gravação. */
 function normalizarEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-/** true quando o e-mail já pertence a um cadastro ou a uma conta simulada. */
-function emailEmUso(email: string): boolean {
-  const estado = obterEstado();
-  const alvo = normalizarEmail(email);
-
-  return estado.usuarios.some((usuario) => normalizarEmail(usuario.email) === alvo);
+function mensagemDuplicada(): string {
+  return "Não foi possível concluir o cadastro com esses dados. Revise e-mail e matrícula.";
 }
 
-/**
- * Primeira etapa: confere senha, unicidade de e-mail e matrícula importada.
- * Erros de e-mail e de senha usam a mesma mensagem genérica, para não revelar
- * se a conta existe.
- */
-export async function validarEtapaUm(dados: EtapaUmCadastro): Promise<ResultadoCadastro> {
-  await garantirHidratacao();
+/** Resposta da consulta antecipada: não revela qual dado está indisponível. */
+function mensagemDisponibilidade(): string {
+  return "Não foi possível continuar com esses dados. Revise e-mail e senha.";
+}
 
+function campoDoCodigo(codigo: string): CampoErro {
+  if (codigo.includes("matricula")) return "matricula";
+  if (codigo.includes("e_mail") || codigo.includes("email")) return "email";
+
+  return "dados";
+}
+
+function traduzirParaCadastro(erro: unknown): ResultadoConclusao | null {
+  const traduzido = traduzirErroPersistencia(erro);
+
+  if (traduzido instanceof ErroDeRegra) {
+    return {
+      ok: false,
+      campo: campoDoCodigo(traduzido.codigo),
+      erro:
+        traduzido.codigo === "matricula_ja_utilizada" ||
+        traduzido.codigo === "e_mail_ja_utilizado_por_outro_cadastro"
+          ? mensagemDuplicada()
+          : traduzido.message,
+    };
+  }
+
+  if (traduzido instanceof Error && traduzido.name === "BancoIndisponivelError") throw traduzido;
+
+  return null;
+}
+
+function opcoesSelecaoDe(opcoes: OpcoesAcademicas): OpcoesSelecao {
+  const cursosAtivos = opcoes.cursos.filter((curso) => curso.situacao === "ativo");
+  const turmasAtivas = opcoes.turmas.filter((turma) => turma.situacao === "ativo");
+  const periodosAtivos = opcoes.periodos.filter((periodo) => periodo.situacao === "ativo");
+
+  return {
+    cursosIds: cursosAtivos.map((curso) => curso.id),
+    turmasPorCurso: Object.fromEntries(
+      cursosAtivos.map((curso) => [
+        curso.id,
+        turmasAtivas.filter((turma) => turma.cursoId === curso.id).map((turma) => turma.id),
+      ]),
+    ),
+    periodosIds: periodosAtivos.map((periodo) => periodo.id),
+    periodosPorCurso: Object.fromEntries(
+      cursosAtivos.map((curso) => [
+        curso.id,
+        periodosDoCurso(curso.id, turmasAtivas, periodosAtivos).map((periodo) => periodo.id),
+      ]),
+    ),
+  };
+}
+
+function opcoesAcademicasSimuladas(): OpcoesAcademicas {
+  const estado = obterEstado();
+
+  return { cursos: estado.cursos, turmas: estado.turmas, periodos: estado.periodos };
+}
+
+/** Nome da matrícula registrada, quando existir; null quando ainda não consta. */
+function nomeDaMatricula(matriculas: { matricula: string; nome: string }[], matricula: string) {
+  return matriculas.find((registro) => registro.matricula === matricula)?.nome ?? null;
+}
+
+/** Validação completa do formulário, compartilhada pelos dois modos. */
+function validarFormularioCompleto(
+  dados: DadosCadastroCompleto,
+  opcoes: OpcoesAcademicas,
+): { ok: false; campo: CampoErro; erro: string } | { ok: true; dados: DadosPessoais } {
   const matricula = dados.matricula.trim();
   const email = normalizarEmail(dados.email);
 
@@ -121,95 +189,10 @@ export async function validarEtapaUm(dados: EtapaUmCadastro): Promise<ResultadoC
     return { ok: false, campo: "confirmacao", erro: "A confirmação não bate com a senha." };
   }
 
-  if (emailEmUso(email)) {
-    return {
-      ok: false,
-      campo: "email",
-      erro: "Não foi possível continuar com esses dados. Revise e-mail e senha.",
-    };
-  }
-
-  const importada = obterEstado().matriculas.find((registro) => registro.matricula === matricula);
-  const previa: PreviaCadastro & { senha: string } = {
-    id: novoId("cad"),
-    matricula,
-    email,
-    nome: importada?.nome ?? "",
-    matriculaNaoRegistrada: importada === undefined,
-    senha: dados.senha,
-    criadoEm: agora(),
-  };
-
-  previas.set(previa.id, previa);
-
-  return {
-    ok: true,
-    previa: {
-      id: previa.id,
-      matricula: previa.matricula,
-      email: previa.email,
-      nome: previa.nome,
-      matriculaNaoRegistrada: previa.matriculaNaoRegistrada,
-      criadoEm: previa.criadoEm,
-    },
-    mensagem: previa.matriculaNaoRegistrada
-      ? "A matrícula não está registrada no sistema. O cadastro ficará pendente até a conferência da coordenação."
-      : "Matrícula registrada no sistema. Continue com seus dados pessoais.",
-  };
-}
-
-/**
- * Segunda etapa: grava o cadastro. Matrícula não registrada vira solicitação de
- * acesso pendente e usuário `pendente`, que não entra nas áreas autenticadas.
- */
-export async function concluirCadastro(
-  previaId: string,
-  dados: EtapaDoisCadastro,
-): Promise<ResultadoConclusao> {
-  const previa = previas.get(previaId);
-
-  if (!previa) {
-    return {
-      ok: false,
-      campo: "previa",
-      erro: "O cadastro expirou. Recomece pela primeira etapa.",
-    };
-  }
-
-  await garantirHidratacao();
-
-  const estado = obterEstado();
-
-  if (emailEmUso(previa.email)) {
-    return {
-      ok: false,
-      campo: "dados",
-      erro: "Não foi possível concluir o cadastro com esses dados. Revise e-mail e senha.",
-    };
-  }
-
-  const curso = estado.cursos.find((item) => item.id === dados.cursoId);
-  const turma = estado.turmas.find(
-    (item) => item.id === dados.turmaId && item.cursoId === dados.cursoId,
-  );
-  const periodo = estado.periodos.find((item) => item.id === dados.periodoId);
-
-  if (!curso || !turma || !periodo) {
-    return {
-      ok: false,
-      campo: "dados",
-      erro: "Selecione curso, turma e período antes de concluir.",
-    };
-  }
-
   const cpfValido = esquemaCpf.safeParse(dados.cpf);
 
-  if (!cpfValido.success) {
-    return { ok: false, campo: "dados", erro: "Informe um CPF válido." };
-  }
+  if (!cpfValido.success) return { ok: false, campo: "dados", erro: "Informe um CPF válido." };
 
-  // A data chega mascarada (dd/mm/aaaa) e a validação a converte para ISO, que é
-  // como as fixtures guardam: sem isso o perfil abriria a data em outro formato.
   const nascimento = esquemaData.safeParse(dados.dataNascimento);
 
   if (!nascimento.success) {
@@ -221,6 +204,7 @@ export async function concluirCadastro(
   if (!endereco.success) {
     return { ok: false, campo: "dados", erro: "Confira o endereço informado." };
   }
+
   if (
     dados.nomeCompleto.trim().length < 3 ||
     !esquemaCelular.safeParse(dados.celular).success ||
@@ -234,29 +218,286 @@ export async function concluirCadastro(
     };
   }
 
-  const dadosPessoais: DadosPessoais = {
+  const completo = esquemaDadosPessoais(opcoesSelecaoDe(opcoes)).safeParse({
     nomeCompleto: dados.nomeCompleto.trim(),
-    cpf: cpfValido.data,
+    cpf: dados.cpf,
     rg: dados.rg.trim(),
-    dataNascimento: nascimento.data,
-    email: previa.email,
+    dataNascimento: dados.dataNascimento,
+    email,
     telefone: dados.telefone.trim(),
     celular: dados.celular.trim(),
-    endereco: endereco.data,
-    cursoId: curso.id,
-    turmaId: turma.id,
-    periodoId: periodo.id,
-  };
+    endereco: dados.endereco,
+    cursoId: dados.cursoId,
+    turmaId: dados.turmaId,
+    periodoId: dados.periodoId,
+  });
 
-  const situacao: SituacaoUsuario = previa.matriculaNaoRegistrada ? "pendente" : "ativo";
+  if (!completo.success) {
+    const turmaInvalida = completo.error.issues.some((issue) => issue.path[0] === "turmaId");
+
+    return {
+      ok: false,
+      campo: "dados",
+      erro: turmaInvalida
+        ? "Selecione curso, turma e período antes de concluir."
+        : (completo.error.issues[0]?.message ?? "Confira os dados informados."),
+    };
+  }
+
+  return { ok: true, dados: { ...completo.data, email } };
+}
+
+/**
+ * Primeira etapa: confere formato e disponibilidade atuais. Não cria conta,
+ * credencial, solicitação nem reserva e-mail/matrícula.
+ */
+export async function validarEtapaUm(dados: EtapaUmCadastro): Promise<ResultadoCadastro> {
+  const matricula = dados.matricula.trim();
+  const email = normalizarEmail(dados.email);
+
+  if (!MATRICULA_SIGAA.test(matricula)) {
+    return { ok: false, campo: "matricula", erro: "Informe a matrícula do SIGAA." };
+  }
+
+  if (!esquemaEmail.safeParse(email).success || !esquemaSenha.safeParse(dados.senha).success) {
+    return {
+      ok: false,
+      campo: "senha",
+      erro: "Não foi possível continuar com esses dados. Revise e-mail e senha.",
+    };
+  }
+
+  if (dados.senha !== dados.confirmacao) {
+    return { ok: false, campo: "confirmacao", erro: "A confirmação não bate com a senha." };
+  }
+
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    const [usuarioEmail, usuarioMatricula, importada] = await Promise.all([
+      prisma.usuario.findUnique({ where: { email }, select: { id: true } }),
+      prisma.usuario.findUnique({ where: { matricula }, select: { id: true } }),
+      prisma.matriculaImportada.findUnique({
+        where: { matricula },
+        select: { nome: true },
+      }),
+    ]);
+
+    if (usuarioEmail || usuarioMatricula) {
+      return {
+        ok: false,
+        campo: usuarioEmail ? "email" : "matricula",
+        erro: mensagemDisponibilidade(),
+      };
+    }
+
+    return {
+      ok: true,
+      matriculaNaoRegistrada: importada === null,
+      nome: importada?.nome ?? "",
+      mensagem: importada
+        ? "Matrícula registrada no sistema. Continue com seus dados pessoais."
+        : "A matrícula não está registrada no sistema. O cadastro ficará pendente até a conferência da coordenação.",
+    };
+  }
+
+  const estado = obterEstado();
+  const emailEmUso = estado.usuarios.some(
+    (usuario) => normalizarEmail(usuario.email) === email,
+  );
+  const matriculaEmUso = estado.usuarios.some((usuario) => usuario.matricula === matricula);
+
+  if (emailEmUso || matriculaEmUso) {
+    return {
+      ok: false,
+      campo: emailEmUso ? "email" : "matricula",
+      erro: mensagemDisponibilidade(),
+    };
+  }
+
+  const nome = nomeDaMatricula(estado.matriculas, matricula);
+
+  return {
+    ok: true,
+    matriculaNaoRegistrada: nome === null,
+    nome: nome ?? "",
+    mensagem:
+      nome === null
+        ? "A matrícula não está registrada no sistema. O cadastro ficará pendente até a conferência da coordenação."
+        : "Matrícula registrada no sistema. Continue com seus dados pessoais.",
+  };
+}
+
+/** Conclusão única: revalida o formulário inteiro e grava de forma atômica. */
+export async function concluirCadastro(
+  dados: DadosCadastroCompleto,
+): Promise<ResultadoConclusao> {
+  if (bancoConfigurado()) return concluirCadastroPersistente(dados);
+
+  return concluirCadastroSimulado(dados);
+}
+
+async function concluirCadastroPersistente(
+  dados: DadosCadastroCompleto,
+): Promise<ResultadoConclusao> {
+  const email = normalizarEmail(dados.email);
+
+  try {
+    return await executarTransacao(async (tx) => {
+      const opcoes = await listarOpcoesAcademicas(tx);
+      const validado = validarFormularioCompleto(dados, opcoes);
+
+      if (!validado.ok) return validado;
+
+      const [usuarioEmail, usuarioMatricula] = await Promise.all([
+        tx.usuario.findUnique({ where: { email }, select: { id: true } }),
+        tx.usuario.findUnique({ where: { matricula: dados.matricula.trim() }, select: { id: true } }),
+      ]);
+
+      if (usuarioEmail || usuarioMatricula) {
+        return {
+          ok: false as const,
+          campo: usuarioEmail ? ("email" as const) : ("matricula" as const),
+          erro: mensagemDuplicada(),
+        };
+      }
+
+      const importada = await tx.matriculaImportada.findUnique({
+        where: { matricula: dados.matricula.trim() },
+        select: { nome: true },
+      });
+      const situacao: SituacaoUsuario = importada ? "ativo" : "pendente";
+      const nome = dados.nomeCompleto.trim();
+      const { criarAutenticacaoCadastro } = await import("@/lib/auth/autenticacao");
+      const { carregarConfiguracaoAutenticacao } = await import("@/lib/auth/configuracao");
+      const autenticacao = criarAutenticacaoCadastro(tx, carregarConfiguracaoAutenticacao());
+
+      const resposta = await autenticacao.api.signUpEmail({
+        body: { name: nome, email, password: dados.senha },
+      });
+      const criado = await tx.usuario.findUnique({
+        where: { id: resposta.user.id },
+        include: { authAccounts: { select: { providerId: true } } },
+      });
+
+      // Resposta sintética para e-mail existente não pode ser tratada como
+      // identidade nova nem receber vínculos de domínio.
+      if (
+        !criado ||
+        criado.email !== email ||
+        !criado.authAccounts.some((conta) => conta.providerId === "credential")
+      ) {
+        throw new ErroDeRegra(mensagemDuplicada(), "cadastro_duplicado");
+      }
+
+      const dadosPessoais: DadosPessoais = { ...validado.dados, email };
+
+      await tx.usuario.update({
+        where: { id: criado.id },
+        data: {
+          nome,
+          papel: "aluno",
+          situacao,
+          campus: "Pinheiral",
+          matricula: dados.matricula.trim(),
+          membroComissaoEstagio: false,
+          dadosPessoais: dadosPessoais as unknown as Prisma.InputJsonValue,
+        },
+      });
+
+      await tx.dadosPessoaisAluno.create({
+        data: {
+          id: novoId("dp"),
+          usuarioId: criado.id,
+          cpf: dadosPessoais.cpf,
+          rg: dadosPessoais.rg,
+          dataNascimento: new Date(`${dadosPessoais.dataNascimento}T00:00:00.000Z`),
+          telefone: dadosPessoais.telefone,
+          celular: dadosPessoais.celular,
+          endereco: dadosPessoais.endereco as unknown as Prisma.InputJsonValue,
+          cursoId: dadosPessoais.cursoId,
+          turmaId: dadosPessoais.turmaId,
+          periodoId: dadosPessoais.periodoId,
+        },
+      });
+
+      let solicitacaoId: string | undefined;
+
+      if (situacao === "pendente") {
+        solicitacaoId = novoId("sol");
+        await tx.solicitacaoAcesso.create({
+          data: {
+            id: solicitacaoId,
+            usuarioId: criado.id,
+            cursoId: dadosPessoais.cursoId,
+            situacao: "pendente",
+            motivo: "Matrícula não está registrada no sistema.",
+          },
+        });
+      }
+
+      return { ok: true as const, usuarioId: criado.id, situacao, solicitacaoId };
+    });
+  } catch (erro) {
+    const traduzido = traduzirParaCadastro(erro);
+
+    if (traduzido) return traduzido;
+
+    // O provedor de autenticação engole a violação de unicidade do banco e
+    // devolve um APIError genérico. Como a checagem prévia já foi feita, uma
+    // conta existente confirma a corrida entre duas conclusões simultâneas.
+    if (erro instanceof Error && erro.name === "APIError") {
+      try {
+        const { prisma } = await carregarCliente();
+        const existente = await prisma.usuario.findFirst({
+          where: { OR: [{ email }, { matricula: dados.matricula.trim() }] },
+          select: { email: true },
+        });
+
+        if (existente) {
+          return {
+            ok: false,
+            campo: existente.email === email ? ("email" as const) : ("matricula" as const),
+            erro: mensagemDuplicada(),
+          };
+        }
+      } catch {
+        // Se nem a leitura de confirmação funcionar, preserva o erro original.
+      }
+    }
+
+    throw erro;
+  }
+}
+
+async function concluirCadastroSimulado(
+  dados: DadosCadastroCompleto,
+): Promise<ResultadoConclusao> {
+  const estado = obterEstado();
+  const email = normalizarEmail(dados.email);
+  const matricula = dados.matricula.trim();
+
+  if (
+    estado.usuarios.some((usuario) => normalizarEmail(usuario.email) === email) ||
+    estado.usuarios.some((usuario) => usuario.matricula === matricula)
+  ) {
+    return { ok: false, campo: "email", erro: mensagemDuplicada() };
+  }
+
+  const validado = validarFormularioCompleto(dados, opcoesAcademicasSimuladas());
+
+  if (!validado.ok) return validado;
+
+  const nomeRegistrado = nomeDaMatricula(estado.matriculas, matricula);
+  const situacao: SituacaoUsuario = nomeRegistrado === null ? "pendente" : "ativo";
+  const dadosPessoais: DadosPessoais = { ...validado.dados, email };
   const usuario: Usuario = {
     id: novoId("usr"),
-    nome: previa.nome || dados.nomeCompleto.trim(),
-    email: previa.email,
+    nome: nomeRegistrado || dados.nomeCompleto.trim(),
+    email,
     papel: "aluno",
     situacao,
     campus: "Pinheiral",
-    matricula: previa.matricula,
+    matricula,
     dadosPessoais,
     membroComissaoEstagio: false,
     criadoEm: agora(),
@@ -264,35 +505,28 @@ export async function concluirCadastro(
 
   await criarUsuario(usuario);
   estado.usuarios.push(usuario);
-
-  // A senha escolhida na primeira etapa vira credencial: sem isso o cadastro
-  // concluído não liberaria acesso a ninguém (o §5.4 exige liberar a área do
-  // aluno), e a recuperação de senha (5.8) não teria o que redefinir.
-  await definirSenha(usuario.email, previa.senha, "cadastro_publico");
+  await definirSenha(email, dados.senha, "cadastro_publico");
 
   let solicitacaoId: string | undefined;
 
-  if (previa.matriculaNaoRegistrada) {
+  if (situacao === "pendente") {
     solicitacaoId = novoId("sol");
-
     estado.solicitacoes.push({
       id: solicitacaoId,
       nome: usuario.nome,
       email: usuario.email,
-      matricula: previa.matricula,
+      matricula,
       dadosPessoais,
-      situacao: "pendente",
+      situacao: "pendente" as const,
       motivo: "Matrícula não está registrada no sistema.",
       criadoEm: agora(),
     });
   }
 
-  previas.delete(previaId);
-
   return { ok: true, usuarioId: usuario.id, situacao, solicitacaoId };
 }
 
-/** Remove préviews abandonadas; usado pelos testes. */
+/** Mantido para compatibilidade com a preparação dos testes de simulação. */
 export function limparPrevias(): void {
-  previas.clear();
+  // A arquitetura sem prévia persistida não mantém estado entre as etapas.
 }

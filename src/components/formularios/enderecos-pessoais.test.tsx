@@ -28,14 +28,8 @@ async function preparar(tipo: "cadastro" | "perfil") {
     );
   vi.mocked(validarEtapaUmAction).mockResolvedValue({
     ok: true,
-    previa: {
-      id: "previa",
-      matricula: "20241006904",
-      email: "novo@aluno.ifrj.edu.br",
-      nome: "Aluno",
-      matriculaNaoRegistrada: false,
-      criadoEm: "2026-01-01",
-    },
+    matriculaNaoRegistrada: false,
+    nome: "Aluno",
     mensagem: "Etapa conferida",
   });
   const tela = render(<FormularioCadastro {...opcoes} />);
@@ -138,7 +132,7 @@ describe.each(["cadastro", "perfil"] as const)("endereço no %s", (tipo) => {
       fireEvent.submit(tela.container.querySelector("form")!);
       if (tipo === "cadastro") {
         await waitFor(() => expect(concluirCadastroAction).toHaveBeenCalled());
-        expect(vi.mocked(concluirCadastroAction).mock.calls[0][1].endereco).toMatchObject({
+        expect(vi.mocked(concluirCadastroAction).mock.calls[0][0].endereco).toMatchObject({
           cep: "20040-030",
           logradouro: "Rua manual",
           numero: "42",

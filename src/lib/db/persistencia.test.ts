@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => {
       count: vi.fn(),
       createMany: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       updateMany: vi.fn(),
       update: vi.fn(),
       create: vi.fn(),
@@ -27,6 +28,7 @@ const mocks = vi.hoisted(() => {
       count: vi.fn(),
       createMany: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       updateMany: vi.fn(),
       create: vi.fn(),
     },
@@ -74,6 +76,7 @@ beforeEach(() => {
   mocks.prisma.usuario.count.mockResolvedValue(1);
   mocks.prisma.matriculaImportada.count.mockResolvedValue(1);
   mocks.prisma.usuario.findMany.mockResolvedValue([usuarioDoBanco]);
+  mocks.prisma.usuario.findUnique.mockResolvedValue(usuarioDoBanco);
   mocks.prisma.matriculaImportada.findMany.mockResolvedValue([]);
   mocks.prisma.usuario.updateMany.mockResolvedValue({ count: 1 });
   mocks.prisma.usuario.update.mockResolvedValue(usuarioDoBanco);

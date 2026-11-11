@@ -431,6 +431,7 @@ export function TabelaMatriculas({
                 <TableHead>Nome</TableHead>
                 <TableHead>Curso</TableHead>
                 <TableHead>Origem</TableHead>
+                <TableHead>Registrada em</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -444,6 +445,7 @@ export function TabelaMatriculas({
                       {rotuloOrigem(registro.origem)}
                     </Badge>
                   </TableCell>
+                  <TableCell>{new Date(registro.importadaEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -868,6 +868,14 @@ export const matriculasImportadas: MatriculaImportada[] = [
     origem: "cadastro_administrador",
     importadaEm: "2026-03-05T16:00:00",
   },
+  {
+    id: "mat-4",
+    matricula: "20231000555",
+    nome: "Aluno Sem Conta",
+    curso: "Eletricidade",
+    origem: "importacao",
+    importadaEm: "2026-02-01T10:00:00",
+  },
 ];
 
 /** Contas de desenvolvimento, com senha `selic123`. */

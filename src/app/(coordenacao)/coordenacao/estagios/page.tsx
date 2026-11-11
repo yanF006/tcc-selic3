@@ -4,10 +4,8 @@ import { PaginaArea } from "@/components/layout/pagina-area";
 import { ConteudoEstagios } from "@/app/(aluno)/estagio/conteudo-estagios";
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
 import {
-  listarEstagios,
+  consultarEstagios,
   exclusaoPendenteDoEstagio,
-  podeConsultarEstagio,
-  lancamentosDoEstagio,
   totalHorasDoEstagio,
 } from "@/lib/services/estagios";
 import { listarUsuarios } from "@/lib/services/administracao";
@@ -23,6 +21,7 @@ import {
   listarTemplates,
 } from "@/lib/services/documentos";
 import { dadosDoPainelFluxo } from "@/lib/services/fluxo-estagio";
+import { lancamentosDoEstagioAtuais } from "@/lib/services/lancamentos";
 
 export const metadata: Metadata = {
   title: "Estágios",
@@ -33,21 +32,21 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
   const usuario = await usuarioDaRequisicaoObrigatorio();
   const { estagio: selecionado } = await searchParams;
   const [pagina, convenios, orientadores, supervisores, templates, usuarios] = await Promise.all([
-    listarEstagios({ tamanho: 1000 }),
+    consultarEstagios(usuario, { tamanho: 1000 }),
     listarConvenios({ tamanho: 1000 }),
     listarOrientadores(),
     listarSupervisores(),
     listarTemplates(),
     listarUsuarios({ tamanho: 1000 }),
   ]);
-  const estagios = pagina.itens.filter((estagio) => podeConsultarEstagio(usuario, estagio));
+  const estagios = pagina.itens;
   const resumosHoras = Object.fromEntries(
     await Promise.all(
       estagios.map(async (estagio) => [
         estagio.id,
         {
           total: await totalHorasDoEstagio(estagio.id),
-          lancamentos: lancamentosDoEstagio(estagio.id),
+          lancamentos: await lancamentosDoEstagioAtuais(estagio.id),
         },
       ]),
     ),

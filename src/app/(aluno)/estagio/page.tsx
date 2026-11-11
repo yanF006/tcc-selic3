@@ -5,7 +5,6 @@ import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
 import {
   estagiosDoAluno,
   exclusaoPendenteDoEstagio,
-  lancamentosDoEstagio,
   totalHorasDoEstagio,
 } from "@/lib/services/estagios";
 import {
@@ -15,6 +14,7 @@ import {
   listarSupervisores,
 } from "@/lib/services/catalogo";
 import { listarTemplates } from "@/lib/services/documentos";
+import { lancamentosDoEstagioAtuais } from "@/lib/services/lancamentos";
 import { documentosDoAluno } from "@/lib/services/documentos";
 import type { LancamentoHoras } from "@/lib/domain/types";
 
@@ -70,7 +70,7 @@ export default async function Page({ searchParams }: PageProps<"/estagio">) {
   for (const estagio of estagios) {
     resumosHoras[estagio.id] = {
       total: await totalHorasDoEstagio(estagio.id),
-      lancamentos: lancamentosDoEstagio(estagio.id),
+      lancamentos: await lancamentosDoEstagioAtuais(estagio.id),
     };
   }
 

@@ -88,6 +88,13 @@ export interface Periodo {
   situacao: SituacaoUsuario;
 }
 
+export interface ContatoInstituicao {
+  nome: string;
+  email: string;
+  telefone: string;
+  cargo?: string;
+}
+
 export interface Convenio {
   id: string;
   instituicao: string;
@@ -99,6 +106,7 @@ export interface Convenio {
   situacao: SituacaoUsuario;
   /** Data da última renovação registrada pelo histórico de convênios. */
   renovacoes: number;
+  responsaveis?: ContatoInstituicao[];
 }
 
 /** Convênio dentro da vigência é ativo; vencido, expirado. */
@@ -203,6 +211,8 @@ export type DocumentoPreenchido = {
   alunoId: string;
   estagioId?: string;
   versaoTemplate: number;
+  definicaoChecksum?: string;
+  definicaoSnapshot?: DescriptorDocumento;
   valores: Record<string, unknown>;
   situacao: SituacaoDocumento;
   criadoEm: string;

@@ -4,6 +4,8 @@ Frontend demonstrável do Sistema de Estágios das Licenciaturas do IFRJ Campus 
 O desenvolvimento segue OpenSpec/SDD: validar as telas e os contratos de domínio
 primeiro, integrar banco de dados e backend definitivo depois.
 
+**Esse arquivo README.md pode estar desatualizado...**
+
 ## Tecnologias
 
 - Next.js 16, App Router, React 19 e TypeScript em modo estrito.
@@ -45,6 +47,23 @@ Para validar o build compilado, execute `npm run build` e depois
 `PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`. Isso evita a
 compilação de rotas durante os testes. O fluxo do seletor de papel usa o servidor
 de desenvolvimento com sua flag específica.
+
+## Variáveis na Vercel
+
+Consulte [`.env.vercel.example`](.env.vercel.example) para a configuração de
+Production/Preview com MySQL do Aiven, Better Auth e SMTP do Brevo. Cada variável
+indica se o valor precisa ser **alterado**, **conferido** ou é **opcional**.
+
+Preencha `DATABASE_URL`, `BETTER_AUTH_SECRET`, `SMTP_USER`, `SMTP_PASSWORD` e
+`SMTP_FROM`; confira `BETTER_AUTH_URL` e configure `SELIC_DB_CA_CERT` quando a CA
+do banco for necessária. O exemplo usa Brevo na porta 587 com STARTTLS.
+Cadastre os valores em **Settings → Environment Variables**, selecione o ambiente
+correto e faça um **Redeploy**. O arquivo de exemplo não é carregado automaticamente.
+Preview deve usar banco e segredo próprios, separados de Production.
+
+Ao introduzir ou alterar variáveis de ambiente, mantenha `.env.example` e
+`.env.vercel.example` atualizados com obrigatoriedade, valores de exemplo sem
+segredos e instruções de preenchimento aplicáveis a cada ambiente.
 
 ## Banco de dados (Prisma 7 + MySQL)
 
@@ -145,47 +164,6 @@ registro ao aluno, curso ou campus.
   O download usa o último preenchimento salvo ou submetido.
 - Exclusão de usuários remove dados pessoais do cadastro e mantém referências
   necessárias aos documentos, estágios e pareceres históricos.
-
-## Consulta de endereço por CEP
-
-Cadastro, perfil e os sete grupos de endereço dos documentos usam
-`GET /api/enderecos/cep?cep=<oito-digitos>`. O servidor consulta o ViaCEP com
-timeout de cinco segundos; o cliente limita a espera a sete segundos. A busca
-não usa chave de API, cache ou tentativas automáticas.
-
-No cadastro e no perfil, informar um CEP válido inicia a consulta. Nos documentos,
-o endereço do aluno vem primeiro do cadastro hidratado pelo banco; abrir o
-formulário não consulta o ViaCEP. Use **Alterar endereço** e mude o CEP, ou
-**Consultar CEP** para consultar o valor atual. Os endereços da concedente ficam
-independentes; na ausência de fonte cadastrada vinculada, usam o preenchimento
-salvo ou começam vazios.
-
-Logradouro, bairro, cidade e UF continuam editáveis. Número e complemento são
-sempre manuais. Falha externa, CEP inexistente ou resposta parcial preservam os
-valores existentes e permitem salvar um preenchimento manual válido. Respostas
-atrasadas não substituem um CEP mais recente nem campos editados durante a busca.
-Correções no documento não alteram o perfil e prevalecem ao salvar/reabrir.
-
-Registros antigos com endereço em texto livre mantêm esse texto até que
-logradouro e número sejam reconstruídos. Transcreva manualmente número e
-complemento: o sistema não tenta separar texto legado por vírgulas.
-
-A consulta real não altera a persistência híbrida: endereços do cadastro usam
-o JSON de dados pessoais do usuário; documentos continuam em memória e não
-ganham durabilidade após reinício do servidor. Publique cliente, rota e adaptador
-juntos. Em rollback, preserve os valores dos documentos, pois a versão anterior
-pode reaplicar o endereço do perfil sobre rascunhos corrigidos.
-
-Os testes do adaptador/rota usam rede controlada; os testes de integração
-cobrem os nove grupos (cadastro, perfil, liberação/aluno e local, convênio,
-termo, ficha, relatório/aluno e instituição). `e2e/suporte/cep.ts` intercepta
-as consultas de navegador e `e2e/consulta-cep.spec.ts` cobre salvar/reabrir,
-falhas e respostas atrasadas. Para executar os E2E com o banco de produção
-desligado e sem depender do ViaCEP, use um servidor recém-iniciado:
-
-```bash
-DATABASE_URL= npm run test:e2e
-```
 
 ## O que é simulado e o que ainda falta
 

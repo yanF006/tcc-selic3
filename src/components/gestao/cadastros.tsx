@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { alterarCadastroAction } from "@/app/(coordenacao)/coordenacao/cadastros/acoes";
 import type { consultarCadastros, TipoCadastro } from "@/lib/services/cadastros";
+import type { ContatoInstituicao } from "@/lib/domain/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,12 @@ export function Cadastros({
   const [mensagem, setMensagem] = useState<{ ok: boolean; mensagem: string } | null>(null);
   const [pendente, iniciar] = useTransition();
   const texto = (chave: string) => String(campos[chave] ?? "");
+  const contatos = (campos.responsaveis ?? []) as ContatoInstituicao[];
+  function mudarContato(indice: number, chave: keyof ContatoInstituicao, valor: string) {
+    mudar("responsaveis", contatos.map((contato, posicao) =>
+      posicao === indice ? { ...contato, [chave]: valor } : contato,
+    ));
+  }
   const mudar = (chave: string, valor: unknown) =>
     setCampos((atual) => ({ ...atual, [chave]: valor }));
   const registros: {
@@ -271,6 +278,54 @@ export function Cadastros({
                 </>
               )}
             </div>
+            {tipo === "convenio" && (
+              <fieldset disabled={pendente} className="flex min-w-0 flex-col gap-4 rounded border p-4">
+                <legend className="px-1 font-medium">Contatos da instituição</legend>
+                <p className="text-muted-foreground text-sm">
+                  Estes contatos são compartilhados pelos convênios do mesmo CNPJ.
+                  Remover um contato o inativa na instituição. Contatos não possuem acesso ao sistema.
+                </p>
+                {contatos.map((contato, indice) => (
+                  <fieldset key={indice} className="min-w-0 rounded border p-3">
+                    <legend className="px-1 text-sm font-medium">Contato {indice + 1}</legend>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {([
+                        ["nome", "Nome", "text"],
+                        ["email", "E-mail", "email"],
+                        ["telefone", "Telefone", "tel"],
+                        ["cargo", "Cargo (opcional)", "text"],
+                      ] as const).map(([chave, rotulo, tipoInput]) => (
+                        <div key={chave} className="flex min-w-0 flex-col gap-2">
+                          <Label htmlFor={`contato-${indice}-${chave}`}>{rotulo}</Label>
+                          <Input
+                            id={`contato-${indice}-${chave}`}
+                            type={tipoInput}
+                            value={contato[chave] ?? ""}
+                            required={chave !== "cargo"}
+                            maxLength={chave === "cargo" ? 80 : chave === "telefone" ? 20 : 191}
+                            onChange={(evento) => mudarContato(indice, chave, evento.target.value)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="mt-3"
+                      aria-label={`Remover contato ${indice + 1}`}
+                      onClick={() => mudar("responsaveis", contatos.filter((_, posicao) => posicao !== indice))}
+                    >Remover contato</Button>
+                  </fieldset>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="self-start"
+                  disabled={contatos.length >= 20}
+                  onClick={() => mudar("responsaveis", [...contatos, { nome: "", email: "", telefone: "", cargo: "" }])}
+                >Adicionar contato</Button>
+              </fieldset>
+            )}
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={pendente}>
                 Salvar cadastro

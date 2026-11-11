@@ -1,8 +1,10 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
-import { templatePorId } from "@/lib/services/documentos";
+import { definicaoKit, lerArquivoKit } from "@/lib/templates/manifesto";
+import { ErroDeRegra } from "@/lib/domain/erros";
+
+export const runtime = "nodejs";
 
 /**
  * Download dos documentos fixos do Kit (8.4): a Lei de Estágio e o Regulamento.
@@ -29,7 +31,7 @@ export async function GET(
   }
 
   const { templateId } = await params;
-  const template = await templatePorId(templateId);
+  const template = definicaoKit(templateId);
 
   if (!template) {
     return Response.json({ erro: "Documento não encontrado." }, { status: 404 });
@@ -42,30 +44,19 @@ export async function GET(
     );
   }
 
-  const vigente = template.versoes.find((versao) => versao.vigente);
-
-  if (!vigente) {
-    return Response.json({ erro: "Documento sem versão vigente." }, { status: 409 });
+  try {
+    const { conteudo, nome, checksum } = await lerArquivoKit(templateId);
+    return new Response(new Uint8Array(conteudo), {
+      headers: {
+        "content-type": TIPOS_POR_EXTENSAO[path.extname(nome)] ?? "application/octet-stream",
+        "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(nome)}`,
+        "content-length": String(conteudo.byteLength),
+        "cache-control": "private, no-store",
+        "etag": `"${checksum}"`,
+      },
+    });
+  } catch (erro) {
+    if (!(erro instanceof ErroDeRegra)) throw erro;
+    return Response.json({ erro: "Arquivo do Kit indisponível." }, { status: 503 });
   }
-
-  // O prefixo estático limita a leitura e o tracing ao Kit, sem empacotar a raiz inteira.
-  const arquivo = path.join(
-    process.cwd(),
-    "Contexto",
-    "kit-estagio",
-    path.basename(vigente.arquivo),
-  );
-  const conteudo = await readFile(arquivo).catch(() => null);
-
-  if (!conteudo) {
-    return Response.json({ erro: "Arquivo do Kit indisponível." }, { status: 500 });
-  }
-
-  return new Response(conteudo, {
-    headers: {
-      "content-type": TIPOS_POR_EXTENSAO[path.extname(arquivo)] ?? "application/octet-stream",
-      "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(arquivo))}`,
-      "content-length": String(conteudo.byteLength),
-    },
-  });
 }

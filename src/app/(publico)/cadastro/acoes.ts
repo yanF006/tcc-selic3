@@ -4,18 +4,16 @@ import { validarEtapaUm, concluirCadastro } from "@/lib/services/cadastro";
 import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 
 import type {
-  EtapaDoisCadastro,
-  PreviaCadastro,
+  DadosCadastroCompleto,
   ResultadoCadastro,
   ResultadoConclusao,
 } from "@/lib/services/cadastro";
 
 /**
- * Server Actions do cadastro público (5.2 a 5.7). Cada etapa é uma ação: a
- * primeira devolve a prévia validada, a segunda grava o cadastro em memória.
+ * Server Actions do cadastro público (5.1 a 5.5). A primeira etapa apenas
+ * confere disponibilidade; a segunda envia o formulário completo e revalida
+ * tudo no servidor antes de gravar.
  */
-
-export type { PreviaCadastro };
 
 export async function validarEtapaUmAction(dados: {
   matricula: string;
@@ -31,11 +29,10 @@ export async function validarEtapaUmAction(dados: {
 }
 
 export async function concluirCadastroAction(
-  previaId: string,
-  dados: EtapaDoisCadastro,
+  dados: DadosCadastroCompleto,
 ): Promise<ResultadoConclusao> {
   try {
-    return await concluirCadastro(previaId, dados);
+    return await concluirCadastro(dados);
   } catch (erro) {
     return { ok: false, campo: "dados", erro: mensagemSeguraParaUsuario(erro) };
   }

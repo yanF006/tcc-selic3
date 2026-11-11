@@ -491,6 +491,8 @@ model Arquivo {
   documentoId  String?  @db.VarChar(64)
   nome         String   @db.VarChar(255)
   mimeType     String   @db.VarChar(100)
+  /// "assinado" | "comprovante"; anexar não confirma assinaturas.
+  finalidade   String   @default("comprovante") @db.VarChar(20)
   tamanhoBytes Int
   checksum     String   @db.VarChar(64)
   conteudo     Bytes

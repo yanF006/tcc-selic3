@@ -23,6 +23,12 @@ import {
   garantirHidratacao,
 } from "@/lib/db/persistencia";
 
+import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
+import { executarTransacao } from "@/lib/db/transacoes";
+import { criarRepositorioUsuarios } from "@/lib/db/repositorios/usuarios";
+import { criarRepositorioSolicitacoes } from "@/lib/db/repositorios/solicitacoes";
+import { importarMatriculasPersistentes, listarImportacoesPersistentes, listarMatriculasPersistentes, registrarMatriculaPersistente } from "./matriculas-persistentes";
+
 import { ErroDeRegra } from "./erros";
 
 /**
@@ -78,6 +84,10 @@ function porNome<T extends { nome: string }>(a: T, b: T): number {
 
 /** true quando a matrícula já vale no sistema, venha de onde vier. */
 export async function matriculaRegistrada(matricula: string): Promise<boolean> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return (await prisma.matriculaImportada.count({ where: { matricula: matricula.trim() } })) > 0;
+  }
   await garantirHidratacao();
 
   return obterEstado().matriculas.some((registro) => registro.matricula === matricula.trim());
@@ -88,8 +98,20 @@ function nomeDoCurso(cursoId: string): string {
   return obterEstado().cursos.find((curso) => curso.id === cursoId)?.nome ?? "Não informado";
 }
 
+async function repositorioUsuariosPersistente() {
+  const { prisma, Prisma } = await carregarCliente();
+
+  return criarRepositorioUsuarios(prisma, Prisma);
+}
+
 export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<Pagina<Usuario>> {
   await garantirHidratacao();
+
+  if (bancoConfigurado()) {
+    const repositorio = await repositorioUsuariosPersistente();
+
+    return repositorio.listarPaginado(consulta);
+  }
 
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.usuarios, consulta.busca ?? "", (usuario) => [
@@ -110,6 +132,12 @@ export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<P
 export async function usuarioPorId(id: string): Promise<Usuario | null> {
   await garantirHidratacao();
 
+  if (bancoConfigurado()) {
+    const repositorio = await repositorioUsuariosPersistente();
+
+    return repositorio.buscarPorId(id);
+  }
+
   return obterEstado().usuarios.find((usuario) => usuario.id === id) ?? null;
 }
 
@@ -119,6 +147,12 @@ export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
 
   const alvo = email.trim().toLowerCase();
 
+  if (bancoConfigurado()) {
+    const repositorio = await repositorioUsuariosPersistente();
+
+    return repositorio.buscarPorEmail(alvo);
+  }
+
   return (
     obterEstado().usuarios.find((usuario) => usuario.email.trim().toLowerCase() === alvo) ?? null
   );
@@ -126,6 +160,12 @@ export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
 
 export async function contarUsuariosPorSituacao(): Promise<Record<SituacaoUsuario, number>> {
   await garantirHidratacao();
+
+  if (bancoConfigurado()) {
+    const repositorio = await repositorioUsuariosPersistente();
+
+    return repositorio.contarPorSituacao();
+  }
 
   const usuarios = obterEstado().usuarios;
 
@@ -136,10 +176,13 @@ export async function contarUsuariosPorSituacao(): Promise<Record<SituacaoUsuari
   };
 }
 
-export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuario> {
-  await garantirHidratacao();
+interface CadastroValidado {
+  email: string;
+  campus: Campus;
+  matricula?: string;
+}
 
-  const estado = obterEstado();
+function validarCadastroAdministrativo(cadastro: CadastroUsuario): CadastroValidado {
   const email = cadastro.email.trim().toLowerCase();
 
   if (!cadastro.nome.trim())
@@ -150,13 +193,6 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     throw new ErroDeRegra(
       "Escolha o papel antes de concluir o cadastro.",
       "escolha_o_papel_antes_de_concluir_o_cadastro",
-    );
-  }
-
-  if (estado.usuarios.some((usuario) => usuario.email.toLowerCase() === email)) {
-    throw new ErroDeRegra(
-      "E-mail já utilizado por outro cadastro.",
-      "e_mail_ja_utilizado_por_outro_cadastro",
     );
   }
 
@@ -181,7 +217,124 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
         "informe_a_matricula_com_onze_digitos",
       );
     }
+  }
 
+  return { email, campus, matricula };
+}
+
+/** Depois do commit, pede o link padrão para a conta estabelecer a primeira senha. */
+async function solicitarDefinicaoSenha(email: string): Promise<void> {
+  try {
+    const [{ obterAutenticacao }, { carregarConfiguracaoAutenticacao }] = await Promise.all([
+      import("@/lib/auth/autenticacao"),
+      import("@/lib/auth/configuracao"),
+    ]);
+    const configuracao = carregarConfiguracaoAutenticacao();
+    const autenticacao = await obterAutenticacao();
+
+    await autenticacao.api.requestPasswordReset({
+      body: { email, redirectTo: `${configuracao.origem}/redefinir-senha` },
+    });
+  } catch (erro) {
+    const codigo =
+      erro && typeof erro === "object" && "code" in erro ? String(erro.code) : "ENVIO_FALHOU";
+    console.warn("[administracao] Falha ao solicitar definição de senha.", {
+      codigo: /^[A-Z0-9_]{1,64}$/.test(codigo) ? codigo : "ENVIO_FALHOU",
+    });
+  }
+}
+
+async function cadastrarUsuarioPersistente(cadastro: CadastroUsuario): Promise<Usuario> {
+  const { email, campus, matricula } = validarCadastroAdministrativo(cadastro);
+  const { prisma, Prisma } = await carregarCliente();
+
+  const usuario = await executarTransacao(
+    async (tx) => {
+      const repositorio = criarRepositorioUsuarios(tx, Prisma);
+      const [porEmail, porMatricula] = await Promise.all([
+        tx.usuario.findUnique({ where: { email }, select: { id: true } }),
+        matricula
+          ? tx.usuario.findUnique({ where: { matricula }, select: { id: true } })
+          : Promise.resolve(null),
+      ]);
+
+      if (porEmail) {
+        throw new ErroDeRegra(
+          "E-mail já utilizado por outro cadastro.",
+          "e_mail_ja_utilizado_por_outro_cadastro",
+        );
+      }
+      if (porMatricula) {
+        throw new ErroDeRegra("Matrícula já vinculada ou registrada.", "matricula_ja_utilizada");
+      }
+
+      if (matricula) {
+        const registrada = await tx.matriculaImportada.findUnique({
+          where: { matricula },
+          select: { id: true },
+        });
+
+        if (!registrada) {
+          const curso = cadastro.cursoId
+            ? await tx.curso.findUnique({
+                where: { id: cadastro.cursoId },
+                select: { nome: true },
+              })
+            : null;
+
+          await tx.matriculaImportada.create({
+            data: {
+              id: novoId("mat"),
+              matricula,
+              nome: cadastro.nome.trim(),
+              curso: curso?.nome ?? "Não informado",
+              origem: "cadastro_administrador",
+            },
+          });
+        }
+      }
+
+      const novo: Usuario = {
+        id: novoId("usr"),
+        nome: cadastro.nome.trim(),
+        email,
+        papel: cadastro.papel,
+        situacao: "ativo",
+        campus,
+        matricula,
+        cursoId: cadastro.papel === "coordenador_curso" ? cadastro.cursoId : undefined,
+        membroComissaoEstagio: false,
+        criadoEm: agora(),
+      };
+
+      await repositorio.criar(novo);
+
+      return novo;
+    },
+    { cliente: prisma },
+  );
+
+  await solicitarDefinicaoSenha(email);
+
+  return usuario;
+}
+
+export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuario> {
+  await garantirHidratacao();
+
+  if (bancoConfigurado()) return cadastrarUsuarioPersistente(cadastro);
+
+  const { email, campus, matricula } = validarCadastroAdministrativo(cadastro);
+  const estado = obterEstado();
+
+  if (estado.usuarios.some((usuario) => usuario.email.toLowerCase() === email)) {
+    throw new ErroDeRegra(
+      "E-mail já utilizado por outro cadastro.",
+      "e_mail_ja_utilizado_por_outro_cadastro",
+    );
+  }
+
+  if (cadastro.papel === "aluno" && matricula) {
     // O cadastro do aluno registra a matrícula que ainda não consta, com a origem
     // do cadastro de administrador, e libera o acesso na mesma operação. Quem já
     // está registrado mantém o registro existente, sem duplicar.
@@ -219,6 +372,121 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
   return usuario;
 }
 
+async function editarUsuarioPersistente(
+  id: string,
+  alteracoes: Partial<CadastroUsuario> & { nome?: string; situacao?: SituacaoUsuario },
+): Promise<Usuario> {
+  const { prisma, Prisma } = await carregarCliente();
+
+  return executarTransacao(
+    async (tx) => {
+      const repositorio = criarRepositorioUsuarios(tx, Prisma);
+      const atual = await repositorio.buscarPorId(id);
+
+      if (!atual) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
+
+      const usuario: Usuario = { ...atual };
+
+      if (alteracoes.email && alteracoes.email.toLowerCase() !== atual.email.toLowerCase()) {
+        const email = alteracoes.email.trim().toLowerCase();
+
+        if (!email.includes("@")) {
+          throw new ErroDeRegra("Informe um e-mail válido.", "informe_um_e_mail_valido");
+        }
+
+        const existente = await tx.usuario.findUnique({
+          where: { email },
+          select: { id: true },
+        });
+
+        if (existente && existente.id !== id) {
+          throw new ErroDeRegra(
+            "E-mail já utilizado por outro cadastro.",
+            "e_mail_ja_utilizado_por_outro_cadastro",
+          );
+        }
+
+        usuario.email = email;
+      }
+
+      if (alteracoes.nome?.trim()) usuario.nome = alteracoes.nome.trim();
+      if (alteracoes.papel !== undefined) usuario.papel = alteracoes.papel;
+      if (alteracoes.cursoId !== undefined) usuario.cursoId = alteracoes.cursoId;
+      if (alteracoes.membroComissaoEstagio !== undefined) {
+        usuario.membroComissaoEstagio = alteracoes.membroComissaoEstagio;
+      }
+      if (alteracoes.situacao) usuario.situacao = alteracoes.situacao;
+
+      if (usuario.papel !== "coordenador_estagio") usuario.membroComissaoEstagio = false;
+      if (usuario.papel !== "coordenador_curso") usuario.cursoId = undefined;
+
+      if (Object.hasOwn(alteracoes, "matricula")) {
+        const matricula = alteracoes.matricula?.trim();
+
+        if (usuario.papel === "aluno" && matricula) {
+          if (!MATRICULA_SIGAA.test(matricula)) {
+            throw new ErroDeRegra(
+              "Informe a matrícula com 11 dígitos.",
+              "informe_a_matricula_com_onze_digitos",
+            );
+          }
+
+          const outro = await tx.usuario.findUnique({
+            where: { matricula },
+            select: { id: true },
+          });
+
+          if (outro && outro.id !== id) {
+            throw new ErroDeRegra(
+              "Matrícula já vinculada ou registrada.",
+              "matricula_ja_utilizada",
+            );
+          }
+
+          const registrada = await tx.matriculaImportada.findUnique({
+            where: { matricula },
+            select: { id: true },
+          });
+
+          if (!registrada) {
+            const curso = usuario.cursoId
+              ? await tx.curso.findUnique({
+                  where: { id: usuario.cursoId },
+                  select: { nome: true },
+                })
+              : null;
+
+            await tx.matriculaImportada.create({
+              data: {
+                id: novoId("mat"),
+                matricula,
+                nome: usuario.nome,
+                curso: curso?.nome ?? "Não informado",
+                origem: "cadastro_administrador",
+              },
+            });
+          }
+
+          usuario.matricula = matricula;
+        } else {
+          usuario.matricula = undefined;
+        }
+      } else if (usuario.papel !== "aluno") {
+        usuario.matricula = undefined;
+      }
+
+      await repositorio.atualizar(usuario);
+
+      if (usuario.situacao !== "ativo") {
+        await tx.authSession.deleteMany({ where: { userId: id } });
+      }
+
+      return usuario;
+    },
+    { cliente: prisma },
+  );
+}
+
 export async function editarUsuario(
   id: string,
   alteracoes: Partial<CadastroUsuario> & { nome?: string; situacao?: SituacaoUsuario },
@@ -229,6 +497,8 @@ export async function editarUsuario(
     }
   }
   await garantirHidratacao();
+
+  if (bancoConfigurado()) return editarUsuarioPersistente(id, alteracoes);
 
   const estado = obterEstado();
   const usuario = estado.usuarios.find((registro) => registro.id === id);
@@ -261,10 +531,57 @@ export async function editarUsuario(
   if (usuario.papel !== "coordenador_estagio") usuario.membroComissaoEstagio = false;
   if (usuario.papel !== "coordenador_curso") usuario.cursoId = undefined;
 
+  let matriculaCriada: MatriculaImportada | undefined;
+
+  if (Object.hasOwn(alteracoes, "matricula")) {
+    const matricula = alteracoes.matricula?.trim();
+
+    if (usuario.papel === "aluno" && matricula) {
+      if (!MATRICULA_SIGAA.test(matricula)) {
+        throw new ErroDeRegra(
+          "Informe a matrícula com 11 dígitos.",
+          "informe_a_matricula_com_onze_digitos",
+        );
+      }
+
+      if (
+        estado.usuarios.some(
+          (registro) => registro.id !== id && registro.matricula === matricula,
+        )
+      ) {
+        throw new ErroDeRegra("Matrícula já vinculada ou registrada.", "matricula_ja_utilizada");
+      }
+
+      if (!(await matriculaRegistrada(matricula))) {
+        matriculaCriada = {
+          id: novoId("mat"),
+          matricula,
+          nome: usuario.nome,
+          curso: usuario.cursoId ? nomeDoCurso(usuario.cursoId) : "Não informado",
+          origem: "cadastro_administrador",
+          importadaEm: agora(),
+        };
+
+        await criarMatricula(matriculaCriada);
+        estado.matriculas.push(matriculaCriada);
+      }
+
+      usuario.matricula = matricula;
+    } else {
+      usuario.matricula = undefined;
+    }
+  } else if (usuario.papel !== "aluno") {
+    usuario.matricula = undefined;
+  }
+
   try {
     await atualizarUsuario(usuario);
   } catch (erro) {
     Object.assign(usuario, anterior);
+    if (matriculaCriada) {
+      const indice = estado.matriculas.findIndex((registro) => registro.id === matriculaCriada!.id);
+      if (indice >= 0) estado.matriculas.splice(indice, 1);
+    }
     throw erro;
   }
 
@@ -275,7 +592,41 @@ export async function editarUsuario(
  * Inativa o cadastro: bloqueia o acesso e preserva os registros criados pelo
  * usuário (estágios, documentos e pareceres continuam apontando para ele).
  */
+async function atualizarSituacaoPersistente(
+  id: string,
+  situacao: SituacaoUsuario,
+): Promise<Usuario> {
+  const { prisma, Prisma } = await carregarCliente();
+
+  return executarTransacao(
+    async (tx) => {
+      const repositorio = criarRepositorioUsuarios(tx, Prisma);
+      const usuario = await repositorio.buscarPorId(id);
+
+      if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
+      if (situacao === "inativo" && usuario.situacao === "inativo") {
+        throw new ErroDeRegra(
+          `Cadastro já está inativo (${metadadoUsuario("inativo").rotulo}).`,
+          "usuario_ja_inativo",
+        );
+      }
+
+      const atualizado: Usuario = { ...usuario, situacao };
+      await repositorio.atualizar(atualizado);
+
+      if (situacao !== "ativo") {
+        await tx.authSession.deleteMany({ where: { userId: id } });
+      }
+
+      return atualizado;
+    },
+    { cliente: prisma },
+  );
+}
+
 export async function inativarUsuario(id: string): Promise<Usuario> {
+  if (bancoConfigurado()) return atualizarSituacaoPersistente(id, "inativo");
+
   await garantirHidratacao();
 
   const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
@@ -303,6 +654,8 @@ export async function inativarUsuario(id: string): Promise<Usuario> {
 }
 
 export async function reativarUsuario(id: string): Promise<Usuario> {
+  if (bancoConfigurado()) return atualizarSituacaoPersistente(id, "ativo");
+
   await garantirHidratacao();
 
   const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
@@ -323,8 +676,50 @@ export async function reativarUsuario(id: string): Promise<Usuario> {
   return usuario;
 }
 
+async function possuiHistoricoPersistente(tx: import("@/generated/prisma/client").Prisma.TransactionClient, id: string): Promise<boolean> {
+  const contagens = await Promise.all([
+    tx.estagio.count({ where: { OR: [{ alunoId: id }, { editadoPorId: id }, { encaminhadoPorId: id }, { liberadoPorId: id }] } }),
+    tx.documentoPreenchido.count({ where: { OR: [{ alunoId: id }, { registradoPorId: id }, { assinaturasConfirmadasPorId: id }] } }),
+    tx.lancamentoHoras.count({ where: { alunoId: id } }),
+    tx.submissaoDocumento.count({ where: { autorId: id } }),
+    tx.parecer.count({ where: { autorId: id } }),
+    tx.observacaoDocumento.count({ where: { autorId: id } }),
+    tx.envioExterno.count({ where: { autorId: id } }),
+    tx.pedidoEnvioDocumento.count({ where: { pedidoPorId: id } }),
+    tx.arquivo.count({ where: { autorId: id } }),
+    tx.solicitacaoExclusaoEstagio.count({ where: { OR: [{ solicitanteId: id }, { decididoPorId: id }] } }),
+    tx.solicitacaoAcesso.count({ where: { OR: [{ usuarioId: id }, { decididoPorId: id }] } }),
+  ]);
+  return contagens.some((quantidade) => quantidade > 0);
+}
+
+/** Anonimiza identidade com histórico ou apaga por completo a conta sem referências. */
+async function excluirUsuarioPersistente(id: string): Promise<void> {
+  const { prisma, Prisma } = await carregarCliente();
+  await executarTransacao(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${id} FOR UPDATE`;
+    const usuario = await tx.usuario.findUnique({ where: { id } });
+    if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
+    if (await possuiHistoricoPersistente(tx, id)) {
+      await tx.usuario.update({ where: { id }, data: {
+        nome: "Cadastro excluído", email: `excluido.${id}@selic.invalid`, situacao: "inativo",
+        matricula: null, dadosPessoais: Prisma.DbNull,
+      } });
+      await tx.dadosPessoaisAluno.deleteMany({ where: { usuarioId: id } });
+      await tx.authSession.deleteMany({ where: { userId: id } });
+      await tx.authAccount.deleteMany({ where: { userId: id } });
+      return;
+    }
+    await tx.solicitacaoAcesso.deleteMany({ where: { usuarioId: id } });
+    await tx.dadosPessoaisAluno.deleteMany({ where: { usuarioId: id } });
+    await tx.usuario.delete({ where: { id } });
+  }, { cliente: prisma }, { isolationLevel: "Serializable" });
+}
+
 /** Remove os dados pessoais, preservando identidades referenciadas no histórico. */
 export async function excluirUsuario(id: string): Promise<void> {
+  if (bancoConfigurado()) return excluirUsuarioPersistente(id);
+
   await garantirHidratacao();
 
   const estado = obterEstado();
@@ -385,6 +780,36 @@ export async function listarSolicitacoes(
   consulta: ConsultaSolicitacoes = {},
   autor?: Usuario,
 ): Promise<Pagina<SolicitacaoAcesso>> {
+  if (bancoConfigurado()) {
+    const tamanhoPagina = Math.max(1, consulta.tamanho ?? 10);
+    const vazio: Pagina<SolicitacaoAcesso> = { itens: [], total: 0, pagina: 1, tamanhoPagina };
+
+    if (autor) {
+      if (autor.situacao !== "ativo") return vazio;
+      if (!["administrador", "coordenador_estagio", "coordenador_curso"].includes(autor.papel)) {
+        return vazio;
+      }
+    }
+
+    let cursoId: string | undefined;
+
+    if (autor?.papel === "coordenador_curso") {
+      if (!autor.cursoId) return vazio;
+      cursoId = autor.cursoId;
+    }
+
+    const { prisma } = await carregarCliente();
+    const repositorio = criarRepositorioSolicitacoes(prisma);
+
+    return repositorio.listarPaginado({
+      situacao: consulta.situacao,
+      busca: consulta.busca,
+      pagina: consulta.pagina,
+      tamanho: consulta.tamanho,
+      cursoId,
+    });
+  }
+
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.solicitacoes, consulta.busca ?? "", (solicitacao) => [
     solicitacao.nome,
@@ -400,6 +825,120 @@ export async function listarSolicitacoes(
   return paginar(filtradas, consulta);
 }
 
+async function decidirSolicitacaoPersistente(
+  id: string,
+  decisao: "autorizado" | "recusado",
+  administradorId: string,
+  motivo?: string,
+): Promise<SolicitacaoAcesso> {
+  const { prisma } = await carregarCliente();
+
+  return executarTransacao(
+    async (tx) => {
+      const registro = await tx.solicitacaoAcesso.findUnique({
+        where: { id },
+        select: { usuarioId: true, cursoId: true },
+      });
+
+      if (!registro) {
+        throw new ErroDeRegra("Solicitação não encontrada.", "solicitacao_nao_encontrada");
+      }
+
+      const repositorio = criarRepositorioSolicitacoes(tx);
+      const solicitacao = await repositorio.buscarPorId(id);
+
+      if (!solicitacao) {
+        throw new ErroDeRegra("Solicitação não encontrada.", "solicitacao_nao_encontrada");
+      }
+
+      const autor = await tx.usuario.findUnique({
+        where: { id: administradorId },
+        select: { papel: true, situacao: true, cursoId: true },
+      });
+
+      const permitido =
+        autor?.situacao === "ativo" &&
+        (autor.papel === "administrador" ||
+          autor.papel === "coordenador_estagio" ||
+          (autor.papel === "coordenador_curso" &&
+            Boolean(autor.cursoId) &&
+            autor.cursoId === registro.cursoId));
+
+      if (!permitido) {
+        throw new ErroDeRegra(
+          "Solicitação não disponível para este usuário.",
+          "acesso_negado",
+        );
+      }
+
+      if (decisao !== "autorizado" && decisao !== "recusado") {
+        throw new ErroDeRegra("Escolha autorizar ou recusar.", "decisao_invalida");
+      }
+      if (solicitacao.situacao !== "pendente") {
+        throw new ErroDeRegra(`Solicitação já ${solicitacao.situacao}.`, "solicitacao_decidida");
+      }
+      if (decisao === "recusado" && !motivo?.trim()) {
+        throw new ErroDeRegra("Informe o motivo da recusa.", "motivo_obrigatorio");
+      }
+      if (decisao === "autorizado" && !solicitacao.matricula) {
+        throw new ErroDeRegra("Solicitação sem matrícula.", "matricula_ausente");
+      }
+
+      const decididoEm = new Date();
+      const decisaoGravada = await tx.solicitacaoAcesso.updateMany({
+        where: { id, situacao: "pendente" },
+        data: {
+          situacao: decisao,
+          motivo: motivo?.trim() || solicitacao.motivo || null,
+          decididoPorId: administradorId,
+          decididoEm,
+        },
+      });
+
+      if (decisaoGravada.count === 0) {
+        throw new ErroDeRegra("Solicitação já foi decidida.", "solicitacao_decidida");
+      }
+
+      if (decisao === "autorizado") {
+        const curso = await tx.curso.findUnique({
+          where: { id: registro.cursoId },
+          select: { nome: true },
+        });
+
+        await tx.matriculaImportada.upsert({
+          where: { matricula: solicitacao.matricula },
+          create: {
+            id: novoId("mat"),
+            matricula: solicitacao.matricula,
+            nome: solicitacao.nome,
+            curso: curso?.nome ?? "Não informado",
+            origem: "cadastro_administrador",
+          },
+          update: {},
+        });
+
+        const ativacao = await tx.usuario.updateMany({
+          where: { id: registro.usuarioId },
+          data: { situacao: "ativo" },
+        });
+
+        if (ativacao.count === 0) {
+          throw new ErroDeRegra("Usuário da solicitação não encontrado.", "usuario_nao_encontrado");
+        }
+      } else {
+        await tx.usuario.updateMany({
+          where: { id: registro.usuarioId },
+          data: { situacao: "inativo" },
+        });
+      }
+
+      return (await repositorio.buscarPorId(id))!;
+    },
+    { cliente: prisma },
+    { isolationLevel: "Serializable" },
+  );
+}
+
 export async function decidirSolicitacao(
   id: string,
   decisao: "autorizado" | "recusado",
@@ -407,6 +946,10 @@ export async function decidirSolicitacao(
   motivo?: string,
 ): Promise<SolicitacaoAcesso> {
   await garantirHidratacao();
+
+  if (bancoConfigurado()) {
+    return decidirSolicitacaoPersistente(id, decisao, administradorId, motivo);
+  }
 
   const estado = obterEstado();
   const solicitacao = estado.solicitacoes.find((registro) => registro.id === id);
@@ -430,7 +973,6 @@ export async function decidirSolicitacao(
   const antes = {
     usuarios: structuredClone(estado.usuarios),
     matriculas: structuredClone(estado.matriculas),
-    notificacoes: structuredClone(estado.notificacoes),
     solicitacao: structuredClone(solicitacao),
   };
 
@@ -489,28 +1031,19 @@ export async function decidirSolicitacao(
       }
     }
 
-    const aluno = estado.usuarios.find(
-      (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
-    );
-    if (aluno) {
-      if (decisao === "recusado") {
+    if (decisao === "recusado") {
+      const aluno = estado.usuarios.find(
+        (usuario) => usuario.email.toLowerCase() === solicitacao.email.toLowerCase(),
+      );
+
+      if (aluno) {
         aluno.situacao = "inativo";
         await atualizarUsuario(aluno);
       }
-      estado.notificacoes.push({
-        id: novoId("ntf"),
-        destinatarioId: aluno.id,
-        titulo: decisao === "autorizado" ? "Cadastro autorizado" : "Cadastro recusado",
-        mensagem: solicitacao.motivo ?? "",
-        tipo: "acesso",
-        lida: false,
-        criadaEm: agora(),
-      });
     }
   } catch (erro) {
     estado.usuarios = antes.usuarios;
     estado.matriculas = antes.matriculas;
-    estado.notificacoes = antes.notificacoes;
     for (const chave of Object.keys(solicitacao)) {
       if (!(chave in antes.solicitacao)) {
         delete (solicitacao as unknown as Record<string, unknown>)[chave];
@@ -531,6 +1064,7 @@ export async function listarMatriculas(
     tamanho?: number;
   } = {},
 ): Promise<Pagina<MatriculaImportada>> {
+  if (bancoConfigurado()) return listarMatriculasPersistentes(consulta);
   await garantirHidratacao();
 
   const estado = obterEstado();
@@ -556,6 +1090,7 @@ export async function importarMatriculas(
   arquivo: string,
   linhas: LinhaImportacao[],
 ): Promise<ResultadoImportacao> {
+  if (bancoConfigurado()) return importarMatriculasPersistentes(arquivo, linhas);
   await garantirHidratacao();
 
   const estado = obterEstado();
@@ -628,6 +1163,10 @@ export async function importarMatriculas(
 }
 
 export async function totalMatriculasImportadas(): Promise<number> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    return prisma.matriculaImportada.count();
+  }
   await garantirHidratacao();
 
   return obterEstado().matriculas.length;
@@ -639,6 +1178,7 @@ export async function totalMatriculasImportadas(): Promise<number> {
  * aluno correspondente.
  */
 export async function registrarMatricula(linha: LinhaImportacao): Promise<MatriculaImportada> {
+  if (bancoConfigurado()) return registrarMatriculaPersistente(linha);
   await garantirHidratacao();
 
   const estado = obterEstado();
@@ -676,4 +1216,9 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   estado.matriculas.push(registro);
 
   return registro;
+}
+
+/** Relatórios duráveis; no simulador permanece o relatório imediato da importação. */
+export async function listarImportacoesMatriculas(): Promise<ResultadoImportacao[]> {
+  return bancoConfigurado() ? listarImportacoesPersistentes() : [];
 }

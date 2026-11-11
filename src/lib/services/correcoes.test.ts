@@ -248,9 +248,13 @@ describe("autorização por vínculo e integridade de edição", () => {
       senha: "selic123",
       confirmacao: "selic123",
     });
-    if (!previa.ok) throw new Error("Prévia válida esperada.");
-    const resultado = await concluirCadastro(previa.previa.id, {
+    if (!previa.ok) throw new Error("Consulta válida esperada.");
+    const resultado = await concluirCadastro({
       ...usuario("usr-maria").dadosPessoais!,
+      matricula: "20260000500",
+      email: "contato.invalido@aluno.ifrj.edu.br",
+      senha: "selic123",
+      confirmacao: "selic123",
       celular: "123",
     });
     expect(resultado.ok).toBe(false);
