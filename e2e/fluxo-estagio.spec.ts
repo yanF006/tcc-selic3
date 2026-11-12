@@ -144,9 +144,6 @@ test("solicitação, indeferimento excepcional, assinaturas, liberação e hist�
 
   await entrar(page, "maria.souza@aluno.ifrj.edu.br");
   await page.goto(alunoUrl);
-  await page.getByRole("button", { name: /^Notificações:/ }).click();
-  await expect(page.getByRole("menu").getByText("Estágio liberado", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
   await expect(
     page.getByRole("button", { name: "Selecionar documentos", exact: true }),
   ).toBeVisible();
@@ -247,7 +244,7 @@ test("documentos da coordenação pesquisam aluno, orientador, supervisor e inst
   await expect(page.getByText("Aluno: João Pedro Lima", { exact: true }).first()).toBeVisible();
 });
 
-test("e-mail de assinante indisponível gera histórico de falha e notificação ao aluno", async ({
+test("e-mail de assinante indisponível gera histórico de falha visível ao aluno", async ({
   page,
 }) => {
   await entrar(page, "maria.souza@aluno.ifrj.edu.br");
@@ -260,11 +257,7 @@ test("e-mail de assinante indisponível gera histórico de falha e notificação
   await expect(page.getByTestId("fluxo-estagio")).toContainText("Falha no envio");
   await entrar(page, "maria.souza@aluno.ifrj.edu.br");
   await page.goto(`/estagio?estagio=${estagioId}`);
-  await page.getByRole("button", { name: /^Notificações:/ }).click();
-  await expect(
-    page.getByRole("menu").getByText("E-mail do assinante indisponível", { exact: true }).first(),
-  ).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("fluxo-estagio")).toContainText("Falha no envio");
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Cancelar solicitação", exact: true }).click();
   await expect(page.getByTestId("fluxo-estagio")).toContainText("Registro encerrado");

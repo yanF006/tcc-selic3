@@ -5,11 +5,19 @@ import { expect, test } from "@playwright/test";
  * `corrigir-hidratacao-e-carregamento-banco`). O servidor deste arquivo é
  * iniciado por `npm run test:e2e:banco-indisponivel` com `DATABASE_URL`
  * apontando para um destino reservado e timeouts curtos.
+ *
+ * Um visitante sem sessão não tem identidade a validar, então o banco nem é
+ * consultado: ele é levado ao login. A tela "dados indisponíveis" aparece para
+ * quem tem sessão; esse caminho é coberto por teste unitário do guarda.
  */
 
-// Sem cookie de ID: no modo persistente a identidade vem só da sessão do provedor,
-// então a indisponibilidade precisa aparecer mesmo sem nenhuma sessão antiga.
-test("mostra carregamento, erro recuperável e nenhuma conta padrão", async ({ page }) => {
+test("mostra carregamento, leva ao login e nenhuma conta padrão ou dado de fixture", async ({
+  page,
+}) => {
+  // Aquecimento: o servidor de desenvolvimento compila a rota na primeira visita
+  // (cerca de 2,5 s), o que não faz parte do comportamento medido abaixo.
+  await page.request.get("/admin/usuarios", { timeout: 30_000 }).catch(() => undefined);
+
   const navegacao = page.goto("/admin/usuarios", { waitUntil: "commit" });
 
   await expect(page.getByRole("status").filter({ hasText: "Carregando dados" })).toBeVisible({
@@ -18,20 +26,10 @@ test("mostra carregamento, erro recuperável e nenhuma conta padrão", async ({ 
 
   await navegacao;
 
-  await expect(
-    page.getByRole("heading", { name: "Dados temporariamente indisponíveis" }),
-  ).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("Os dados estão indisponíveis no momento.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Tentar novamente" })).toBeVisible();
+  await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
 
-  // A falha não pode ser mascarada pelas fixtures.
+  // Nenhuma conta padrão entra, e o login não mostra dados de demonstração.
   await expect(page.getByText("Felipe Andrade")).toHaveCount(0);
-  await expect(page.getByRole("table")).toHaveCount(0);
   await expect(page.getByText("Maria de Souza Oliveira")).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Tentar novamente" }).click();
-
-  await expect(
-    page.getByRole("heading", { name: "Dados temporariamente indisponíveis" }),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("table")).toHaveCount(0);
 });

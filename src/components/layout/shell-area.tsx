@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+
+import { CarregandoArea } from "@/components/layout/carregando-area";
 import { Navbar, type GrupoNavbar } from "@/components/layout/navbar";
 import { SeletorPapel } from "@/components/layout/seletor-papel";
 import { TelaIndisponivel } from "@/components/layout/tela-indisponivel";
@@ -16,18 +19,33 @@ import { documentosParaParecer } from "@/lib/services/documentos";
  * seletor de papel. As três áreas (aluno, coordenação e administração) usam
  * este componente com os papéis exigidos de cada uma.
  */
-export async function ShellArea({
-  papeisExigidos,
-  destino,
-  qualquerPapel,
-  children,
-}: {
+interface PropsShellArea {
   papeisExigidos: Papel[];
   destino: string;
   /** true quando basta um dos papéis (áreas compartilhadas, como a coordenação). */
   qualquerPapel?: boolean;
   children: React.ReactNode;
-}) {
+}
+
+/**
+ * Casca das áreas autenticadas. A espera pela sessão e pelo banco acontece dentro
+ * de um Suspense: o layout é enviado de imediato com o carregamento, e a casca
+ * completa (ou a tela de indisponibilidade) chega quando a consulta termina.
+ */
+export function ShellArea(props: PropsShellArea) {
+  return (
+    <Suspense fallback={<CarregandoArea />}>
+      <ShellAreaResolvida {...props} />
+    </Suspense>
+  );
+}
+
+async function ShellAreaResolvida({
+  papeisExigidos,
+  destino,
+  qualquerPapel,
+  children,
+}: PropsShellArea) {
   let usuario: Usuario;
 
   try {
