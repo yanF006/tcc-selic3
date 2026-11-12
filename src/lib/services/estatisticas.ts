@@ -8,14 +8,16 @@ import type {
   SituacaoEstagio,
   Usuario,
 } from "@/lib/domain/types";
+import { bancoConfigurado } from "@/lib/db/prisma";
 
 import { classificacaoConvenio } from "./catalogo";
 import { ErroDeRegra } from "./erros";
 import { obterEstado } from "./store";
 
 /**
- * Estatísticas de estágio (bloco 12). Tudo é calculado sobre o estado
- * consultado; o recorte por papel limita os alunos antes de qualquer soma.
+ * Estatísticas de estágio (bloco 12). O cálculo é feito sobre um conjunto de
+ * dados (`DadosEstatisticas`) que vem do simulador ou do banco. Assim filtros,
+ * totais e horas efetivas têm uma única implementação nos dois modos.
  */
 
 export interface RecorteEstatisticas {
@@ -118,6 +120,39 @@ export interface PesquisaEstatisticas {
   totaisHoras: TotaisHoras;
 }
 
+/** Dados do aluno necessários ao cálculo, já resolvidos para nomes. */
+export interface AlunoEstatistica {
+  id: string;
+  nome: string;
+  situacao: Usuario["situacao"];
+  cursoId?: string;
+  turmaId?: string;
+  periodoId?: string;
+}
+
+export interface TemplateEstatistica {
+  nome: string;
+  tipoParecer?: string;
+}
+
+/**
+ * Conjunto de dados sobre o qual o cálculo roda. Quem o monta é responsável por
+ * restringir as linhas ao recorte do usuário quando o recorte for de curso.
+ */
+export interface DadosEstatisticas {
+  estagios: Estagio[];
+  alunos: Map<string, AlunoEstatistica>;
+  convenios: Convenio[];
+  pessoas: Map<string, string>;
+  cursos: Map<string, string>;
+  turmas: Map<string, string>;
+  periodos: Map<string, string>;
+  lancamentos: LancamentoHoras[];
+  documentos: DocumentoPreenchido[];
+  templates: Map<string, TemplateEstatistica>;
+  documentosComParecer: Set<string>;
+}
+
 const CAMPUS = "Pinheiral";
 
 function normalizar(valor: string | undefined): string {
@@ -138,8 +173,11 @@ function semestreDaData(data: string): 1 | 2 {
   return Number(data.slice(5, 7)) <= 6 ? 1 : 2;
 }
 
-/** Recorte de visibilidade do usuário (12.9). */
-export function recorteDeEstatisticas(usuario: Usuario): RecorteEstatisticas {
+/**
+ * Recorte de visibilidade do usuário (12.9). `nomeCurso` é o nome do curso do
+ * coordenador, lido pelo chamador no modo em que ele estiver.
+ */
+export function montarRecorte(usuario: Usuario, nomeCurso?: string): RecorteEstatisticas {
   if (usuario.situacao !== "ativo") {
     throw new ErroDeRegra("Estatísticas indisponíveis para este usuário.", "acesso_negado");
   }
@@ -148,12 +186,10 @@ export function recorteDeEstatisticas(usuario: Usuario): RecorteEstatisticas {
 
   if (!campus) {
     if (usuario.papel === "coordenador_curso" && usuario.cursoId) {
-      const curso = obterEstado().cursos.find((registro) => registro.id === usuario.cursoId);
-
       return {
         escopo: "curso",
         cursoId: usuario.cursoId,
-        titulo: `Estatísticas — ${curso?.nome ?? "Curso"}`,
+        titulo: `Estatísticas — ${nomeCurso ?? "Curso"}`,
       };
     }
 
@@ -163,44 +199,83 @@ export function recorteDeEstatisticas(usuario: Usuario): RecorteEstatisticas {
   return { escopo: "campus", titulo: `Estatísticas — Campus ${CAMPUS}` };
 }
 
-function estagiosDoRecorte(recorte: RecorteEstatisticas): Estagio[] {
-  const estado = obterEstado();
-  const usuarios = new Map(estado.usuarios.map((usuario) => [usuario.id, usuario]));
+/** Recorte a partir do simulador (uso dos testes e do modo sem banco). */
+export function recorteDeEstatisticas(usuario: Usuario): RecorteEstatisticas {
+  const curso = usuario.cursoId
+    ? obterEstado().cursos.find((registro) => registro.id === usuario.cursoId)
+    : undefined;
 
-  return estado.estagios.filter((estagio) => {
+  return montarRecorte(usuario, curso?.nome);
+}
+
+/** Conjunto de dados do modo sem banco. */
+export function dadosDoSimulador(): DadosEstatisticas {
+  const estado = obterEstado();
+
+  return {
+    estagios: estado.estagios,
+    alunos: new Map(
+      estado.usuarios.map((usuario) => [
+        usuario.id,
+        {
+          id: usuario.id,
+          nome: usuario.nome,
+          situacao: usuario.situacao,
+          cursoId: cursoDoUsuario(usuario),
+          turmaId: usuario.dadosPessoais?.turmaId,
+          periodoId: usuario.dadosPessoais?.periodoId,
+        },
+      ]),
+    ),
+    convenios: estado.convenios,
+    pessoas: new Map(estado.pessoas.map((pessoa) => [pessoa.id, pessoa.nome])),
+    cursos: new Map(estado.cursos.map((curso) => [curso.id, curso.nome])),
+    turmas: new Map(estado.turmas.map((turma) => [turma.id, turma.nome])),
+    periodos: new Map(estado.periodos.map((periodo) => [periodo.id, periodo.rotulo])),
+    lancamentos: estado.lancamentos,
+    documentos: estado.documentos,
+    templates: new Map(
+      estado.templates.map((template) => [
+        template.id,
+        { nome: template.nome, tipoParecer: template.metadados?.tipoParecer },
+      ]),
+    ),
+    documentosComParecer: new Set(estado.pareceres.map((parecer) => parecer.documentoId)),
+  };
+}
+
+function estagiosDoRecorte(recorte: RecorteEstatisticas, dados: DadosEstatisticas): Estagio[] {
+  return dados.estagios.filter((estagio) => {
     if (estagio.excluidoEm || estagio.canceladoEm) return false;
     if (recorte.escopo !== "curso") return true;
 
-    const aluno = usuarios.get(estagio.alunoId);
-    const cursoId = estagio.cursoIdHistorico ?? (aluno ? cursoDoUsuario(aluno) : undefined);
+    const aluno = dados.alunos.get(estagio.alunoId);
+    const cursoId = estagio.cursoIdHistorico ?? aluno?.cursoId;
 
     return cursoId === recorte.cursoId;
   });
 }
 
-function linhasDoRecorte(recorte: RecorteEstatisticas): EstagioEstatistica[] {
-  const estado = obterEstado();
-  const usuarios = new Map(estado.usuarios.map((usuario) => [usuario.id, usuario]));
-  const convenios = new Map(estado.convenios.map((convenio) => [convenio.id, convenio]));
-  const pessoas = new Map(estado.pessoas.map((pessoa) => [pessoa.id, pessoa]));
-  const cursos = new Map(estado.cursos.map((curso) => [curso.id, curso]));
-  const turmas = new Map(estado.turmas.map((turma) => [turma.id, turma]));
-  const periodos = new Map(estado.periodos.map((periodo) => [periodo.id, periodo]));
+function linhasDoRecorte(
+  recorte: RecorteEstatisticas,
+  dados: DadosEstatisticas,
+): EstagioEstatistica[] {
+  const convenios = new Map(dados.convenios.map((convenio) => [convenio.id, convenio]));
   const lancamentos = new Map<string, LancamentoHoras[]>();
 
-  for (const lancamento of estado.lancamentos) {
+  for (const lancamento of dados.lancamentos) {
     const lista = lancamentos.get(lancamento.estagioId) ?? [];
     lista.push(lancamento);
     lancamentos.set(lancamento.estagioId, lista);
   }
 
-  return estagiosDoRecorte(recorte)
+  return estagiosDoRecorte(recorte, dados)
     .map((estagio) => {
-      const aluno = usuarios.get(estagio.alunoId);
+      const aluno = dados.alunos.get(estagio.alunoId);
       const convenio = convenios.get(estagio.convenioId);
-      const cursoId = estagio.cursoIdHistorico ?? (aluno ? cursoDoUsuario(aluno) : undefined);
-      const turmaId = aluno?.dadosPessoais?.turmaId;
-      const periodoId = aluno?.dadosPessoais?.periodoId;
+      const cursoId = estagio.cursoIdHistorico ?? aluno?.cursoId;
+      const turmaId = aluno?.turmaId;
+      const periodoId = aluno?.periodoId;
       const horas = lancamentosEfetivos(lancamentos.get(estagio.id) ?? []).reduce(
         (total, item) => total + item.horas,
         0,
@@ -211,13 +286,13 @@ function linhasDoRecorte(recorte: RecorteEstatisticas): EstagioEstatistica[] {
         alunoNome: aluno?.nome ?? estagio.nomeAlunoHistorico ?? "Cadastro excluído",
         alunoAtivo: aluno?.situacao === "ativo",
         cursoId,
-        cursoNome: (cursoId ? cursos.get(cursoId)?.nome : undefined) ?? "Curso não informado",
+        cursoNome: (cursoId ? dados.cursos.get(cursoId) : undefined) ?? "Curso não informado",
         turmaId,
-        turmaNome: (turmaId ? turmas.get(turmaId)?.nome : undefined) ?? "Turma não informada",
-        periodoRotulo: (periodoId ? periodos.get(periodoId)?.rotulo : undefined) ?? "—",
+        turmaNome: (turmaId ? dados.turmas.get(turmaId) : undefined) ?? "Turma não informada",
+        periodoRotulo: (periodoId ? dados.periodos.get(periodoId) : undefined) ?? "—",
         instituicao: convenio?.instituicao ?? "Instituição não informada",
-        supervisorNome: pessoas.get(estagio.supervisorId)?.nome ?? "Supervisor não informado",
-        orientadorNome: pessoas.get(estagio.orientadorId)?.nome ?? "Orientador não informado",
+        supervisorNome: dados.pessoas.get(estagio.supervisorId) ?? "Supervisor não informado",
+        orientadorNome: dados.pessoas.get(estagio.orientadorId) ?? "Orientador não informado",
         horas,
       };
     })
@@ -359,10 +434,13 @@ function totaisDeHoras(linhas: EstagioEstatistica[]): TotaisHoras {
   };
 }
 
-function documentosDasLinhas(linhas: EstagioEstatistica[]): DocumentoPreenchido[] {
+function documentosDasLinhas(
+  linhas: EstagioEstatistica[],
+  dados: DadosEstatisticas,
+): DocumentoPreenchido[] {
   const ids = new Set(linhas.map((linha) => linha.estagio.id));
 
-  return obterEstado().documentos.filter(
+  return dados.documentos.filter(
     (documento) =>
       documento.situacao !== "inativo" && documento.estagioId && ids.has(documento.estagioId),
   );
@@ -371,8 +449,8 @@ function documentosDasLinhas(linhas: EstagioEstatistica[]): DocumentoPreenchido[
 function indicadoresDe(
   linhas: EstagioEstatistica[],
   recorte: RecorteEstatisticas,
+  dados: DadosEstatisticas,
 ): IndicadoresEstatisticas {
-  const estado = obterEstado();
   const situacoes: Record<SituacaoEstagio, number> = {
     em_preparacao: 0,
     em_andamento: 0,
@@ -381,16 +459,12 @@ function indicadoresDe(
 
   for (const linha of linhas) situacoes[linha.estagio.situacao] += 1;
 
+  // Campus: todo o catálogo. Curso: apenas convênios usados pelas linhas do recorte.
+  const conveniosUsados = new Set(linhas.map((linha) => linha.estagio.convenioId));
   const conveniosDoRecorte =
     recorte.escopo === "campus"
-      ? estado.convenios
-      : estado.convenios.filter((convenio) =>
-          estado.estagios.some(
-            (estagio) =>
-              estagio.convenioId === convenio.id &&
-              linhas.some((linha) => linha.estagio.id === estagio.id),
-          ),
-        );
+      ? dados.convenios
+      : dados.convenios.filter((convenio) => conveniosUsados.has(convenio.id));
   const ativos = conveniosDoRecorte.filter(
     (convenio) => classificacaoConvenio(convenio) === "ativo",
   );
@@ -398,12 +472,11 @@ function indicadoresDe(
     (convenio) => classificacaoConvenio(convenio) === "expirado",
   );
 
-  const documentos = documentosDasLinhas(linhas);
-  const templates = new Map(estado.templates.map((template) => [template.id, template]));
+  const documentos = documentosDasLinhas(linhas, dados);
   const porTipo = new Map<string, DocumentosPorTipo>();
 
   for (const documento of documentos) {
-    const template = templates.get(documento.templateId);
+    const template = dados.templates.get(documento.templateId);
     const atual = porTipo.get(documento.templateId) ?? {
       templateId: documento.templateId,
       nome: template?.nome ?? documento.templateId,
@@ -439,10 +512,10 @@ function indicadoresDe(
       (documento) => documento.estagioId === linha.estagio.id,
     );
     const semParecer = documentosDoEstagio.filter((documento) => {
-      const fila = templates.get(documento.templateId)?.metadados?.tipoParecer;
+      const fila = dados.templates.get(documento.templateId)?.tipoParecer;
       if (fila !== "coordenador_curso" && fila !== "comissao_estagio") return false;
 
-      return !estado.pareceres.some((parecer) => parecer.documentoId === documento.id);
+      return !dados.documentosComParecer.has(documento.id);
     });
 
     if (semParecer.length > 0) {
@@ -465,17 +538,17 @@ function indicadoresDe(
 }
 
 /**
- * Pesquisa de estágios do recorte do usuário. As contagens de cada filtro são
- * calculadas antes da busca por nome, para orientar a escolha; a preparação
+ * Cálculo da pesquisa sobre um conjunto de dados. As contagens de cada filtro
+ * são calculadas antes da busca por nome, para orientar a escolha; a preparação
  * aparece na lista e nos filtros, mas não entra nas contagens de andamento e
  * conclusão.
  */
-export async function pesquisarEstatisticas(
-  usuario: Usuario,
+export function calcularPesquisa(
+  recorte: RecorteEstatisticas,
+  dados: DadosEstatisticas,
   filtros: FiltrosEstatisticas = {},
-): Promise<PesquisaEstatisticas> {
-  const recorte = recorteDeEstatisticas(usuario);
-  const linhas = linhasDoRecorte(recorte);
+): PesquisaEstatisticas {
+  const linhas = linhasDoRecorte(recorte, dados);
   const base = aplicaFiltrosDeContexto(linhas, filtros);
   const itens = aplicaBusca(base, filtros);
 
@@ -485,23 +558,22 @@ export async function pesquisarEstatisticas(
     itens,
     total: itens.length,
     opcoes: opcoesDasLinhas(base),
-    indicadores: indicadoresDe(itens, recorte),
+    indicadores: indicadoresDe(itens, recorte, dados),
     totaisHoras: totaisDeHoras(itens),
   };
 }
 
-/** Lista os documentos de um tipo dentro do recorte filtrado (indicador clicável). */
-export async function documentosDoIndicador(
-  usuario: Usuario,
+/** Documentos de um tipo dentro da pesquisa já calculada: mesmo recorte e mesmos filtros. */
+export function documentosDoIndicadorNoConjunto(
+  pesquisa: PesquisaEstatisticas,
+  dados: DadosEstatisticas,
   templateId: string,
-  filtros: FiltrosEstatisticas = {},
-): Promise<{ documento: DocumentoPreenchido; alunoNome: string; estagioId?: string }[]> {
-  const pesquisa = await pesquisarEstatisticas(usuario, filtros);
+): { documento: DocumentoPreenchido; alunoNome: string; estagioId?: string }[] {
   const ids = new Set(pesquisa.itens.map((item) => item.estagio.id));
   const nomes = new Map(pesquisa.itens.map((item) => [item.estagio.id, item.alunoNome]));
 
-  return obterEstado()
-    .documentos.filter(
+  return dados.documentos
+    .filter(
       (documento) =>
         documento.templateId === templateId &&
         documento.situacao !== "inativo" &&
@@ -513,4 +585,34 @@ export async function documentosDoIndicador(
       alunoNome: documento.estagioId ? (nomes.get(documento.estagioId) ?? "Aluno") : "Aluno",
       estagioId: documento.estagioId,
     }));
+}
+
+/** Pesquisa de estágios do recorte do usuário (simulador ou banco, conforme o modo). */
+export async function pesquisarEstatisticas(
+  usuario: Usuario,
+  filtros: FiltrosEstatisticas = {},
+): Promise<PesquisaEstatisticas> {
+  if (bancoConfigurado()) {
+    const { pesquisarEstatisticasPersistentes } = await import("./estatisticas-persistentes");
+    return pesquisarEstatisticasPersistentes(usuario, filtros);
+  }
+
+  return calcularPesquisa(recorteDeEstatisticas(usuario), dadosDoSimulador(), filtros);
+}
+
+/** Lista os documentos de um tipo dentro do recorte filtrado (indicador clicável). */
+export async function documentosDoIndicador(
+  usuario: Usuario,
+  templateId: string,
+  filtros: FiltrosEstatisticas = {},
+): Promise<{ documento: DocumentoPreenchido; alunoNome: string; estagioId?: string }[]> {
+  if (bancoConfigurado()) {
+    const { documentosDoIndicadorPersistente } = await import("./estatisticas-persistentes");
+    return documentosDoIndicadorPersistente(usuario, templateId, filtros);
+  }
+
+  const dados = dadosDoSimulador();
+  const pesquisa = calcularPesquisa(recorteDeEstatisticas(usuario), dados, filtros);
+
+  return documentosDoIndicadorNoConjunto(pesquisa, dados, templateId);
 }

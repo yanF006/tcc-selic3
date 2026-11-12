@@ -189,7 +189,7 @@ type LinhaConvenio = {
   instituicao: { nome: string; cnpj: string; responsaveis?: { nome: string; email: string; telefone: string; cargo: string | null; situacao: string }[] };
 };
 
-function paraConvenio(linha: LinhaConvenio): Convenio {
+export function paraConvenio(linha: LinhaConvenio): Convenio {
   return {
     id: linha.id,
     instituicao: linha.instituicao.nome,

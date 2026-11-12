@@ -15,7 +15,7 @@ import type { NovoLancamento } from "./lancamentos";
 
 type LinhaLancamento = { id: string; estagioId: string; alunoId: string; data: Date; entrada: string; saida: string; almocoDesligado: boolean; minutos: number; tipo: string; corrigeId: string | null; criadoEm: Date };
 
-function paraDominioLancamento(linha: LinhaLancamento): LancamentoHoras {
+export function paraDominioLancamento(linha: LinhaLancamento): LancamentoHoras {
   return {
     id: linha.id, estagioId: linha.estagioId, alunoId: linha.alunoId, data: linha.data.toISOString().slice(0, 10),
     entrada: linha.entrada, saida: linha.saida, almocoDesligado: linha.almocoDesligado, horas: linha.minutos / 60,
