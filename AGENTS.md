@@ -26,3 +26,7 @@ Sempre que uma alteração for feita, e o site esteja funcional, mesmo que incom
 ## Aiven e Vercel
 
 Quando uma mudança de configuração no Aiven ou no Vercel forem necessárias, alertar o usuário, pois só ele consegue realizar essas mudanças.
+
+## Prazo
+
+Devido ao prazo curto, propor, na fase de planejamento, soluções simples ou reduções de escopo do projeto. Durante a implementação, propor apenas correção de erros, caso sejam encontrados.
