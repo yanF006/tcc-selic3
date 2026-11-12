@@ -12,6 +12,7 @@ import { descartarCliente } from "@/lib/db/prisma";
 import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
 import { cancelarSolicitacao, criarEstagio, estagioPorId, excluirEstagio, exclusaoPendenteDoEstagio, solicitarExclusaoEstagio } from "@/lib/services/estagios";
 import { solicitarEncaminhamento } from "@/lib/services/fluxo-estagio";
+import { criarRascunho, documentosParaParecer, submeter } from "@/lib/services/documentos";
 import { documentosDaCoordenacaoPersistente } from "@/lib/services/fluxo-consultas-persistentes";
 import * as store from "@/lib/services/store";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
@@ -133,6 +134,19 @@ describe("cancelamento e exclusão de estágio persistidos", () => {
     expect(doCurso.itens.filter((documento) => documento.estagioId === estagio.id).every((documento) => documento.situacao === "inativo")).toBe(true);
     const deOutroCurso = await documentosDaCoordenacaoPersistente(coordenadorOutro, { tamanho: 1000 });
     expect(deOutroCurso.itens.some((documento) => documento.estagioId === estagio.id)).toBe(false);
+  });
+
+  it("documento submetido na fila de parecer sai da fila após a exclusão do estágio", async () => {
+    const estagio = await criarEstagio(aluno, solicitacao(2036));
+    const rascunho = await criarRascunho(aluno, "tpl-formulario-liberacao", estagio.id, {});
+    await submeter(rascunho.id, aluno);
+    const antes = await documentosParaParecer("coordenador_curso", coordenador, { estagioId: estagio.id });
+    expect(antes.itens.map((documento) => documento.id)).toContain(rascunho.id);
+
+    await excluirEstagio(estagio.id, coordenador);
+    const depois = await documentosParaParecer("coordenador_curso", coordenador, { estagioId: estagio.id });
+    expect(depois.itens.map((documento) => documento.id)).not.toContain(rascunho.id);
+    expect(await prisma.documentoPreenchido.findUniqueOrThrow({ where: { id: rascunho.id } })).toMatchObject({ situacao: "inativo" });
   });
 
   it("exclusão inativa documentos, remove dados pessoais do contexto e mantém o perfil do aluno", async () => {
