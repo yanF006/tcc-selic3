@@ -52,6 +52,8 @@ import type { OpcoesPaginacao } from "./paginacao";
 import { agora, obterEstado, novoId } from "./store";
 import { descritorDaVersao } from "./templates";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
+import { executarTransacao } from "@/lib/db/transacoes";
+import type { Prisma } from "@/generated/prisma/client";
 import { checksumDefinicao, templatesFixos } from "@/lib/templates/manifesto";
 import { buscarDocumento, paraDominioDocumento } from "@/lib/db/repositorios/documentos";
 import { criarRascunhoPersistente, podeConsultarDocumentoNoBanco, salvarRascunhoPersistente } from "./documentos-persistentes";
@@ -946,50 +948,87 @@ export function valoresDigitadosPermitidos(
 }
 
 /** Atualizações de perfil não refazem parecer nem conferência. Endereços corrigidos no documento são preservados. */
+/**
+ * Valores do documento depois da atualização do perfil, ou null quando o
+ * documento não muda (estágio encerrado). Não altera o documento: quem chama
+ * grava o resultado no modo em que estiver.
+ */
+async function valoresSincronizadosDoPerfil(
+  documento: DocumentoPreenchido,
+  anterior: Usuario,
+  atual: Usuario,
+): Promise<Record<string, unknown> | null> {
+  const estagio = documento.estagioId ? await estagioPorId(documento.estagioId) : null;
+  if (estagio && estagioEncerrado(estagio)) return null;
+  const descriptor = descritorDoDocumento(documento);
+  const antes = await valoresAutomaticos(
+    documento.templateId,
+    anterior,
+    documento.estagioId,
+    documento.versaoTemplate,
+  );
+  const depois = await valoresAutomaticos(
+    documento.templateId,
+    atual,
+    documento.estagioId,
+    documento.versaoTemplate,
+  );
+  const valores: Record<string, unknown> = { ...documento.valores };
+  const grupos = descriptor?.gruposEndereco ?? [];
+  const idsEndereco = new Set(grupos.flatMap(idsDoGrupo));
+  for (const campo of camposDoTemplate(documento.templateId, descriptor)) {
+    if (campo.origem === "aluno" && !idsEndereco.has(campo.id))
+      valores[campo.id] = depois[campo.id] ?? "";
+  }
+  for (const grupo of grupos.filter((grupo) => grupo.origemInicial === "aluno")) {
+    const ids = idsDoGrupo(grupo);
+    if (
+      ids.every((id) => valores[id] === undefined || valores[id] === antes[id])
+    ) {
+      for (const id of ids) valores[id] = depois[id] ?? "";
+    }
+  }
+  const dados = atual.dadosPessoais;
+  for (const [id, valor] of Object.entries({
+    telefoneAluno: dados?.telefone,
+    celularAluno: dados?.celular,
+    emailAluno: dados?.email,
+  })) {
+    if (camposDoTemplate(documento.templateId, descriptor).some((campo) => campo.id === id))
+      valores[id] = valor ?? "";
+  }
+  return valores;
+}
+
 export async function sincronizarDadosDoPerfil(anterior: Usuario, atual: Usuario) {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    await executarTransacao(
+      async (tx) => {
+        const linhas = await tx.documentoPreenchido.findMany({
+          where: { alunoId: atual.id, situacao: { not: "inativo" } },
+          orderBy: [{ id: "asc" }],
+        });
+        for (const linha of linhas) {
+          const valores = await valoresSincronizadosDoPerfil(paraDominioDocumento(linha), anterior, atual);
+          if (!valores) continue;
+          await tx.documentoPreenchido.update({
+            where: { id: linha.id },
+            data: { valores: valores as Prisma.InputJsonValue },
+          });
+        }
+      },
+      { cliente: prisma },
+      { isolationLevel: "RepeatableRead" },
+    );
+    return;
+  }
   for (const documento of obterEstado().documentos.filter(
     (doc) => doc.alunoId === atual.id && doc.situacao !== "inativo",
   )) {
-    const estagio = documento.estagioId ? await estagioPorId(documento.estagioId) : null;
-    if (estagio && estagioEncerrado(estagio)) continue;
-    const descriptor = descritorDoDocumento(documento);
-    const antes = await valoresAutomaticos(
-      documento.templateId,
-      anterior,
-      documento.estagioId,
-      documento.versaoTemplate,
-    );
-    const depois = await valoresAutomaticos(
-      documento.templateId,
-      atual,
-      documento.estagioId,
-      documento.versaoTemplate,
-    );
-    const grupos = descriptor?.gruposEndereco ?? [];
-    const idsEndereco = new Set(grupos.flatMap(idsDoGrupo));
-    for (const campo of camposDoTemplate(documento.templateId, descriptor)) {
-      if (campo.origem === "aluno" && !idsEndereco.has(campo.id))
-        documento.valores[campo.id] = depois[campo.id] ?? "";
-    }
-    for (const grupo of grupos.filter((grupo) => grupo.origemInicial === "aluno")) {
-      const ids = idsDoGrupo(grupo);
-      if (
-        ids.every(
-          (id) => documento.valores[id] === undefined || documento.valores[id] === antes[id],
-        )
-      ) {
-        for (const id of ids) documento.valores[id] = depois[id] ?? "";
-      }
-    }
-    const dados = atual.dadosPessoais;
-    for (const [id, valor] of Object.entries({
-      telefoneAluno: dados?.telefone,
-      celularAluno: dados?.celular,
-      emailAluno: dados?.email,
-    })) {
-      if (camposDoTemplate(documento.templateId, descriptor).some((campo) => campo.id === id))
-        documento.valores[id] = valor ?? "";
-    }
+    const valores = await valoresSincronizadosDoPerfil(documento, anterior, atual);
+    if (!valores) continue;
+    documento.valores = valores;
     documento.atualizadoEm = agora();
   }
 }

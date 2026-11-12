@@ -7,8 +7,9 @@ import type { DadosPessoais, Usuario } from "@/lib/domain/types";
 import { opcoesSelecao } from "./catalogo";
 import { moverCredencial } from "./credenciais";
 import { obterEstado } from "./store";
-import { atualizarUsuario, garantirHidratacao } from "@/lib/db/persistencia";
-import { bancoConfigurado } from "@/lib/db/prisma";
+import { atualizarUsuario } from "@/lib/db/persistencia";
+import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
+import { criarRepositorioUsuarios } from "@/lib/db/repositorios/usuarios";
 import { traduzirErroPersistencia } from "@/lib/db/erros";
 import { obterAutenticacao } from "@/lib/auth/autenticacao";
 import { carregarConfiguracaoAutenticacao } from "@/lib/auth/configuracao";
@@ -32,11 +33,19 @@ export type ResultadoDadosPessoais =
   | { ok: true; dados: DadosPessoais; mensagem: string }
   | { ok: false; erro: string; erros: Record<string, string> };
 
+/** Registro do usuário: lido do banco no modo persistente e da memória no simulado. */
+async function registroDoUsuario(id: string): Promise<Usuario | undefined> {
+  if (bancoConfigurado()) {
+    const { prisma, Prisma } = await carregarCliente();
+    return (await criarRepositorioUsuarios(prisma, Prisma).buscarPorId(id)) ?? undefined;
+  }
+
+  return obterEstado().usuarios.find((item) => item.id === id);
+}
+
 /** Dados pessoais do usuário, ou null quando ele ainda não tem cadastro completo. */
 export async function dadosDoAluno(usuario: Usuario): Promise<DadosPessoais | null> {
-  await garantirHidratacao();
-
-  const registro = obterEstado().usuarios.find((item) => item.id === usuario.id);
+  const registro = await registroDoUsuario(usuario.id);
 
   if (!registro?.dadosPessoais) return null;
 
@@ -80,9 +89,7 @@ export async function atualizarDadosPessoais(
     return { ok: false, erro: "Cadastro não autorizado para edição.", erros: {} };
   }
 
-  await garantirHidratacao();
-
-  const registro = obterEstado().usuarios.find((registro) => registro.id === usuario.id);
+  const registro = await registroDoUsuario(usuario.id);
 
   if (!registro) {
     return { ok: false, erro: "Usuário não encontrado.", erros: {} };
@@ -178,7 +185,6 @@ export async function atualizarDadosPessoais(
     registro.nome = validado.data.nomeCompleto;
     registro.email = validado.data.email;
     registro.dadosPessoais = validado.data;
-    await atualizarUsuario(registro);
   } catch (erro) {
     Object.assign(registro, anterior);
 

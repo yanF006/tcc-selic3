@@ -1,16 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BancoIndisponivelError, detalhesDoErro, redigir } from "./erros";
-import { MENSAGEM_BANCO_INDISPONIVEL } from "./mensagens";
-import {
-  garantirHidratacao,
-  atualizarUsuario,
-  reiniciarPersistenciaParaTestes,
-  estadoDaPersistencia,
-} from "./persistencia";
-import { cadastrarUsuario, editarUsuario, listarUsuarios } from "@/lib/services/administracao";
-import { ErroDeRegra } from "@/lib/services/erros";
-import { obterEstado, reiniciarEstado } from "@/lib/services/store";
+import { atualizarUsuario } from "./persistencia";
 
 const mocks = vi.hoisted(() => {
   const prisma = {
@@ -84,155 +75,38 @@ beforeEach(() => {
     async (operacao: (tx: typeof mocks.prisma) => Promise<unknown>) => operacao(mocks.prisma),
   );
   mocks.prisma.matriculaImportada.updateMany.mockResolvedValue({ count: 1 });
-  process.env.SELIC_DB_SNAPSHOT_TTL_MS = "2000";
-  process.env.SELIC_DB_RETRY_COOLDOWN_MS = "1000";
-  reiniciarEstado();
-  reiniciarPersistenciaParaTestes();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  delete process.env.SELIC_DB_SNAPSHOT_TTL_MS;
-  delete process.env.SELIC_DB_RETRY_COOLDOWN_MS;
   delete process.env.DATABASE_URL;
   vi.restoreAllMocks();
 });
 
-describe("máquina de estados da persistência", () => {
-  it("vai de simulado a pronto e hidrata somente uma vez dentro do TTL", async () => {
-    await garantirHidratacao();
+describe("escrita persistente de usuário", () => {
+  it("grava o usuário em uma transação única no banco", async () => {
+    await atualizarUsuario(usuarioDoBanco as never);
 
-    expect(estadoDaPersistencia().modo).toBe("pronto");
-    expect(obterEstado().usuarios).toHaveLength(1);
-    expect(mocks.prisma.usuario.count).toHaveBeenCalledTimes(1);
-
-    vi.setSystemTime(11_999);
-    await garantirHidratacao();
-
-    expect(mocks.prisma.usuario.count).toHaveBeenCalledTimes(1);
-
-    vi.setSystemTime(12_000);
-    await garantirHidratacao();
-
-    expect(mocks.prisma.usuario.count).toHaveBeenCalledTimes(2);
+    expect(mocks.prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(mocks.prisma.authSession.deleteMany).not.toHaveBeenCalled();
   });
 
-  it("coalesce hidratações concorrentes em uma única consulta", async () => {
-    let resolverContagem: (valor: number) => void = () => undefined;
+  it("revoga as sessões quando a conta deixa de estar ativa", async () => {
+    await atualizarUsuario({ ...usuarioDoBanco, situacao: "inativo" } as never);
 
-    mocks.prisma.usuario.count.mockImplementation(
-      () =>
-        new Promise<number>((resolver) => {
-          resolverContagem = resolver;
-        }),
-    );
-
-    const primeira = garantirHidratacao();
-    const segunda = garantirHidratacao();
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(mocks.prisma.usuario.count).toHaveBeenCalledTimes(1);
-
-    resolverContagem(1);
-    await Promise.all([primeira, segunda]);
-
-    expect(mocks.prisma.usuario.count).toHaveBeenCalledTimes(1);
-    expect(estadoDaPersistencia().modo).toBe("pronto");
-  });
-
-  it("permite nova tentativa após cooldown, sem reiniciar o processo", async () => {
-    process.env.SELIC_DB_RETRY_COOLDOWN_MS = "50";
-    mocks.prisma.usuario.count.mockRejectedValueOnce(
-      Object.assign(new Error("connect ECONNREFUSED"), { code: "ER_GET_CONNECTION_TIMEOUT" }),
-    );
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    await expect(garantirHidratacao()).rejects.toBeInstanceOf(BancoIndisponivelError);
-    expect(estadoDaPersistencia().modo).toBe("falha");
-
-    mocks.prisma.usuario.count.mockResolvedValue(1);
-    vi.setSystemTime(10_051);
-
-    await garantirHidratacao();
-
-    expect(estadoDaPersistencia().modo).toBe("pronto");
-    expect(obterEstado().usuarios[0]?.id).toBe("usr-do-banco");
-  });
-
-  it("mantém a falha durante o cooldown sem consultar o banco", async () => {
-    process.env.SELIC_DB_RETRY_COOLDOWN_MS = "1000";
-    mocks.prisma.usuario.count.mockRejectedValueOnce(
-      Object.assign(new Error("sem conexão"), { code: "ECONNREFUSED" }),
-    );
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    await expect(garantirHidratacao()).rejects.toBeInstanceOf(BancoIndisponivelError);
-    mocks.prisma.usuario.count.mockClear();
-
-    await expect(garantirHidratacao()).rejects.toBeInstanceOf(BancoIndisponivelError);
-    expect(mocks.prisma.usuario.count).not.toHaveBeenCalled();
-  });
-
-  it("renova o snapshot após mutação bem-sucedida", async () => {
-    await garantirHidratacao();
-    mocks.prisma.usuario.count.mockClear();
-
-    vi.setSystemTime(11_500);
-    await atualizarUsuario({ ...obterEstado().usuarios[0], nome: "Nome Atualizado" });
-
-    vi.setSystemTime(12_500);
-    await garantirHidratacao();
-
-    expect(mocks.prisma.usuario.count).not.toHaveBeenCalled();
-  });
-
-  it("devolve erro em vez de fixtures quando o banco configurado falha", async () => {
-    mocks.prisma.usuario.count.mockRejectedValue(
-      Object.assign(new Error("connect timeout"), { code: "ETIMEDOUT" }),
-    );
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    await expect(listarUsuarios()).rejects.toBeInstanceOf(BancoIndisponivelError);
-    await expect(listarUsuarios()).rejects.toThrow(MENSAGEM_BANCO_INDISPONIVEL);
-    expect(estadoDaPersistencia().modo).toBe("falha");
-  });
-
-  it("mantém o modo simulado quando não há banco configurado", async () => {
-    mocks.bancoConfigurado.mockReturnValue(false);
-    reiniciarPersistenciaParaTestes();
-
-    await garantirHidratacao();
-
-    expect(estadoDaPersistencia().modo).toBe("simulado");
-    expect(mocks.carregarCliente).not.toHaveBeenCalled();
-  });
-
-  it("informa conflito de e-mail no serviço sem descartar o cliente nem marcar indisponibilidade", async () => {
-    await garantirHidratacao();
-    mocks.prisma.usuario.create.mockRejectedValueOnce({
-      code: "P2002",
-      meta: { target: ["email"] },
+    expect(mocks.prisma.authSession.deleteMany).toHaveBeenCalledWith({
+      where: { userId: usuarioDoBanco.id },
     });
-    await expect(
-      cadastrarUsuario({ nome: "Novo", email: "novo@teste.local", papel: "administrador" }),
-    ).rejects.toMatchObject({ codigo: "e_mail_ja_utilizado_por_outro_cadastro" });
-    expect(estadoDaPersistencia().modo).toBe("pronto");
-    expect(mocks.descartarCliente).not.toHaveBeenCalled();
-    expect(obterEstado().usuarios).toHaveLength(1);
   });
 
-  it("informa alvo removido concorrente sem criar outro registro", async () => {
-    await garantirHidratacao();
-    mocks.prisma.usuario.update.mockRejectedValueOnce({ code: "P2025" });
-    const anterior = structuredClone(obterEstado().usuarios[0]);
-    await expect(editarUsuario(anterior.id, { nome: "Nome alterado" })).rejects.toBeInstanceOf(
-      ErroDeRegra,
+  it("falha de conexão vira indisponibilidade sem cair em dados simulados", async () => {
+    const causa = Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+    mocks.prisma.$transaction.mockRejectedValueOnce(causa);
+
+    await expect(atualizarUsuario(usuarioDoBanco as never)).rejects.toBeInstanceOf(
+      BancoIndisponivelError,
     );
-    expect(obterEstado().usuarios[0]).toEqual(anterior);
-    expect(mocks.prisma.usuario.create).not.toHaveBeenCalled();
-    expect(mocks.descartarCliente).not.toHaveBeenCalled();
+    expect(mocks.descartarCliente).toHaveBeenCalled();
   });
 });
 
@@ -246,7 +120,7 @@ describe("diagnóstico de falhas", () => {
       ),
       { code: "ER_ACCESS_DENIED", errno: 1045, sqlState: "28000" },
     );
-    const erro = new Error("Falha ao hidratar", { cause: causa });
+    const erro = new Error("Falha ao gravar", { cause: causa });
     erro.name = "ErroDeConexao";
 
     const detalhes = detalhesDoErro(erro);
@@ -254,7 +128,7 @@ describe("diagnóstico de falhas", () => {
 
     expect(detalhes).toMatchObject({
       name: "ErroDeConexao",
-      message: "Falha ao hidratar",
+      message: "Falha ao gravar",
       cause: {
         code: "ER_ACCESS_DENIED",
         errno: 1045,
@@ -323,9 +197,9 @@ describe("diagnóstico de falhas", () => {
       sqlState: "HY000",
     });
 
-    mocks.prisma.usuario.count.mockRejectedValueOnce(causa);
+    mocks.prisma.$transaction.mockRejectedValueOnce(causa);
 
-    await expect(garantirHidratacao()).rejects.toBeInstanceOf(BancoIndisponivelError);
+    await expect(atualizarUsuario(usuarioDoBanco as never)).rejects.toBeInstanceOf(BancoIndisponivelError);
 
     expect(aviso).toHaveBeenCalledTimes(1);
     const detalhes = aviso.mock.calls[0]?.[1] as Record<string, unknown>;

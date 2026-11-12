@@ -5,7 +5,7 @@ import type { DadosPessoais } from "@/lib/domain/types";
 
 const mocks = vi.hoisted(() => ({
   bancoConfigurado: vi.fn(() => true),
-  garantirHidratacao: vi.fn(async () => undefined),
+  buscarPorId: vi.fn<(id: string) => Promise<import("@/lib/domain/types").Usuario | null>>(async () => null),
   atualizarUsuario: vi.fn(async (_usuario: import("@/lib/domain/types").Usuario) => undefined),
   changeEmail: vi.fn(),
   moverCredencial: vi.fn(async () => undefined),
@@ -22,8 +22,10 @@ vi.mock("@/lib/db/repositorios/catalogo", () => ({
   listarOpcoesAcademicas: mocks.listarOpcoesAcademicas,
 }));
 vi.mock("@/lib/db/persistencia", () => ({
-  garantirHidratacao: mocks.garantirHidratacao,
   atualizarUsuario: mocks.atualizarUsuario,
+}));
+vi.mock("@/lib/db/repositorios/usuarios", () => ({
+  criarRepositorioUsuarios: () => ({ buscarPorId: mocks.buscarPorId }),
 }));
 vi.mock("@/lib/auth/autenticacao", () => ({
   obterAutenticacao: async () => ({ api: { changeEmail: mocks.changeEmail } }),
@@ -71,7 +73,11 @@ function dadosValidos(aluno: ReturnType<typeof alunoAtivo>): DadosPessoais {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.bancoConfigurado.mockReturnValue(true);
-  mocks.garantirHidratacao.mockResolvedValue(undefined);
+  // O registro vem do banco (simulado aqui pela cópia da fixture), não da memória.
+  mocks.buscarPorId.mockImplementation(async (id: string) => {
+    const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
+    return usuario ? structuredClone(usuario) : null;
+  });
   mocks.atualizarUsuario.mockResolvedValue(undefined);
   mocks.changeEmail.mockResolvedValue({ status: true });
   mocks.listarOpcoesAcademicas.mockResolvedValue({ cursos, turmas, periodos });

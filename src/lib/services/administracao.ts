@@ -16,13 +16,6 @@ import type {
 import { agora, obterEstado, novoId } from "./store";
 import { filtrarPorTexto, paginar } from "./paginacao";
 
-import {
-  atualizarUsuario,
-  criarMatricula,
-  criarUsuario,
-  excluirUsuarioDoBanco,
-  garantirHidratacao,
-} from "@/lib/db/persistencia";
 
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
@@ -89,8 +82,6 @@ export async function matriculaRegistrada(matricula: string): Promise<boolean> {
     const { prisma } = await carregarCliente();
     return (await prisma.matriculaImportada.count({ where: { matricula: matricula.trim() } })) > 0;
   }
-  await garantirHidratacao();
-
   return obterEstado().matriculas.some((registro) => registro.matricula === matricula.trim());
 }
 
@@ -106,8 +97,6 @@ async function repositorioUsuariosPersistente() {
 }
 
 export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<Pagina<Usuario>> {
-  await garantirHidratacao();
-
   if (bancoConfigurado()) {
     const repositorio = await repositorioUsuariosPersistente();
 
@@ -131,8 +120,6 @@ export async function listarUsuarios(consulta: ConsultaUsuarios = {}): Promise<P
 }
 
 export async function usuarioPorId(id: string): Promise<Usuario | null> {
-  await garantirHidratacao();
-
   if (bancoConfigurado()) {
     const repositorio = await repositorioUsuariosPersistente();
 
@@ -144,8 +131,6 @@ export async function usuarioPorId(id: string): Promise<Usuario | null> {
 
 /** Usuário pelo e-mail, que é o identificador do login; null quando não existe. */
 export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
-  await garantirHidratacao();
-
   const alvo = email.trim().toLowerCase();
 
   if (bancoConfigurado()) {
@@ -160,8 +145,6 @@ export async function usuarioPorEmail(email: string): Promise<Usuario | null> {
 }
 
 export async function contarUsuariosPorSituacao(): Promise<Record<SituacaoUsuario, number>> {
-  await garantirHidratacao();
-
   if (bancoConfigurado()) {
     const repositorio = await repositorioUsuariosPersistente();
 
@@ -321,8 +304,6 @@ async function cadastrarUsuarioPersistente(cadastro: CadastroUsuario): Promise<U
 }
 
 export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuario> {
-  await garantirHidratacao();
-
   if (bancoConfigurado()) return cadastrarUsuarioPersistente(cadastro);
 
   const { email, campus, matricula } = validarCadastroAdministrativo(cadastro);
@@ -348,8 +329,6 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
         origem: "cadastro_administrador" as const,
         importadaEm: agora(),
       };
-
-      await criarMatricula(registro);
       estado.matriculas.push(registro);
     }
   }
@@ -366,8 +345,6 @@ export async function cadastrarUsuario(cadastro: CadastroUsuario): Promise<Usuar
     membroComissaoEstagio: false,
     criadoEm: agora(),
   };
-
-  await criarUsuario(usuario);
   estado.usuarios.push(usuario);
 
   return usuario;
@@ -497,8 +474,6 @@ export async function editarUsuario(
       throw new ErroDeRegra("Escolha um único papel válido.", "papel_invalido");
     }
   }
-  await garantirHidratacao();
-
   if (bancoConfigurado()) return editarUsuarioPersistente(id, alteracoes);
 
   const estado = obterEstado();
@@ -562,8 +537,6 @@ export async function editarUsuario(
           origem: "cadastro_administrador",
           importadaEm: agora(),
         };
-
-        await criarMatricula(matriculaCriada);
         estado.matriculas.push(matriculaCriada);
       }
 
@@ -576,7 +549,6 @@ export async function editarUsuario(
   }
 
   try {
-    await atualizarUsuario(usuario);
   } catch (erro) {
     Object.assign(usuario, anterior);
     if (matriculaCriada) {
@@ -628,8 +600,6 @@ async function atualizarSituacaoPersistente(
 export async function inativarUsuario(id: string): Promise<Usuario> {
   if (bancoConfigurado()) return atualizarSituacaoPersistente(id, "inativo");
 
-  await garantirHidratacao();
-
   const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
@@ -645,7 +615,6 @@ export async function inativarUsuario(id: string): Promise<Usuario> {
   usuario.situacao = "inativo";
 
   try {
-    await atualizarUsuario(usuario);
   } catch (erro) {
     usuario.situacao = situacaoAnterior;
     throw erro;
@@ -657,8 +626,6 @@ export async function inativarUsuario(id: string): Promise<Usuario> {
 export async function reativarUsuario(id: string): Promise<Usuario> {
   if (bancoConfigurado()) return atualizarSituacaoPersistente(id, "ativo");
 
-  await garantirHidratacao();
-
   const usuario = obterEstado().usuarios.find((registro) => registro.id === id);
 
   if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
@@ -668,7 +635,6 @@ export async function reativarUsuario(id: string): Promise<Usuario> {
   usuario.situacao = "ativo";
 
   try {
-    await atualizarUsuario(usuario);
   } catch (erro) {
     usuario.situacao = situacaoAnterior;
     throw erro;
@@ -717,8 +683,6 @@ async function excluirUsuarioPersistente(id: string): Promise<void> {
 export async function excluirUsuario(id: string): Promise<void> {
   if (bancoConfigurado()) return excluirUsuarioPersistente(id);
 
-  await garantirHidratacao();
-
   const estado = obterEstado();
   const usuario = estado.usuarios.find((registro) => registro.id === id);
 
@@ -740,7 +704,6 @@ export async function excluirUsuario(id: string): Promise<void> {
     });
 
     try {
-      await atualizarUsuario(usuario);
     } catch (erro) {
       Object.assign(usuario, anterior);
       throw erro;
@@ -751,7 +714,6 @@ export async function excluirUsuario(id: string): Promise<void> {
     estado.usuarios = estado.usuarios.filter((registro) => registro.id !== id);
 
     try {
-      await excluirUsuarioDoBanco(id);
     } catch (erro) {
       estado.usuarios.splice(indice, 0, usuario);
       throw erro;
@@ -939,8 +901,6 @@ export async function decidirSolicitacao(
   administradorId: string,
   motivo?: string,
 ): Promise<SolicitacaoAcesso> {
-  await garantirHidratacao();
-
   if (bancoConfigurado()) {
     return decidirSolicitacaoPersistente(id, decisao, administradorId, motivo);
   }
@@ -989,8 +949,6 @@ export async function decidirSolicitacao(
           origem: "cadastro_administrador" as const,
           importadaEm: agora(),
         };
-
-        await criarMatricula(registro);
         estado.matriculas.push(registro);
       }
 
@@ -1000,7 +958,6 @@ export async function decidirSolicitacao(
 
       if (existente) {
         existente.situacao = "ativo";
-        await atualizarUsuario(existente);
       } else {
         const usuario: Usuario = {
           id: novoId("usr"),
@@ -1019,8 +976,6 @@ export async function decidirSolicitacao(
           membroComissaoEstagio: false,
           criadoEm: agora(),
         };
-
-        await criarUsuario(usuario);
         estado.usuarios.push(usuario);
       }
     }
@@ -1032,7 +987,6 @@ export async function decidirSolicitacao(
 
       if (aluno) {
         aluno.situacao = "inativo";
-        await atualizarUsuario(aluno);
       }
     }
   } catch (erro) {
@@ -1059,8 +1013,6 @@ export async function listarMatriculas(
   } = {},
 ): Promise<Pagina<MatriculaImportada>> {
   if (bancoConfigurado()) return listarMatriculasPersistentes(consulta);
-  await garantirHidratacao();
-
   const estado = obterEstado();
   const busca = filtrarPorTexto(estado.matriculas, consulta.busca ?? "", (matricula) => [
     matricula.nome,
@@ -1085,8 +1037,6 @@ export async function importarMatriculas(
   linhas: LinhaImportacao[],
 ): Promise<ResultadoImportacao> {
   if (bancoConfigurado()) return importarMatriculasPersistentes(arquivo, linhas);
-  await garantirHidratacao();
-
   const estado = obterEstado();
   const existentes = new Set(estado.matriculas.map((matricula) => matricula.matricula));
   const resultado: ResultadoImportacao = {
@@ -1146,8 +1096,6 @@ export async function importarMatriculas(
       origem: "importacao",
       importadaEm: agora(),
     };
-
-    await criarMatricula(registro);
     estado.matriculas.push(registro);
     resultado.validas += 1;
     resultado.itens.push({ matricula, nome, resultado: "valida" });
@@ -1161,8 +1109,6 @@ export async function totalMatriculasImportadas(): Promise<number> {
     const { prisma } = await carregarCliente();
     return prisma.matriculaImportada.count();
   }
-  await garantirHidratacao();
-
   return obterEstado().matriculas.length;
 }
 
@@ -1173,8 +1119,6 @@ export async function totalMatriculasImportadas(): Promise<number> {
  */
 export async function registrarMatricula(linha: LinhaImportacao): Promise<MatriculaImportada> {
   if (bancoConfigurado()) return registrarMatriculaPersistente(linha);
-  await garantirHidratacao();
-
   const estado = obterEstado();
   const matricula = linha.matricula.trim();
   const nome = linha.nome.trim();
@@ -1205,8 +1149,6 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
     origem: "cadastro_administrador",
     importadaEm: agora(),
   };
-
-  await criarMatricula(registro);
   estado.matriculas.push(registro);
 
   return registro;

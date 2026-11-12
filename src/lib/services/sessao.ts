@@ -2,7 +2,7 @@ import { rotuloPapel } from "@/lib/domain/status";
 import type { Papel, Usuario } from "@/lib/domain/types";
 import { CONTAS_DE_DESENVOLVIMENTO } from "@/lib/fixtures/base";
 
-import { agora, obterEstado } from "./store";
+import { agora } from "./store";
 import { conferirSenha } from "./credenciais";
 import { usuarioPorEmail } from "./administracao";
 
@@ -85,25 +85,6 @@ export function sair(): void {
   sessaoAtual = null;
 }
 
-/** Recarrega a sessão a partir do estado, como faria o servidor a cada requisição. */
-export async function recarregarSessao(): Promise<Usuario | null> {
-  if (!sessaoAtual) return null;
-
-  const usuario = obterEstado().usuarios.find(
-    (candidato) => candidato.id === sessaoAtual?.usuario.id,
-  );
-
-  if (!usuario || usuario.situacao !== "ativo") {
-    sessaoAtual = null;
-
-    return null;
-  }
-
-  sessaoAtual = { ...sessaoAtual, usuario };
-
-  return usuario;
-}
-
 export function rotuloSessao(): string {
   const usuario = usuarioAtual();
 
@@ -112,6 +93,3 @@ export function rotuloSessao(): string {
   return `${usuario.nome} — ${rotuloPapel(usuario.papel)}`;
 }
 
-export function usuarioPorId(id: string): Usuario | null {
-  return obterEstado().usuarios.find((usuario) => usuario.id === id) ?? null;
-}

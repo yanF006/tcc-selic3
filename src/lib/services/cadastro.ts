@@ -18,7 +18,6 @@ import { ErroDeRegra } from "@/lib/domain/erros";
 
 import { agora, obterEstado, novoId } from "./store";
 import { definirSenha } from "./credenciais";
-import { criarUsuario } from "@/lib/db/persistencia";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
 import { traduzirErroPersistencia } from "@/lib/db/erros";
@@ -503,7 +502,6 @@ async function concluirCadastroSimulado(
     criadoEm: agora(),
   };
 
-  await criarUsuario(usuario);
   estado.usuarios.push(usuario);
   await definirSenha(email, dados.senha, "cadastro_publico");
 
@@ -526,7 +524,3 @@ async function concluirCadastroSimulado(
   return { ok: true, usuarioId: usuario.id, situacao, solicitacaoId };
 }
 
-/** Mantido para compatibilidade com a preparação dos testes de simulação. */
-export function limparPrevias(): void {
-  // A arquitetura sem prévia persistida não mantém estado entre as etapas.
-}
