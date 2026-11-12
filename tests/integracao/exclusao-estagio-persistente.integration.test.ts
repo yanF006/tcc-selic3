@@ -12,6 +12,7 @@ import { descartarCliente } from "@/lib/db/prisma";
 import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
 import { cancelarSolicitacao, criarEstagio, estagioPorId, excluirEstagio, exclusaoPendenteDoEstagio, solicitarExclusaoEstagio } from "@/lib/services/estagios";
 import { solicitarEncaminhamento } from "@/lib/services/fluxo-estagio";
+import { documentosDaCoordenacaoPersistente } from "@/lib/services/fluxo-consultas-persistentes";
 import * as store from "@/lib/services/store";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
 import { criarExecutorDdl } from "./ddl";
@@ -122,6 +123,16 @@ describe("cancelamento e exclusão de estágio persistidos", () => {
     const registro = await prisma.solicitacaoExclusaoEstagio.findFirstOrThrow({ where: { estagioId: estagio.id } });
     expect(registro).toMatchObject({ solicitanteId: coordenador.id, situacao: "autorizado", decididoPorId: coordenador.id });
     expect(registro.decididoEm).toBeTruthy();
+  });
+
+  it("documentos inativados permanecem na consulta histórica do curso e somem para outro curso", async () => {
+    const estagio = await criarEstagio(aluno, solicitacao(2035));
+    await excluirEstagio(estagio.id, coordenador);
+    const doCurso = await documentosDaCoordenacaoPersistente(coordenador, { tamanho: 1000 });
+    expect(doCurso.itens.filter((documento) => documento.estagioId === estagio.id).length).toBeGreaterThan(0);
+    expect(doCurso.itens.filter((documento) => documento.estagioId === estagio.id).every((documento) => documento.situacao === "inativo")).toBe(true);
+    const deOutroCurso = await documentosDaCoordenacaoPersistente(coordenadorOutro, { tamanho: 1000 });
+    expect(deOutroCurso.itens.some((documento) => documento.estagioId === estagio.id)).toBe(false);
   });
 
   it("exclusão inativa documentos, remove dados pessoais do contexto e mantém o perfil do aluno", async () => {
