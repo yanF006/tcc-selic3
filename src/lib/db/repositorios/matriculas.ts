@@ -22,7 +22,7 @@ export function criarRepositorioMatriculas(cliente: ClienteMatriculas): Reposito
 
     async listar() {
       const linhas = await cliente.matriculaImportada.findMany({
-        orderBy: { importadaEm: "asc" },
+        orderBy: [{ importadaEm: "asc" }, { id: "asc" }],
       });
 
       return linhas.map(paraDominioMatricula);

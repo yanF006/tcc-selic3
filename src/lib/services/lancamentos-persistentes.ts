@@ -133,9 +133,11 @@ export async function listarLancamentosPersistentes(estagioId: string, consulta:
   const { prisma } = await carregarCliente();
   const termo = consulta.busca?.trim();
   const where = { estagioId, ...(consulta.data ? { data: new Date(`${consulta.data}T00:00:00.000Z`) } : {}), ...(termo ? { OR: [{ entrada: { contains: termo } }, { saida: { contains: termo } }] } : {}) };
-  const total = await prisma.lancamentoHoras.count({ where });
   const tamanho = Math.max(1, consulta.tamanho ?? 10);
-  const pagina = Math.min(Math.max(1, consulta.pagina ?? 1), Math.max(1, Math.ceil(total / tamanho)));
-  const linhas = await prisma.lancamentoHoras.findMany({ where, orderBy: [{ data: "asc" }, { criadoEm: "asc" }, { id: "asc" }], take: tamanho, skip: (pagina - 1) * tamanho });
-  return { itens: linhas.map(paraDominioLancamento), total, pagina, tamanhoPagina: tamanho };
+  return executarTransacao(async (tx) => {
+    const total = await tx.lancamentoHoras.count({ where });
+    const pagina = Math.min(Math.max(1, consulta.pagina ?? 1), Math.max(1, Math.ceil(total / tamanho)));
+    const linhas = await tx.lancamentoHoras.findMany({ where, orderBy: [{ data: "asc" }, { criadoEm: "asc" }, { id: "asc" }], take: tamanho, skip: (pagina - 1) * tamanho });
+    return { itens: linhas.map(paraDominioLancamento), total, pagina, tamanhoPagina: tamanho };
+  }, { cliente: prisma }, { isolationLevel: "RepeatableRead" });
 }

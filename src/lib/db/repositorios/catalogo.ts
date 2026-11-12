@@ -20,12 +20,12 @@ export async function listarOpcoesAcademicas(
   cliente: ClienteCatalogo,
 ): Promise<OpcoesAcademicas> {
   const [cursos, turmas, periodos] = await Promise.all([
-    cliente.curso.findMany({ orderBy: { nome: "asc" } }),
+    cliente.curso.findMany({ orderBy: [{ nome: "asc" }, { id: "asc" }] }),
     cliente.turma.findMany({
-      orderBy: { nome: "asc" },
+      orderBy: [{ nome: "asc" }, { id: "asc" }],
       include: { turmaPeriodos: { select: { periodoId: true } } },
     }),
-    cliente.periodo.findMany({ orderBy: [{ ano: "desc" }, { semestre: "desc" }] }),
+    cliente.periodo.findMany({ orderBy: [{ ano: "desc" }, { semestre: "desc" }, { id: "asc" }] }),
   ]);
 
   return {

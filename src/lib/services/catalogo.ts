@@ -256,23 +256,26 @@ async function listarConveniosPersistente(
 
   const where: Prisma.ConvenioWhereInput = filtros.length ? { AND: filtros } : {};
   const tamanho = Math.max(1, consulta.tamanho ?? TAMANHO_PADRAO);
-  const total = await prisma.convenio.count({ where });
-  const paginas = Math.max(1, Math.ceil(total / tamanho));
-  const pagina = Math.min(Math.max(1, consulta.pagina ?? 1), paginas);
-  const linhas = await prisma.convenio.findMany({
-    where,
-    include: incluirInstituicao,
-    orderBy: [{ inicioVigencia: "asc" }, { id: "asc" }],
-    skip: (pagina - 1) * tamanho,
-    take: tamanho,
-  });
 
-  return {
-    itens: linhas.map(paraConvenio),
-    total,
-    pagina,
-    tamanhoPagina: tamanho,
-  };
+  return executarTransacao(async (tx) => {
+    const total = await tx.convenio.count({ where });
+    const paginas = Math.max(1, Math.ceil(total / tamanho));
+    const pagina = Math.min(Math.max(1, consulta.pagina ?? 1), paginas);
+    const linhas = await tx.convenio.findMany({
+      where,
+      include: incluirInstituicao,
+      orderBy: [{ inicioVigencia: "asc" }, { id: "asc" }],
+      skip: (pagina - 1) * tamanho,
+      take: tamanho,
+    });
+
+    return {
+      itens: linhas.map(paraConvenio),
+      total,
+      pagina,
+      tamanhoPagina: tamanho,
+    };
+  }, { cliente: prisma }, { isolationLevel: "RepeatableRead" });
 }
 
 export async function listarConvenios(consulta: ConsultaConvenios = {}): Promise<Pagina<Convenio>> {

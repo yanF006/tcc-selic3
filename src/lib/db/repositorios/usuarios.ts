@@ -76,7 +76,7 @@ export function criarRepositorioUsuarios(
     contar: () => cliente.usuario.count(),
 
     async listar() {
-      const linhas = await cliente.usuario.findMany({ orderBy: { criadoEm: "asc" } });
+      const linhas = await cliente.usuario.findMany({ orderBy: [{ criadoEm: "asc" }, { id: "asc" }] });
 
       return linhas.map(paraDominioUsuario);
     },
