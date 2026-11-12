@@ -122,14 +122,14 @@ O sistema SHALL preservar os registros necessários para explicar decisões de a
 
 ### Requirement: Exclusão e cancelamento com histórico preservado
 
-O sistema SHALL persistir cancelamento de solicitação de estágio e solicitações e decisões de exclusão com seus responsáveis e datas. Exclusão que exige cargo superior SHALL NOT ser concluída antes da autorização. Ao executar exclusão autorizada, o sistema SHALL retirar o estágio dos processos ativos, inativar documentos vinculados e aplicar a remoção de dados pessoais prevista para o fluxo, preservando o histórico permitido e o perfil independente do aluno.
+O sistema SHALL persistir cancelamento de solicitação de estágio e solicitações e decisões de exclusão com seus responsáveis e datas. A exclusão de estágio solicitada pelo coordenador de curso sob sua responsabilidade SHALL ser executada diretamente, sem decisão de cargo superior, registrando responsável e data na solicitação de exclusão com situação `autorizado`. Ao executar exclusão autorizada, o sistema SHALL retirar o estágio dos processos ativos, inativar documentos vinculados e aplicar a remoção de dados pessoais prevista para o fluxo, preservando o histórico permitido e o perfil independente do aluno.
 
-#### Scenario: Exclusão solicitada por coordenador de curso
-- **WHEN** o coordenador de curso solicita a exclusão de um estágio sob sua responsabilidade
-- **THEN** o sistema SHALL persistir a solicitação para decisão superior e manter o estágio sem exclusão até a autorização
+#### Scenario: Exclusão executada por coordenador de curso
+- **WHEN** o coordenador de curso exclui um estágio de aluno do seu curso
+- **THEN** o sistema SHALL executar a exclusão, registrar responsável e data na solicitação de exclusão e recusar a mesma operação quando o coordenador for de outro curso
 
 #### Scenario: Exclusão autorizada em outra instância
-- **WHEN** o responsável competente autoriza a exclusão e a operação é concluída
+- **WHEN** a exclusão é concluída por um responsável autorizado
 - **THEN** outra instância SHALL apresentar o estágio fora dos processos ativos, os documentos inativados e o histórico permitido para a coordenação, preservando o perfil do aluno
 
 #### Scenario: Cancelamento em preparação

@@ -7,10 +7,8 @@ import {
   estagioEncerrado,
   estagioLiberado,
 } from "@/lib/domain/fluxo-estagio";
-import { camposDoTemplate } from "@/lib/templates/descriptors";
-import { idsDoGrupo } from "@/lib/templates/grupos-endereco";
+import { valoresSemDadosDoAluno } from "./dados-pessoais-estagio";
 import { ZodError } from "zod";
-import { descritorDaVersao } from "./templates";
 import type {
   Convenio,
   Estagio,
@@ -567,6 +565,10 @@ export async function correcaoInicialPermitida(estagio: Estagio): Promise<boolea
 }
 
 export async function excluirEstagio(estagioId: string, aluno: Usuario) {
+  if (bancoConfigurado()) {
+    const { encerrarEstagioPersistente } = await import("./exclusao-estagio-persistentes");
+    return encerrarEstagioPersistente(estagioId, aluno, "excluir");
+  }
   const estagio = await exigirAcessoEstagio(aluno, estagioId);
   if (aluno.id !== estagio.alunoId)
     throw new ErroDeRegra("A exclusão cabe ao aluno titular.", "acesso_negado");
@@ -575,42 +577,7 @@ export async function excluirEstagio(estagioId: string, aluno: Usuario) {
   estagio.cursoIdHistorico = cursoDoUsuario(aluno);
   estagio.excluidoEm = agora();
   for (const documento of obterEstado().documentos.filter((doc) => doc.estagioId === estagioId)) {
-    const valores = { ...documento.valores };
-    const descriptor = descritorDaVersao(documento.templateId, documento.versaoTemplate);
-    for (const campo of camposDoTemplate(documento.templateId, descriptor)) {
-      if (
-        campo.origem === "aluno" &&
-        ![
-          "nomeCompleto",
-          "aluno",
-          "curso",
-          "turma",
-          "periodo",
-          "ano",
-          "semestre",
-          "anoSemestre",
-          "turmaSemestreAno",
-          "campus",
-        ].includes(campo.fonte || campo.id)
-      )
-        delete valores[campo.id];
-    }
-    for (const id of [
-      "cpf",
-      "rg",
-      "dataNascimento",
-      "matricula",
-      "enderecoAluno",
-      "cepAluno",
-      "telefoneAluno",
-      "celularAluno",
-      "emailAluno",
-    ])
-      delete valores[id];
-    for (const grupo of descriptor?.gruposEndereco ?? []) {
-      if (grupo.origemInicial === "aluno") for (const id of idsDoGrupo(grupo)) delete valores[id];
-    }
-    documento.valores = valores;
+    documento.valores = valoresSemDadosDoAluno(documento.templateId, documento.versaoTemplate, documento.valores);
     documento.situacao = "inativo";
     documento.inativadoEm = estagio.excluidoEm;
     documento.atualizadoEm = estagio.excluidoEm;
@@ -631,6 +598,10 @@ export async function excluirEstagio(estagioId: string, aluno: Usuario) {
 }
 
 export async function cancelarSolicitacao(estagioId: string, aluno: Usuario) {
+  if (bancoConfigurado()) {
+    const { encerrarEstagioPersistente } = await import("./exclusao-estagio-persistentes");
+    return encerrarEstagioPersistente(estagioId, aluno, "cancelar");
+  }
   const estagio = await exigirAcessoEstagio(aluno, estagioId);
   if (estagio.situacao !== "em_preparacao" || estagioLiberado(estagio))
     throw new ErroDeRegra(
@@ -647,6 +618,10 @@ export async function solicitarExclusaoEstagio(
   solicitanteId: string,
   motivo?: string,
 ): Promise<SolicitacaoExclusaoEstagio> {
+  if (bancoConfigurado()) {
+    const { solicitarExclusaoPersistente } = await import("./exclusao-estagio-persistentes");
+    return solicitarExclusaoPersistente(estagioId, solicitanteId, motivo);
+  }
   const estagio = await estagioPorId(estagioId);
 
   if (!estagio) throw new ErroDeRegra("Estágio não encontrado.", "estagio_inexistente");
@@ -670,6 +645,10 @@ export async function solicitarExclusaoEstagio(
 }
 
 export async function exclusaoPendenteDoEstagio(estagioId: string): Promise<boolean> {
+  if (bancoConfigurado()) {
+    const { exclusaoPendentePersistente } = await import("./exclusao-estagio-persistentes");
+    return exclusaoPendentePersistente(estagioId);
+  }
   return obterEstado().exclusoes.some(
     (solicitacao) => solicitacao.estagioId === estagioId && solicitacao.situacao === "pendente",
   );
