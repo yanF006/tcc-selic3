@@ -51,3 +51,7 @@ yarn-error.log*
 .eslintcache
 /playwright-report
 /test-results
+
+# Backups SQL e metadados: contêm dados pessoais; nunca versionar
+backups/
+*.backup.sql

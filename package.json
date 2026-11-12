@@ -21,6 +21,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:carga-inicial": "tsx prisma/carga-inicial.ts",
     "postinstall": "prisma generate && prisma generate --schema prisma/auth-teste.prisma",
     "test:e2e:banco-indisponivel": "SELIC_E2E_BANCO_INDISPONIVEL=1 PLAYWRIGHT_PORT=3101 DATABASE_URL='mysql://selic:selic@192.0.2.1:3306/selic' SELIC_DB_CONNECT_TIMEOUT_MS=3000 SELIC_DB_ACQUIRE_TIMEOUT_MS=4000 SELIC_DB_INITIALIZATION_TIMEOUT_MS=2500 SELIC_DB_RETRY_COOLDOWN_MS=250 playwright test e2e/banco-indisponivel.spec.ts"
   },

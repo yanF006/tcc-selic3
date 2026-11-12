@@ -1,101 +1,67 @@
 import "dotenv/config";
 
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient } from "../src/generated/prisma/client";
 import type { Prisma } from "../src/generated/prisma/client";
 import { matriculasImportadas, usuarios } from "../src/lib/fixtures/base";
+import { criarClienteOperacional } from "./conexao-operacional";
 
 /**
- * Semeia o MySQL do Aiven com as fixtures de `usuarios` e `matriculas`.
- *
- * O mesmo povoamento acontece de forma automática na primeira leitura do app
- * (`garantirHidratacao`, em `src/lib/db/persistencia.ts`), quando o banco está
- * vazio. Este script existe para preparar o banco sem depender da aplicação —
- * `npm run db:seed` — e é idempotente: cada registro é inserido ou atualizado
- * pelo id, então rodar de novo não duplica nada.
- *
- * Escopo desta migração: apenas `usuarios` e `matriculas`; cursos, turmas,
- * estágios, documentos e pareceres seguem nas fixtures em memória.
+ * Seed de DEMONSTRAÇÃO (tarefa 13.4). Não é carga operacional e nunca roda
+ * sozinho: a aplicação não semeia mais o banco. Travas:
+ *  - SELIC_SEED_DEMONSTRACAO=1 precisa estar definido;
+ *  - o banco precisa ser de demonstração ou ensaio (sufixo _ensaio, _teste ou _demo);
+ *  - só insere registros ausentes (skipDuplicates): nunca atualiza um registro existente.
+ * Produção não recebe este seed: use a carga inicial (`npm run db:carga-inicial`).
  */
 
-const url = new URL(process.env.DATABASE_URL ?? "");
-
-if (!url.hostname) {
-  console.error("DATABASE_URL ausente ou inválida. Copie .env.example para .env.");
-  process.exit(1);
-}
-
-const adapter = new PrismaMariaDb({
-  host: url.hostname,
-  port: url.port ? Number(url.port) : 3306,
-  user: decodeURIComponent(url.username),
-  password: decodeURIComponent(url.password),
-  database: decodeURIComponent(url.pathname.replace(/^\/+/, "")) || undefined,
-  connectionLimit: 5,
-  connectTimeout: 60_000,
-  acquireTimeout: 60_000,
-  initializationTimeout: 60_000,
-  ssl: {
-    rejectUnauthorized: true,
-    ...(process.env.SELIC_DB_CA_CERT?.trim()
-      ? { ca: process.env.SELIC_DB_CA_CERT.trim().replace(/\\n/g, "\n") }
-      : {}),
-  },
-});
-
-const prisma = new PrismaClient({ adapter });
+const { prisma, banco } = criarClienteOperacional();
 
 async function main() {
-  for (const usuario of usuarios) {
-    const dados = {
-      nome: usuario.nome,
-      email: usuario.email,
-      papel: usuario.papel,
-      situacao: usuario.situacao,
-      campus: usuario.campus,
-      matricula: usuario.matricula ?? null,
-      cursoId: usuario.cursoId ?? null,
-      membroComissaoEstagio: usuario.membroComissaoEstagio ?? false,
-      dadosPessoais: usuario.dadosPessoais
-        ? (usuario.dadosPessoais as unknown as Prisma.InputJsonValue)
-        : undefined,
-      criadoEm: new Date(usuario.criadoEm),
-    };
-
-    await prisma.usuario.upsert({
-      where: { id: usuario.id },
-      create: { id: usuario.id, ...dados },
-      update: dados,
-    });
+  if (process.env.SELIC_SEED_DEMONSTRACAO !== "1") {
+    throw new Error("Seed de demonstração recusado: defina SELIC_SEED_DEMONSTRACAO=1.");
+  }
+  if (!/(_ensaio|_teste|_demo)$/.test(banco) || banco === "selic") {
+    throw new Error(`Seed de demonstração recusado para o banco "${banco}".`);
   }
 
-  for (const matricula of matriculasImportadas) {
-    const dados = {
-      matricula: matricula.matricula,
-      nome: matricula.nome,
-      curso: matricula.curso,
-      origem: matricula.origem,
-      importadaEm: new Date(matricula.importadaEm),
-    };
+  const usuariosParaInserir = usuarios.map((usuario) => ({
+    id: usuario.id,
+    nome: usuario.nome,
+    email: usuario.email,
+    papel: usuario.papel,
+    situacao: usuario.situacao,
+    campus: usuario.campus,
+    matricula: usuario.matricula ?? null,
+    cursoId: usuario.cursoId ?? null,
+    membroComissaoEstagio: usuario.membroComissaoEstagio ?? false,
+    dadosPessoais: usuario.dadosPessoais
+      ? (usuario.dadosPessoais as unknown as Prisma.InputJsonValue)
+      : undefined,
+    criadoEm: new Date(usuario.criadoEm),
+  }));
 
-    await prisma.matriculaImportada.upsert({
-      where: { id: matricula.id },
-      create: { id: matricula.id, ...dados },
-      update: dados,
-    });
-  }
+  const matriculasParaInserir = matriculasImportadas.map((matricula) => ({
+    id: matricula.id,
+    matricula: matricula.matricula,
+    nome: matricula.nome,
+    curso: matricula.curso,
+    origem: matricula.origem,
+    importadaEm: new Date(matricula.importadaEm),
+  }));
+
+  await prisma.usuario.createMany({ data: usuariosParaInserir, skipDuplicates: true });
+  await prisma.matriculaImportada.createMany({ data: matriculasParaInserir, skipDuplicates: true });
 
   const [totalUsuarios, totalMatriculas] = await Promise.all([
     prisma.usuario.count(),
     prisma.matriculaImportada.count(),
   ]);
 
-  console.log(`Seed concluído: ${totalUsuarios} usuário(s) e ${totalMatriculas} matrícula(s).`);
+  console.log(`Seed de demonstração concluído: ${totalUsuarios} usuário(s) e ${totalMatriculas} matrícula(s).`);
 }
 
 main()
   .catch((erro) => {
-    console.error("Falha ao semear o banco:", erro);
+    console.error(erro instanceof Error ? erro.message : "Falha ao semear o banco de demonstração.");
     process.exitCode = 1;
   })
   .finally(async () => {
