@@ -127,7 +127,23 @@ export async function carregarCliente(): Promise<ClientePrisma> {
   ]);
 
   const adapter = new PrismaMariaDb(opcoesDeConexao());
-  const prisma = new modulo.PrismaClient({ adapter });
+  // Leituras e escritas fora de transação também passam pela tradução de erro:
+  // falha de conexão vira BancoIndisponivelError e o cliente em cache é descartado,
+  // para a próxima tentativa abrir um pool novo sem reiniciar o processo.
+  const prisma = new modulo.PrismaClient({ adapter }).$extends({
+    query: {
+      async $allOperations({ args, query }) {
+        try {
+          return await query(args);
+        } catch (causa) {
+          const { BancoIndisponivelError, traduzirErroPersistencia } = await import("./erros");
+          const erro = traduzirErroPersistencia(causa);
+          if (erro instanceof BancoIndisponivelError) descartarCliente();
+          throw erro;
+        }
+      },
+    },
+  }) as unknown as PrismaClient;
 
   cache = { prisma, Prisma: modulo.Prisma };
 

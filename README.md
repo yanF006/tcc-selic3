@@ -67,35 +67,46 @@ segredos e instruções de preenchimento aplicáveis a cada ambiente.
 
 ## Banco de dados (Prisma 7 + MySQL)
 
-A persistência real cobre **usuários e matrículas**; o restante do estado
-continua nas fixtures em memória. O acesso usa o driver adapter
-`@prisma/adapter-mariadb` (exigido pelo Prisma 7) com TLS, lido de uma única
-variável de ambiente:
+O modo de dados é escolhido por `SELIC_PERSISTENCIA`:
+
+- **`persistente`** (exige `DATABASE_URL`): todo o domínio lê e grava no MySQL.
+  Não há cópia em memória, hidratação, semeadura automática nem contas de
+  demonstração. Falha de conexão vira a tela de dados indisponíveis, com nova
+  tentativa; nunca vira dado simulado.
+- **`simulado`**: o simulador em memória, com as fixtures de demonstração. Testes
+  unitários sempre usam este modo.
 
 ```bash
-cp .env.example .env   # preencha DATABASE_URL com a URI do MySQL
+cp .env.example .env   # preencha DATABASE_URL e SELIC_PERSISTENCIA
+npm run db:generate    # gera o cliente em src/generated/prisma
+npm run db:deploy      # aplica as migrações versionadas (nunca db:push em produção)
+npm run db:carga-inicial   # cria só o primeiro administrador (SELIC_ADMIN_EMAIL/NOME)
 ```
 
-Sem `DATABASE_URL` — e sempre nos testes unitários — a persistência fica
-desligada e o simulador se comporta como antes. Com a variável presente, a
-primeira leitura hidrata a memória a partir do banco; um banco vazio é semeado
-com as fixtures, então as contas de demonstração continuam funcionando.
+Cada conta tem um único cargo (`papel`): aluno, coordenador de curso, coordenador de
+estágio ou administrador. Não há vários cargos por conta.
 
-```bash
-npm run db:generate   # gera o cliente em src/generated/prisma
-npm run db:deploy     # aplica as migrações versionadas
-npm run db:seed       # opcional: semeia usuários e matrículas
-npm run db:migrate    # cria uma migração nova durante o desenvolvimento
-```
+O primeiro administrador não recebe senha pela carga: ele usa o fluxo padrão de
+recuperação de senha com o e-mail informado. O seed de demonstração
+(`npm run db:seed`) exige `SELIC_SEED_DEMONSTRACAO=1` e só roda em banco de
+ensaio; não há semeadura automática pela aplicação.
+
+Documentação operacional:
+
+- `docs/operacao-dados.md`: inspeção, backup, restauração, transformação dos
+  dados pessoais, carga inicial e ensaio de implantação interrompida.
+- `Contexto/criar-banco-selic.sql`: estrutura final do banco (sem dados), com
+  instruções de execução e versão do MySQL (8.0). Conferido contra o schema.
 
 O cliente gerado (`src/generated/prisma`) não é versionado: o `postinstall`
 o recria a cada `npm install`. A conexão do app é montada em
-`src/lib/db/prisma.ts`; hidratação e escrita contínua ficam em
-`src/lib/db/persistencia.ts`.
+`src/lib/db/prisma.ts`, com tradução de falhas de conexão em indisponibilidade.
 
 ## Contas de demonstração
 
-A senha das contas de desenvolvimento é `selic123`.
+As contas abaixo existem só no modo `simulado` (ou no seed de demonstração
+em banco de ensaio). Em modo `persistente`, nenhuma conta de demonstração é criada.
+A senha das contas de desenvolvimento do simulador é `selic123`.
 
 | Perfil                      | E-mail                          |
 | --------------------------- | ------------------------------- |
@@ -167,44 +178,29 @@ registro ao aluno, curso ou campus.
 
 ## O que é simulado e o que ainda falta
 
-### Simulação prevista nesta entrega
+### O que continua simulado nesta entrega
 
-- **Persistência:** usuários e matrículas vivem no MySQL (Prisma 7, driver
-  `mariadb`). Os demais dados — cursos, turmas, períodos, convênios, estágios,
-  documentos e pareceres — seguem em `src/lib/services/store.ts`, na memória do
-  processo do servidor. A memória é hidratada a partir do banco na primeira
-  leitura e cada mutação é gravada de volta; sem `DATABASE_URL` o simulador roda
-  inteiramente em memória, como antes.
-- **Preview Vercel:** instâncias podem ter estados diferentes. A publicação
-  serve à revisão visual e de navegação; escrita é verificada localmente.
-- **Autenticação:** o cookie HTTP-only contém o identificador do usuário. As
-  credenciais ficam em memória como sal e digest SHA-256; Better Auth ainda não
-  está integrado.
-- **Matrícula:** sem consulta oficial ao SIGAA. A consulta de CEP já usa o
-  ViaCEP real; a importação de matrículas por arquivo ainda não tem UI.
-- **E-mail:** recuperação mostra um link de demonstração. Não há envio real,
-  Nodemailer ou integração com assinantes externos.
-- **Documentos:** DOCX/PDF demonstrativos contêm valores do preenchimento, mas
-  não reproduzem o layout oficial. Geração final com Docxtemplater é futura.
+- **Modo simulado:** existe apenas como ferramenta de desenvolvimento e testes,
+  selecionado por `SELIC_PERSISTENCIA=simulado`. No modo `persistente` ele não é
+  consultado.
+- **Preview Vercel:** a publicação serve à revisão visual e de navegação. A
+  verificação de escrita entre instâncias é feita no ambiente de ensaio.
+- **Matrícula:** a consulta oficial ao SIGAA não existe; a matrícula é conferida
+  contra as matrículas importadas ou lançadas pelo administrador.
+- **Documentos:** DOCX/PDF gerados são demonstrativos e não reproduzem o layout
+  oficial. A geração final é uma entrega própria.
+- **Cadastro:** o formulário não guarda prévia no banco. Recarregar a página
+  descarta o que foi preenchido e não grava senha no navegador.
 
-### Próximos incrementos planejados
+### Adiado por decisão do change `integrar-banco-backend-completo`
 
-O estado detalhado e os critérios de aceitação estão em
-`openspec/changes/frontend-website/tasks.md`, com 46 das 143
-tarefas ainda abertas. Permanecem, entre outros:
+- Notificações gerais (central e sino) e trilha genérica de alterações.
+- Editor e versionamento de templates: o Kit de Estágio é fixo e identificado.
+- Geração final de DOCX/PDF oficiais, com entrega documental própria.
+- Integração oficial com o SIGAA.
 
-- Filas de parecer, decisões, central de notificações e histórico de envios.
-- Gestão completa de convênios, cursos, turmas, orientadores e supervisores.
-- Gerenciamento/versionamento de templates e importação de matrículas por arquivo.
-- Estatísticas, auditoria de acessibilidade/responsividade e revisão com a cliente.
-
-Prisma/MySQL cobre hoje usuários e matrículas; Better Auth, Nodemailer, geração
-final, a migração do restante do domínio para o banco e a integração oficial com
-SIGAA pertencem às próximas mudanças. A remoção do seletor de papel e dos dados
-de desenvolvimento (16.2) é o último gate antes da entrega; a ordem de execução
-da validação final está registrada na seção 16 do arquivo de tarefas. Os
-arquivos legados do Convênio e do Termo de Compromisso já foram convertidos para
-DOCX; os originais permanecem no histórico. A marca oficial do SELic já está
+Os arquivos legados do Convênio e do Termo de Compromisso já foram convertidos
+para DOCX; os originais permanecem no histórico. A marca oficial do SELic já está
 incorporada.
 
 ## Fluxo OpenSpec

@@ -12,7 +12,8 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
-const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
+const base =
+  process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
 const ca = readFileSync(join(base, "tls/ca.pem"), "utf8");
 
 const prisma = new PrismaClient({
@@ -181,5 +182,52 @@ describe("cadastro entre processos", () => {
 
     expect(usuario?.situacao).toBe("pendente");
     expect(usuario?.solicitacaoAcesso?.situacao).toBe("pendente");
+  });
+
+  it("dois cadastros concluídos em processos distintos ficam preservados e a repetição não deixa efeito", async () => {
+    const emailA = `${prefixo}-dois-a@teste.local`;
+    const emailB = `${prefixo}-dois-b@teste.local`;
+    emails.push(emailA, emailB);
+
+    const matriculaA = "20261235004";
+    await prisma.matriculaImportada.create({
+      data: {
+        id: `${prefixo}-mat-a`,
+        matricula: matriculaA,
+        nome: "Aluno Entre Processos",
+        curso: "Curso Entre Processos",
+        origem: "importacao",
+      },
+    });
+
+    try {
+      const primeiro = await noProcesso("conclusao", {
+        ...conclusao(emailA),
+        matricula: matriculaA,
+      });
+      const segundo = await noProcesso("conclusao", {
+        ...conclusao(emailB),
+        matricula: "20261235003",
+      });
+      expect(primeiro).toMatchObject({ ok: true, situacao: "ativo" });
+      expect(segundo).toMatchObject({ ok: true, situacao: "pendente" });
+
+      // Repetir o primeiro cadastro em outro processo é recusado e não cria nada.
+      const repetido = await noProcesso("conclusao", conclusao(emailA));
+      expect(repetido).toMatchObject({ ok: false });
+
+      expect(await prisma.usuario.count({ where: { email: { in: [emailA, emailB] } } })).toBe(2);
+      expect(await prisma.solicitacaoAcesso.count({ where: { usuario: { email: emailB } } })).toBe(
+        1,
+      );
+      expect(await prisma.solicitacaoAcesso.count({ where: { usuario: { email: emailA } } })).toBe(
+        0,
+      );
+      expect((await prisma.usuario.findUnique({ where: { email: emailA } }))?.situacao).toBe(
+        "ativo",
+      );
+    } finally {
+      await prisma.matriculaImportada.deleteMany({ where: { matricula: matriculaA } });
+    }
   });
 });

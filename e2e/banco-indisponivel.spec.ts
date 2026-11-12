@@ -7,15 +7,9 @@ import { expect, test } from "@playwright/test";
  * apontando para um destino reservado e timeouts curtos.
  */
 
-test("mostra carregamento, erro recuperável e nenhuma conta padrão", async ({
-  context,
-  page,
-  baseURL,
-}) => {
-  await context.addCookies([
-    { name: "selic-sessao", value: "usr-admin", url: baseURL ?? "http://127.0.0.1:3101" },
-  ]);
-
+// Sem cookie de ID: no modo persistente a identidade vem só da sessão do provedor,
+// então a indisponibilidade precisa aparecer mesmo sem nenhuma sessão antiga.
+test("mostra carregamento, erro recuperável e nenhuma conta padrão", async ({ page }) => {
   const navegacao = page.goto("/admin/usuarios", { waitUntil: "commit" });
 
   await expect(page.getByRole("status").filter({ hasText: "Carregando dados" })).toBeVisible({
