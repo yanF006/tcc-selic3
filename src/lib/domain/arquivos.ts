@@ -1,3 +1,5 @@
+/** Marcador de checksum de anexo cujo conteúdo foi removido após a exclusão de dados pessoais. */
+export const CHECKSUM_ANEXO_REMOVIDO = "removido";
 export const LIMITE_ARQUIVO_BYTES = 4 * 1024 * 1024;
 export type FinalidadeArquivo = "assinado" | "comprovante";
 

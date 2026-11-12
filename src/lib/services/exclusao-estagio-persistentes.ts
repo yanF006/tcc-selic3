@@ -7,7 +7,7 @@ import { carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
 import { buscarEstagio, paraDominioEstagio, podeConsultarEstagioNoBanco } from "@/lib/db/repositorios/estagios";
 import { ErroDeRegra } from "./erros";
-import { valoresSemDadosDoAluno } from "./dados-pessoais-estagio";
+import { aplicarRemocaoDoEstagio, registrarRemocao } from "./remocao-dados-pessoais-persistentes";
 import { novoId } from "./store";
 
 type Transacao = Prisma.TransactionClient;
@@ -73,27 +73,8 @@ export async function encerrarEstagioPersistente(estagioId: string, autor: Usuar
     });
     if (efeitos.count === 0) return (await buscarEstagio(tx, estagioId)) ?? estagio;
 
-    const documentos = await tx.documentoPreenchido.findMany({ where: { estagioId } });
-    for (const documento of documentos) {
-      await tx.documentoPreenchido.update({
-        where: { id: documento.id },
-        data: {
-          valores: valoresSemDadosDoAluno(documento.templateId, documento.versaoTemplate, documento.valores as Record<string, unknown>) as Prisma.InputJsonValue,
-          situacao: "inativo",
-          inativadoEm: momento,
-        },
-      });
-    }
-    const idsDocumentos = documentos.map((documento) => documento.id);
-    if (idsDocumentos.length > 0) {
-      await tx.envioExterno.updateMany({
-        where: {
-          documentoId: { in: idsDocumentos },
-          OR: [{ destinatarioPapel: "aluno" }, { destinatarioEmail: aluno.email }],
-        },
-        data: { destinatarioEmail: "" },
-      });
-    }
+    await aplicarRemocaoDoEstagio(tx, estagioId, modo === "cancelar" ? "estagio_cancelado" : "estagio_excluido", momento);
+    await registrarRemocao(tx, modo === "cancelar" ? "estagio_cancelado" : "estagio_excluido", estagioId, momento);
 
     if (modo === "excluir") {
       await tx.solicitacaoExclusaoEstagio.updateMany({

@@ -1,4 +1,5 @@
 import { metadadoUsuario } from "@/lib/domain/status";
+import { aplicarRemocaoDaConta, registrarRemocao } from "./remocao-dados-pessoais-persistentes";
 import { MATRICULA_SIGAA, esquemaPapel } from "@/lib/domain/schemas";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
 import type {
@@ -695,19 +696,15 @@ async function possuiHistoricoPersistente(tx: import("@/generated/prisma/client"
 
 /** Anonimiza identidade com histórico ou apaga por completo a conta sem referências. */
 async function excluirUsuarioPersistente(id: string): Promise<void> {
-  const { prisma, Prisma } = await carregarCliente();
+  const { prisma } = await carregarCliente();
   await executarTransacao(async (tx) => {
     await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${id} FOR UPDATE`;
     const usuario = await tx.usuario.findUnique({ where: { id } });
     if (!usuario) throw new ErroDeRegra("Usuário não encontrado.", "usuario_nao_encontrado");
     if (await possuiHistoricoPersistente(tx, id)) {
-      await tx.usuario.update({ where: { id }, data: {
-        nome: "Cadastro excluído", email: `excluido.${id}@selic.invalid`, situacao: "inativo",
-        matricula: null, dadosPessoais: Prisma.DbNull,
-      } });
-      await tx.dadosPessoaisAluno.deleteMany({ where: { usuarioId: id } });
-      await tx.authSession.deleteMany({ where: { userId: id } });
-      await tx.authAccount.deleteMany({ where: { userId: id } });
+      const momento = new Date();
+      await aplicarRemocaoDaConta(tx, id);
+      await registrarRemocao(tx, "conta", id, momento);
       return;
     }
     await tx.solicitacaoAcesso.deleteMany({ where: { usuarioId: id } });

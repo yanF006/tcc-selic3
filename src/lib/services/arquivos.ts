@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
-import { LIMITE_ARQUIVO_BYTES, TIPOS_ARQUIVO, type FinalidadeArquivo, type MetadadosArquivo } from "@/lib/domain/arquivos";
+import { CHECKSUM_ANEXO_REMOVIDO, LIMITE_ARQUIVO_BYTES, TIPOS_ARQUIVO, type FinalidadeArquivo, type MetadadosArquivo } from "@/lib/domain/arquivos";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
 import { buscarDocumento } from "@/lib/db/repositorios/documentos";
@@ -103,6 +103,7 @@ export async function baixarArquivo(autorId: string, arquivoId: string) {
     const arquivo = await tx.arquivo.findUnique({ where: { id: arquivoId }, select: selecionarMetadadosArquivo });
     if (!arquivo?.documentoId) throw new ErroDeRegra("Documento ou arquivo não disponível para este usuário.", "acesso_negado");
     await exigirAcessoAnexos(autorId, arquivo.documentoId, false, tx);
+    if (arquivo.checksum === CHECKSUM_ANEXO_REMOVIDO) throw new ErroDeRegra("Anexo removido após a exclusão dos dados pessoais.", "arquivo_removido");
     const binario = await tx.arquivo.findUniqueOrThrow({ where: { id: arquivoId }, select: { conteudo: true } });
     if (binario.conteudo.byteLength !== arquivo.tamanhoBytes || createHash("sha256").update(binario.conteudo).digest("hex") !== arquivo.checksum) {
       throw new ErroDeRegra("Conteúdo do arquivo indisponível.", "arquivo_indisponivel");

@@ -485,6 +485,19 @@ model DocumentoPreenchido {
   @@map("documentos_preenchidos")
 }
 
+/// Registro técnico mínimo de remoção de dados pessoais; reaplicado após restauração.
+model RemocaoDadosPessoais {
+  id           String   @id @db.VarChar(64)
+  /// "estagio" | "conta" | "pessoa".
+  alvoTipo     String   @db.VarChar(20)
+  alvoId       String   @db.VarChar(64)
+  registradoEm DateTime @default(now())
+
+  @@index([registradoEm])
+  @@index([alvoTipo, alvoId])
+  @@map("remocoes_dados_pessoais")
+}
+
 /// Arquivo binário privado, com metadados separados do conteúdo.
 model Arquivo {
   id           String   @id @db.VarChar(64)
