@@ -23,7 +23,7 @@ import { filtrarPorTexto, paginar, TAMANHO_PADRAO } from "./paginacao";
 import { entrar, usuarioAtual } from "./sessao";
 import { reiniciarEstado } from "./store";
 
-import { documentos, notificacoes, pareceres } from "@/lib/fixtures/base";
+import { documentos, pareceres } from "@/lib/fixtures/base";
 
 /**
  * Validação das fixtures (3.2): toda referência entre agregados precisa
@@ -122,9 +122,6 @@ describe("integridade das fixtures", () => {
       expect(usuariosIds.has(parecer.autorId), parecer.id).toBe(true);
     }
 
-    for (const notificacao of notificacoes) {
-      expect(usuariosIds.has(notificacao.destinatarioId), notificacao.id).toBe(true);
-    }
   });
 
   it("não deixa referência quebrada em matrículas, solicitações e cadastros", () => {

@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  BellIcon,
   ChevronDownIcon,
   ClipboardCheckIcon,
   KeyRoundIcon,
@@ -26,9 +25,7 @@ import {
 } from "lucide-react";
 
 import { rotuloPapel } from "@/lib/domain/status";
-import type { Notificacao, Usuario } from "@/lib/domain/types";
-import { marcarNotificacoesLidasAction } from "@/app/(conta)/conta/notificacoes/acoes";
-import { formatarData } from "@/lib/format";
+import type { Usuario } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
 import type { ItemNav as ItemNavGrupo } from "@/nav";
@@ -64,13 +61,11 @@ export function Navbar({
   grupos,
   seletorDePapel,
   pendenciasParecer = 0,
-  notificacoes = [],
 }: {
   usuario: Usuario;
   grupos: GrupoNavbar[];
   seletorDePapel?: React.ReactNode;
   pendenciasParecer?: number;
-  notificacoes?: Notificacao[];
 }) {
   const pathname = usePathname();
   const [painelAberto, setPainelAberto] = React.useState(false);
@@ -194,50 +189,6 @@ export function Navbar({
               </Link>
             </Button>
           )}
-          {usuario.situacao === "ativo" && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Notificações: ${notificacoes.filter((notificacao) => !notificacao.lida).length} não lidas`}
-                >
-                  <BellIcon className="size-4" aria-hidden="true" />
-                  <span>{notificacoes.filter((notificacao) => !notificacao.lida).length}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="max-h-96 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto"
-              >
-                <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notificacoes.length === 0 && <p className="p-3 text-sm">Nenhuma notificação.</p>}
-                {notificacoes.map((notificacao) => (
-                  <div key={notificacao.id} className="border-border border-b p-3">
-                    <p className={cn("text-sm", !notificacao.lida && "font-semibold")}>
-                      {notificacao.titulo}
-                    </p>
-                    <p className="text-muted-foreground text-sm">{notificacao.mensagem}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {formatarData(notificacao.criadaEm)} ·{" "}
-                      {notificacao.lida ? "Lida" : "Não lida"}
-                    </p>
-                  </div>
-                ))}
-                {notificacoes.length > 0 && (
-                  <DropdownMenuItem asChild>
-                    <form action={marcarNotificacoesLidasAction}>
-                      <button type="submit" className="w-full text-left">
-                        Marcar todas como lidas
-                      </button>
-                    </form>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-2">

@@ -5,7 +5,6 @@ import type {
   Estagio,
   LancamentoHoras,
   MatriculaImportada,
-  Notificacao,
   Parecer,
   Periodo,
   Pessoa,
@@ -785,27 +784,6 @@ documentos.push(
     atualizadoEm: "2026-10-01T10:00:00Z",
   },
 );
-
-export const notificacoes: Notificacao[] = [
-  {
-    id: "ntf-1",
-    destinatarioId: "usr-maria",
-    titulo: "Documento aprovado",
-    mensagem: "Formulário de Liberação aprovado.",
-    tipo: "parecer",
-    lida: false,
-    criadaEm: "2026-02-24T15:05:00",
-  },
-  {
-    id: "ntf-2",
-    destinatarioId: "usr-carla",
-    titulo: "Documento aguardando parecer",
-    mensagem: "Há solicitações de estágio aguardando avaliação.",
-    tipo: "parecer",
-    lida: false,
-    criadaEm: "2026-02-28T09:05:00",
-  },
-];
 
 export const solicitacoesAcesso: SolicitacaoAcesso[] = [
   {

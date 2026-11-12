@@ -17,7 +17,6 @@ import {
 import { exigirAcessoEstagio } from "./estagios";
 import { ErroDeRegra } from "./erros";
 import { acrescentarObservacao, podeAcrescentarObservacao } from "./observacoes";
-import { notificar } from "./sessao";
 import { agora, novoId, obterEstado } from "./store";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
 import { bancoConfigurado } from "@/lib/db/prisma";
@@ -171,13 +170,6 @@ export async function enviarParaAssinaturas(
     };
     estado.envios.push(envio);
     envios.push(envio);
-    if (!email)
-      notificar(
-        documento.alunoId,
-        "E-mail do assinante indisponível",
-        `${assinatura.rotulo}: obtenha a assinatura pelo meio convencional.`,
-        "envio",
-      );
   }
   return envios;
 }
@@ -248,11 +240,6 @@ export async function confirmarAssinaturas(
   estagio.situacao = "em_andamento";
   estagio.liberadoEm = momento;
   estagio.liberadoPorId = autor.id;
-  notificar(
-    estagio.alunoId,
-    "Estágio liberado",
-    "Você pode seguir com os processos de estágio e acessar os demais documentos.",
-  );
   return estagio;
 }
 

@@ -434,7 +434,6 @@ describe("documentos", () => {
     // Sem documentos gerados anteriormente, além do formulário devolvido para correção.
     obterEstado().documentos.length = 0;
     obterEstado().pareceres.length = 0;
-    obterEstado().notificacoes.length = 0;
     obterEstado().documentos.push({
       id: "formulario-devolvido",
       templateId: "tpl-formulario-liberacao",
@@ -604,11 +603,6 @@ describe("documentos", () => {
     );
 
     expect(aprovado.situacao).toBe("aprovado");
-    expect(
-      obterEstado().notificacoes.filter(
-        (n) => n.destinatarioId === "usr-maria" && n.tipo === "parecer",
-      ),
-    ).toHaveLength(1);
   });
 
   it("não submete o Termo de Compromisso a parecer", async () => {

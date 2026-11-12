@@ -49,7 +49,6 @@ import {
 import { ErroDeRegra } from "./erros";
 import { filtrarPorTexto, paginar } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
-import { notificar } from "./sessao";
 import { agora, obterEstado, novoId } from "./store";
 import { descritorDaVersao } from "./templates";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
@@ -724,12 +723,6 @@ export async function submeter(documentoId: string, autor?: Usuario): Promise<Do
         responsavel.papel === "coordenador_estagio" &&
         responsavel.membroComissaoEstagio)
     ) {
-      notificar(
-        responsavel.id,
-        "Documento aguardando parecer",
-        `Documento ${template.nome} submetido para análise.`,
-        "parecer",
-      );
     }
   }
   if (tipoParecer === "externo") {
@@ -877,13 +870,6 @@ export async function registrarParecer(
     fila: (await templatePorId(documento.templateId))?.metadados?.tipoParecer ?? "nenhum",
     data: agora(),
   });
-
-  notificar(
-    documento.alunoId,
-    decisao === "aprovado" ? "Documento aprovado" : "Documento indeferido",
-    consideracoes ?? "",
-    "parecer",
-  );
 
   if (
     consideracoes?.trim() &&

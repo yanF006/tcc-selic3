@@ -757,9 +757,6 @@ export async function excluirUsuario(id: string): Promise<void> {
       throw erro;
     }
   }
-  estado.notificacoes = estado.notificacoes.filter(
-    (notificacao) => notificacao.destinatarioId !== id,
-  );
 }
 
 export function podeDecidirSolicitacao(usuario: Usuario, solicitacao: SolicitacaoAcesso): boolean {

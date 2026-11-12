@@ -2,7 +2,7 @@ import { rotuloPapel } from "@/lib/domain/status";
 import type { Papel, Usuario } from "@/lib/domain/types";
 import { CONTAS_DE_DESENVOLVIMENTO } from "@/lib/fixtures/base";
 
-import { agora, obterEstado, novoId } from "./store";
+import { agora, obterEstado } from "./store";
 import { conferirSenha } from "./credenciais";
 import { usuarioPorEmail } from "./administracao";
 
@@ -114,33 +114,4 @@ export function rotuloSessao(): string {
 
 export function usuarioPorId(id: string): Usuario | null {
   return obterEstado().usuarios.find((usuario) => usuario.id === id) ?? null;
-}
-
-export function notificacoesDoUsuario(id: string): number {
-  return obterEstado().notificacoes.filter(
-    (notificacao) => notificacao.destinatarioId === id && !notificacao.lida,
-  ).length;
-}
-
-export function notificar(
-  destinatarioId: string,
-  titulo: string,
-  mensagem: string,
-  tipo: "parecer" | "acesso" | "envio" | "sistema" = "sistema",
-): void {
-  obterEstado().notificacoes.push({
-    id: novoId("ntf"),
-    destinatarioId,
-    titulo,
-    mensagem,
-    tipo,
-    lida: false,
-    criadaEm: agora(),
-  });
-}
-
-export function marcarNotificacoesLidas(destinatarioId: string): void {
-  for (const notificacao of obterEstado().notificacoes) {
-    if (notificacao.destinatarioId === destinatarioId) notificacao.lida = true;
-  }
 }

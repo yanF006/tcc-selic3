@@ -128,11 +128,6 @@ describe("solicitação e liberação de estágio", () => {
     expect(estagio.situacao).toBe("em_andamento");
     expect(estagio.liberadoPorId).toBe("usr-ana");
     expect(documentos.every((doc) => doc.assinaturasConfirmadasPorId === "usr-ana")).toBe(true);
-    expect(
-      obterEstado().notificacoes.some(
-        (ntf) => ntf.destinatarioId === aluno.id && ntf.titulo === "Estágio liberado",
-      ),
-    ).toBe(true);
   });
 
   it("bloqueia edição enquanto aguarda e permite corrigir somente o indeferimento", async () => {
@@ -239,12 +234,6 @@ describe("solicitação e liberação de estágio", () => {
       (envio) => envio.documentoId === termo.id && envio.status === "falha",
     )!;
     expect(falha.erro).toMatch(/E-mail indisponível/);
-    expect(
-      obterEstado().notificacoes.some(
-        (ntf) =>
-          ntf.destinatarioId === aluno.id && ntf.titulo === "E-mail do assinante indisponível",
-      ),
-    ).toBe(true);
     supervisor.email = "supervisor@exemplo.com";
     await enviarParaAssinaturas(termo.id, aluno);
     expect(obterEstado().envios).toContain(falha);

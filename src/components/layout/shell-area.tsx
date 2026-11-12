@@ -9,7 +9,6 @@ import { gruposPara, ROTULOS_GRUPO } from "@/nav";
 import { AvisoCadastroPendente } from "@/features/cadastro/aviso-cadastro-pendente";
 import { contasDeDesenvolvimento } from "@/lib/services/sessao";
 import { documentosParaParecer } from "@/lib/services/documentos";
-import { obterEstado } from "@/lib/services/store";
 
 /**
  * Casca única das áreas autenticadas (D1): resolve a sessão, executa a guarda de
@@ -56,11 +55,6 @@ export async function ShellArea({
     ? 0
     : (await documentosParaParecer("coordenador_curso", usuario)).total +
       (await documentosParaParecer("comissao_estagio", usuario)).total;
-  const notificacoes = cadastroPendente
-    ? []
-    : obterEstado()
-        .notificacoes.filter((notificacao) => notificacao.destinatarioId === usuario.id)
-        .sort((a, b) => b.criadaEm.localeCompare(a.criadaEm));
 
   return (
     <div className="flex min-h-full flex-col">
@@ -68,7 +62,6 @@ export async function ShellArea({
         usuario={usuario}
         grupos={grupos}
         pendenciasParecer={pendenciasParecer}
-        notificacoes={notificacoes}
         seletorDePapel={
           mostrarSeletor ? (
             <SeletorPapel

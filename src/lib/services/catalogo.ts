@@ -14,7 +14,7 @@ import { periodosDoCurso } from "@/lib/domain/selecoes";
 import type { Prisma } from "@/generated/prisma/client";
 import { filtrarPorTexto, paginar, TAMANHO_PADRAO } from "./paginacao";
 import type { OpcoesPaginacao } from "./paginacao";
-import { agora, obterEstado, novoId } from "./store";
+import { obterEstado, novoId } from "./store";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
 import { listarOpcoesAcademicas } from "@/lib/db/repositorios/catalogo";
@@ -515,20 +515,4 @@ export async function renovarConvenio(
   convenio.renovacoes += 1;
 
   return convenio;
-}
-
-export async function registrarConvenio(convenioId: string, motivo: string): Promise<void> {
-  const convenio = await convenioPorId(convenioId);
-
-  if (!convenio) throw new Error("Convênio não encontrado.");
-
-  obterEstado().notificacoes.push({
-    id: novoId("ntf"),
-    destinatarioId: "usr-admin",
-    titulo: `Histórico do convênio ${convenio.nome}`,
-    mensagem: motivo,
-    tipo: "sistema",
-    lida: false,
-    criadaEm: agora(),
-  });
 }

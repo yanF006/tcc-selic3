@@ -5,7 +5,6 @@ import type {
   Estagio,
   LancamentoHoras,
   MatriculaImportada,
-  Notificacao,
   ObservacaoDocumento,
   EnvioExterno,
   Parecer,
@@ -41,7 +40,6 @@ export interface EstadoSimulado {
   pareceres: Parecer[];
   observacoes: ObservacaoDocumento[];
   envios: EnvioExterno[];
-  notificacoes: Notificacao[];
   solicitacoes: SolicitacaoAcesso[];
   exclusoes: SolicitacaoExclusaoEstagio[];
   matriculas: MatriculaImportada[];
@@ -62,7 +60,6 @@ function estadoLimpo(): EstadoSimulado {
     pareceres: fixtures.pareceres,
     observacoes: [],
     envios: [],
-    notificacoes: fixtures.notificacoes,
     solicitacoes: fixtures.solicitacoesAcesso,
     exclusoes: [],
     matriculas: fixtures.matriculasImportadas,

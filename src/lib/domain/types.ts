@@ -265,16 +265,6 @@ export interface Parecer {
   data: string;
 }
 
-export interface Notificacao {
-  id: string;
-  destinatarioId: string;
-  titulo: string;
-  mensagem: string;
-  tipo: "parecer" | "acesso" | "envio" | "sistema";
-  lida: boolean;
-  criadaEm: string;
-}
-
 export type StatusEnvioExterno = "enviado" | "falha";
 
 export interface EnvioExterno {
