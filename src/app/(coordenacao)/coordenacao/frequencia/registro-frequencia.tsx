@@ -103,7 +103,7 @@ export function RegistroFrequencia({
           <AlertDescription>
             A ficha deste estágio já foi registrada pela coordenação
             {fichaAtual.registradoEm
-              ? ` em ${new Date(fichaAtual.registradoEm).toLocaleString("pt-BR")}`
+              ? ` em ${new Date(fichaAtual.registradoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
               : ""}
             ; um novo registro substitui os valores lançados.
           </AlertDescription>
