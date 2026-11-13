@@ -11,10 +11,30 @@ import { expect, test } from "./suporte/cep";
 
 const SUFIXO = Date.now().toString(36);
 const SENHA = "selic123";
+// Matrícula livre: as das fixtures já têm conta e o cadastro recusa matrícula ocupada.
+const MATRICULA = `2027${Date.now().toString().slice(-7)}`;
+
+/** Registra a matrícula livre pela administração, como faria a coordenação. */
+async function registrarMatriculaLivre(page: import("@playwright/test").Page) {
+  await page.goto("/login");
+  await page.getByLabel("E-mail", { exact: true }).fill("felipe.andrade@ifrj.edu.br");
+  await page.getByLabel("Senha", { exact: true }).fill(SENHA);
+  await Promise.all([
+    page.waitForURL((url) => url.pathname !== "/login"),
+    page.getByRole("button", { name: "Entrar", exact: true }).click(),
+  ]);
+  await page.goto("/admin/matriculas");
+  await page.getByLabel("Matrícula", { exact: true }).fill(MATRICULA);
+  await page.getByLabel("Nome do aluno").fill("Aluno dos dados pessoais");
+  await page.getByLabel("Curso", { exact: true }).click();
+  await page.getByRole("option", { name: "Informática", exact: true }).click();
+  await page.getByRole("button", { name: "Registrar matrícula" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Matrícula registrada" })).toBeVisible();
+}
 
 async function irParaSegundaEtapa(page: import("@playwright/test").Page) {
   await page.goto("/cadastro");
-  await page.getByLabel("Matrícula", { exact: true }).fill("20241006904");
+  await page.getByLabel("Matrícula", { exact: true }).fill(MATRICULA);
   await page.getByLabel("E-mail", { exact: true }).fill(`dados.${SUFIXO}@aluno.ifrj.edu.br`);
   await page.getByLabel("Senha", { exact: true }).fill(SENHA);
   await page.getByLabel("Confirmar senha").fill(SENHA);
@@ -29,6 +49,12 @@ function mensagem(page: import("@playwright/test").Page, id: string) {
 }
 
 test.describe("máscaras e validação dos dados pessoais", () => {
+  test.beforeAll(async ({ browser }, info) => {
+    const contexto = await browser.newContext({ baseURL: info.project.use.baseURL });
+    await registrarMatriculaLivre(await contexto.newPage());
+    await contexto.close();
+  });
+
   test.beforeEach(async ({ page }) => {
     await irParaSegundaEtapa(page);
   });

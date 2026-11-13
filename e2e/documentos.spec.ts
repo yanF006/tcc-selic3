@@ -100,7 +100,11 @@ test.describe("download dos documentos fixos", () => {
       cartao(page, "Lei de Estágio").getByRole("link", { name: "Baixar documento" }).click(),
     ]);
 
-    expect(download.suggestedFilename()).toContain("Lei de Est");
+    // O Chromium headless não decodifica nomes com acento em `filename*` e sugere
+    // "download"; por isso o nome é conferido no cabeçalho enviado pelo servidor.
+    expect(new URL(download.url()).pathname).toBe("/documentos/tpl-lei-estagio/baixar");
+    const cabecalho = (await page.request.get(download.url())).headers()["content-disposition"];
+    expect(decodeURIComponent(cabecalho)).toContain("Lei de Estágio");
 
     // O catálogo não trocou a página por formulário nenhum.
     await expect(page.getByRole("heading", { name: "Documentos", level: 1 })).toBeVisible();

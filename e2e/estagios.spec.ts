@@ -112,9 +112,14 @@ test("estágio já liberado permite registrar e corrigir horas dentro dos limite
     await page.getByRole("button", { name: "Salvar seleção", exact: true }).click();
   }
   await expect(page.getByRole("link", { name: /Ficha de Acompanhamento/ })).toBeVisible();
+  // A prévia só reage depois da hidratação; antes disso o React zeraria a data.
+  await expect(async () => {
+    await page.getByLabel("Entrada", { exact: true }).fill("09:00");
+    await page.getByLabel("Saída", { exact: true }).fill("17:00");
+    await expect(page.getByTestId("previa-horas")).toBeVisible({ timeout: 1_000 });
+  }).toPass();
   await page.getByLabel("Data", { exact: true }).fill("2026-03-05");
-  await page.getByLabel("Entrada", { exact: true }).fill("09:00");
-  await page.getByLabel("Saída", { exact: true }).fill("17:00");
+  await expect(page.getByLabel("Data", { exact: true })).toHaveValue("2026-03-05");
   await page.getByLabel(/Desligar intervalo de almoço/).check();
   await page.getByRole("button", { name: "Lançar horas", exact: true }).click();
   await expect(page.getByText("Lançamento recusado", { exact: true })).toBeVisible();

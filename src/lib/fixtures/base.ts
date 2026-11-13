@@ -243,7 +243,7 @@ export const usuarios: Usuario[] = [
       email: "luiza.santos@aluno.ifrj.edu.br",
       endereco: { cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "" },
     },
-    criadoEm: "2026-03-01T10:00:00",
+    criadoEm: "2026-03-01T10:00:00-03:00",
   },
   {
     id: "usr-maria",
@@ -254,7 +254,7 @@ export const usuarios: Usuario[] = [
     campus: "Pinheiral",
     matricula: "20241006904",
     dadosPessoais: dadosPessoaisMaria,
-    criadoEm: "2026-02-10T14:00:00",
+    criadoEm: "2026-02-10T14:00:00-03:00",
   },
   {
     id: "usr-joao",
@@ -265,7 +265,7 @@ export const usuarios: Usuario[] = [
     campus: "Pinheiral",
     matricula: "20231000788",
     dadosPessoais: dadosPessoaisJoao,
-    criadoEm: "2026-02-11T09:30:00",
+    criadoEm: "2026-02-11T09:30:00-03:00",
   },
   {
     id: "usr-paula",
@@ -282,7 +282,7 @@ export const usuarios: Usuario[] = [
       cpf: "529.982.247-25",
     },
     membroComissaoEstagio: false,
-    criadoEm: "2026-09-05T11:00:00",
+    criadoEm: "2026-09-05T11:00:00-03:00",
   },
   {
     id: "usr-rafaela",
@@ -299,7 +299,7 @@ export const usuarios: Usuario[] = [
       cpf: "111.444.777-35",
     },
     membroComissaoEstagio: false,
-    criadoEm: "2026-09-02T15:00:00",
+    criadoEm: "2026-09-02T15:00:00-03:00",
   },
   {
     id: "usr-carla",
@@ -309,7 +309,7 @@ export const usuarios: Usuario[] = [
     situacao: "ativo",
     campus: "Pinheiral",
     cursoId: "curso-ads",
-    criadoEm: "2024-03-01T10:00:00",
+    criadoEm: "2024-03-01T10:00:00-03:00",
   },
   {
     id: "usr-bruno",
@@ -319,7 +319,7 @@ export const usuarios: Usuario[] = [
     situacao: "ativo",
     campus: "Pinheiral",
     cursoId: "curso-eletro",
-    criadoEm: "2024-03-01T10:05:00",
+    criadoEm: "2024-03-01T10:05:00-03:00",
   },
   {
     id: "usr-ana",
@@ -329,7 +329,7 @@ export const usuarios: Usuario[] = [
     situacao: "ativo",
     campus: "Pinheiral",
     membroComissaoEstagio: true,
-    criadoEm: "2023-02-01T08:00:00",
+    criadoEm: "2023-02-01T08:00:00-03:00",
   },
   {
     id: "usr-admin",
@@ -338,7 +338,7 @@ export const usuarios: Usuario[] = [
     papel: "administrador",
     situacao: "ativo",
     campus: "Pinheiral",
-    criadoEm: "2023-01-10T08:00:00",
+    criadoEm: "2023-01-10T08:00:00-03:00",
   },
   {
     id: "usr-carla-eletro",
@@ -348,7 +348,7 @@ export const usuarios: Usuario[] = [
     situacao: "inativo",
     campus: "Pinheiral",
     cursoId: "curso-informatica",
-    criadoEm: "2023-06-01T08:00:00",
+    criadoEm: "2023-06-01T08:00:00-03:00",
   },
 ];
 
@@ -365,7 +365,7 @@ export const estagios: Estagio[] = [
     dataFim: "2026-08-28",
     situacao: "em_andamento",
     documentosSelecionados: ["tpl-relatorio-semestral"],
-    criadoEm: "2026-03-01T10:00:00",
+    criadoEm: "2026-03-01T10:00:00-03:00",
   },
   {
     id: "est-maria-tecnoweb",
@@ -383,7 +383,7 @@ export const estagios: Estagio[] = [
       "tpl-ficha-acompanhamento",
       "tpl-relatorio-semestral",
     ],
-    criadoEm: "2026-03-01T12:00:00",
+    criadoEm: "2026-03-01T12:00:00-03:00",
   },
   {
     id: "est-maria-hospital",
@@ -404,7 +404,7 @@ export const estagios: Estagio[] = [
       "tpl-relatorio-semestral",
       "tpl-requerimento-aproveitamento",
     ],
-    criadoEm: "2025-07-20T12:00:00",
+    criadoEm: "2025-07-20T12:00:00-03:00",
   },
   {
     id: "est-joao-lab",
@@ -418,7 +418,7 @@ export const estagios: Estagio[] = [
     dataFim: "2024-07-31",
     situacao: "concluido",
     documentosSelecionados: ["tpl-formulario-liberacao", "tpl-termo-compromisso"],
-    criadoEm: "2024-02-15T12:00:00",
+    criadoEm: "2024-02-15T12:00:00-03:00",
   },
 ];
 
@@ -433,7 +433,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     almocoDesligado: true,
     horas: 7,
     tipo: "lancamento",
-    criadoEm: "2026-03-02T20:00:00",
+    criadoEm: "2026-03-02T20:00:00-03:00",
   },
   {
     id: "lan-2",
@@ -445,7 +445,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     almocoDesligado: true,
     horas: 7,
     tipo: "lancamento",
-    criadoEm: "2026-03-03T20:00:00",
+    criadoEm: "2026-03-03T20:00:00-03:00",
   },
   {
     id: "lan-3",
@@ -457,7 +457,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     almocoDesligado: true,
     horas: 6,
     tipo: "lancamento",
-    criadoEm: "2026-03-04T20:00:00",
+    criadoEm: "2026-03-04T20:00:00-03:00",
   },
   {
     id: "lan-4",
@@ -470,7 +470,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     horas: 5.5,
     tipo: "correcao",
     corrigeId: "lan-3",
-    criadoEm: "2026-03-05T09:00:00",
+    criadoEm: "2026-03-05T09:00:00-03:00",
   },
   {
     id: "lan-5",
@@ -482,7 +482,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     almocoDesligado: true,
     horas: 8,
     tipo: "lancamento",
-    criadoEm: "2025-08-04T20:00:00",
+    criadoEm: "2025-08-04T20:00:00-03:00",
   },
   {
     id: "lan-6",
@@ -494,7 +494,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     almocoDesligado: true,
     horas: 8,
     tipo: "lancamento",
-    criadoEm: "2025-08-05T20:00:00",
+    criadoEm: "2025-08-05T20:00:00-03:00",
   },
   {
     id: "lan-7",
@@ -506,7 +506,7 @@ export const lancamentosHoras: LancamentoHoras[] = [
     almocoDesligado: true,
     horas: 6,
     tipo: "lancamento",
-    criadoEm: "2024-03-04T20:00:00",
+    criadoEm: "2024-03-04T20:00:00-03:00",
   },
 ];
 
@@ -526,8 +526,8 @@ export const documentos: DocumentoPreenchido[] = [
         "Apoio ao desenvolvimento de sistemas web, manutenção de banco de dados e testes automatizados.",
     },
     situacao: "em_analise",
-    criadoEm: "2026-02-25T10:00:00",
-    atualizadoEm: "2026-02-28T09:00:00",
+    criadoEm: "2026-02-25T10:00:00-03:00",
+    atualizadoEm: "2026-02-28T09:00:00-03:00",
   },
   {
     id: "doc-termo-tecnoweb",
@@ -537,8 +537,8 @@ export const documentos: DocumentoPreenchido[] = [
     versaoTemplate: 2,
     valores: { cargaHorariaSemanal: 30, horario: "09:00 às 16:00" },
     situacao: "submetido",
-    criadoEm: "2026-02-26T10:00:00",
-    atualizadoEm: "2026-02-26T10:00:00",
+    criadoEm: "2026-02-26T10:00:00-03:00",
+    atualizadoEm: "2026-02-26T10:00:00-03:00",
   },
   {
     id: "doc-liberacao-tecnoweb",
@@ -548,8 +548,8 @@ export const documentos: DocumentoPreenchido[] = [
     versaoTemplate: 1,
     valores: { enderecoAluno: "Rua das Acácias, 215", cepAluno: "23940000" },
     situacao: "aprovado",
-    criadoEm: "2026-02-20T10:00:00",
-    atualizadoEm: "2026-02-24T15:00:00",
+    criadoEm: "2026-02-20T10:00:00-03:00",
+    atualizadoEm: "2026-02-24T15:00:00-03:00",
   },
   {
     id: "doc-relatorio-hospital",
@@ -567,8 +567,8 @@ export const documentos: DocumentoPreenchido[] = [
       autoavaliacao_6: "otimo",
     },
     situacao: "aprovado",
-    criadoEm: "2025-12-15T10:00:00",
-    atualizadoEm: "2025-12-22T16:00:00",
+    criadoEm: "2025-12-15T10:00:00-03:00",
+    atualizadoEm: "2025-12-22T16:00:00-03:00",
   },
   {
     id: "doc-frequencia-hospital",
@@ -592,10 +592,10 @@ export const documentos: DocumentoPreenchido[] = [
       criterio_2: 7.5,
     },
     situacao: "registrada",
-    criadoEm: "2025-12-19T10:00:00",
-    atualizadoEm: "2025-12-19T18:00:00",
+    criadoEm: "2025-12-19T10:00:00-03:00",
+    atualizadoEm: "2025-12-19T18:00:00-03:00",
     registradoPorId: "usr-ana",
-    registradoEm: "2025-12-19T18:00:00",
+    registradoEm: "2025-12-19T18:00:00-03:00",
   },
   {
     id: "doc-requerimento-maria",
@@ -611,8 +611,8 @@ export const documentos: DocumentoPreenchido[] = [
       comprovante_4: true,
     },
     situacao: "rascunho",
-    criadoEm: "2026-03-05T10:00:00",
-    atualizadoEm: "2026-03-06T10:00:00",
+    criadoEm: "2026-03-05T10:00:00-03:00",
+    atualizadoEm: "2026-03-06T10:00:00-03:00",
   },
   {
     id: "doc-proposta-joao",
@@ -622,9 +622,9 @@ export const documentos: DocumentoPreenchido[] = [
     versaoTemplate: 1,
     valores: { titulo: "Atividade prática com circuitos" },
     situacao: "inativo",
-    criadoEm: "2024-03-01T10:00:00",
-    atualizadoEm: "2024-04-01T10:00:00",
-    inativadoEm: "2024-04-01T10:00:00",
+    criadoEm: "2024-03-01T10:00:00-03:00",
+    atualizadoEm: "2024-04-01T10:00:00-03:00",
+    inativadoEm: "2024-04-01T10:00:00-03:00",
   },
   {
     id: "doc-liberacao-joao",
@@ -634,8 +634,8 @@ export const documentos: DocumentoPreenchido[] = [
     versaoTemplate: 1,
     valores: { enderecoAluno: "Avenida Brasil, 1500", cepAluno: "23935000" },
     situacao: "indeferido",
-    criadoEm: "2024-02-20T10:00:00",
-    atualizadoEm: "2024-02-28T16:00:00",
+    criadoEm: "2024-02-20T10:00:00-03:00",
+    atualizadoEm: "2024-02-28T16:00:00-03:00",
   },
 ];
 
@@ -647,7 +647,7 @@ export const pareceres: Parecer[] = [
     consideracoes: "Atividades compatíveis com o plano do curso.",
     autorId: "usr-carla",
     fila: "coordenador_curso",
-    data: "2026-02-24T15:00:00",
+    data: "2026-02-24T15:00:00-03:00",
   },
   {
     id: "par-2",
@@ -656,7 +656,7 @@ export const pareceres: Parecer[] = [
     consideracoes: "Relatório completo.",
     autorId: "usr-carla",
     fila: "coordenador_curso",
-    data: "2025-12-22T16:00:00",
+    data: "2025-12-22T16:00:00-03:00",
   },
   {
     id: "par-3",
@@ -665,7 +665,7 @@ export const pareceres: Parecer[] = [
     consideracoes: "Ausência do comprovante de residência atualizado.",
     autorId: "usr-bruno",
     fila: "coordenador_curso",
-    data: "2024-02-28T16:00:00",
+    data: "2024-02-28T16:00:00-03:00",
   },
 ];
 
@@ -800,7 +800,7 @@ export const solicitacoesAcesso: SolicitacaoAcesso[] = [
       turmaId: "turma-ads-2026-1a",
     },
     situacao: "pendente",
-    criadoEm: "2026-09-02T15:00:00",
+    criadoEm: "2026-09-02T15:00:00-03:00",
   },
   {
     id: "sol-recusada-1",
@@ -816,8 +816,8 @@ export const solicitacoesAcesso: SolicitacaoAcesso[] = [
     situacao: "recusado",
     motivo: "Matrícula não localizada nos registros importados do SIGAA.",
     decididoPorId: "usr-ana",
-    criadoEm: "2026-08-20T11:00:00",
-    decididoEm: "2026-08-21T09:00:00",
+    criadoEm: "2026-08-20T11:00:00-03:00",
+    decididoEm: "2026-08-21T09:00:00-03:00",
   },
 ];
 
@@ -828,7 +828,7 @@ export const matriculasImportadas: MatriculaImportada[] = [
     nome: "Maria de Souza Oliveira",
     curso: "Análise e Desenvolvimento de Sistemas",
     origem: "importacao",
-    importadaEm: "2026-02-01T10:00:00",
+    importadaEm: "2026-02-01T10:00:00-03:00",
   },
   {
     id: "mat-2",
@@ -836,7 +836,7 @@ export const matriculasImportadas: MatriculaImportada[] = [
     nome: "João Pedro Lima",
     curso: "Eletricidade",
     origem: "importacao",
-    importadaEm: "2026-02-01T10:00:00",
+    importadaEm: "2026-02-01T10:00:00-03:00",
   },
   {
     id: "mat-3",
@@ -844,7 +844,7 @@ export const matriculasImportadas: MatriculaImportada[] = [
     nome: "Paula Batista",
     curso: "Informática",
     origem: "cadastro_administrador",
-    importadaEm: "2026-03-05T16:00:00",
+    importadaEm: "2026-03-05T16:00:00-03:00",
   },
   {
     id: "mat-4",
@@ -852,7 +852,7 @@ export const matriculasImportadas: MatriculaImportada[] = [
     nome: "Aluno Sem Conta",
     curso: "Eletricidade",
     origem: "importacao",
-    importadaEm: "2026-02-01T10:00:00",
+    importadaEm: "2026-02-01T10:00:00-03:00",
   },
 ];
 
