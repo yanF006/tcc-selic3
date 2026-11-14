@@ -67,6 +67,48 @@ pessoais: ficam fora do Git (`backups/` já está no `.gitignore`).
   de testes. Nenhuma ação foi feita em Aiven ou Vercel: esses passos cabem a quem
   opera a produção.
 
+## Corte em produção (14.5)
+
+Executado pelo responsável pelo Aiven e pela Vercel, em janela anunciada. Os
+comandos locais usam `DATABASE_URL` no ambiente (nunca na linha de comando).
+Production publica a partir de `master`; o código novo só entra no passo 8.
+
+1. **Suspender escritas antigas.** No Aiven, troque a senha do usuário do banco
+   `selic`. Todo deployment antigo (inclusive aliases e Previews antigos que
+   apontem para `selic`) perde o acesso e não grava mais nada.
+2. **Backup final** com a senha nova: `node scripts/backup-banco.mjs`. Guarde o
+   `.sql` e o `.meta.json` fora do repositório e anote as contagens.
+3. **Ensaio na cópia.** Crie `selic_ensaio` no mesmo serviço, restaure o backup
+   (`restaurar-backup.mjs --limpar`) e, com `DATABASE_URL` apontando para ele, rode
+   os passos 4 a 6. Qualquer falha aqui não afeta produção: corrija antes de seguir.
+4. **Migrações em `selic`:** `npx prisma migrate status`, `npm run db:deploy` e de
+   novo `npx prisma migrate status` (nenhuma pendente). A migração de cargo falha se
+   houver conta com zero ou vários cargos; isso exige decisão, não exclusão.
+5. **Inspeção:** `node scripts/inspecionar-destino.mjs`. Saída `2` = parar e decidir.
+6. **Transformação:** `node scripts/transformar-dados-pessoais.mjs`, conferir o
+   relatório e então `--aplicar`. Se ainda não houver administrador,
+   `npm run db:carga-inicial`.
+7. **Variáveis de Production na Vercel:** `DATABASE_URL` (senha nova),
+   `SELIC_PERSISTENCIA=persistente`, `BETTER_AUTH_URL=https://tcc-selic3.vercel.app`,
+   `BETTER_AUTH_SECRET` novo e diferente do Preview (`openssl rand -base64 32`),
+   `SMTP_*` e `SELIC_DB_CA_CERT` quando necessário.
+8. **Publicar:** fazer o merge do branch da integração em `master` e aguardar o
+   deployment de Production.
+9. **Conferir antes de reabrir:** `migrate status` sem pendências; contagens de
+   usuários, estágios, documentos e arquivos iguais às do backup (só
+   `dados_pessoais_aluno` cresce, pela transformação); smoke tests de login do
+   administrador pela recuperação de senha (link abrindo em `tcc-selic3.vercel.app`),
+   lista de usuários, fila de cadastros pendentes, estágio de um aluno existente,
+   abertura e impressão de documento, download do Kit e de um arquivo enviado.
+10. **Reabrir** e avisar os usuários: as senhas antigas não existem; cada pessoa
+    entra pelo "Esqueci minha senha".
+
+**Reversão.** Até o passo 3, basta devolver a senha nova à `DATABASE_URL` do
+deployment antigo e reabrir. Depois do passo 4, o código antigo não serve o
+esquema novo: reverter exige restaurar o backup em `selic` manualmente com o
+cliente `mysql` (o script recusa o nome `selic` de propósito), descartando as
+escritas posteriores, e promover o deployment antigo pela Vercel.
+
 ## Ações que dependem do responsável pelo ambiente
 
 - Gerar o backup final do banco de produção e guardá-lo fora do repositório.
