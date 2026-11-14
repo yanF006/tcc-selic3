@@ -5,6 +5,7 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FormularioLogin } from "@/app/(publico)/login/formulario-login";
 import { usuarioDaRequisicao, rotaInicial } from "@/lib/auth/sessao-servidor";
+import { bancoConfigurado } from "@/lib/db/prisma";
 import { contasDeDesenvolvimento } from "@/lib/services/sessao";
 
 export const metadata: Metadata = {
@@ -12,7 +13,10 @@ export const metadata: Metadata = {
   description: "Acesso ao SELic — Sistema de Estágios das Licenciaturas do IFRJ Campus Pinheiral.",
 };
 
-/** Formulário de acesso com as quatro contas de desenvolvimento (D3). */
+/**
+ * Formulário de acesso. As contas de desenvolvimento só existem no modo
+ * simulado; com banco configurado, nenhuma conta de demonstração é listada.
+ */
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const parametros = await searchParams;
   const destino = typeof parametros.redirect === "string" ? parametros.redirect : undefined;
@@ -20,7 +24,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   if (usuario) redirect(destino ?? rotaInicial(usuario));
 
-  const contas = contasDeDesenvolvimento();
+  const contas = bancoConfigurado() ? [] : contasDeDesenvolvimento();
 
   return (
     <main className="flex min-h-full flex-col items-center justify-center gap-6 px-4 py-10">
@@ -37,21 +41,23 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
       <FormularioLogin destino={destino} />
 
-      <section className="border-border bg-card w-full max-w-sm rounded-lg border p-4">
-        <h2 className="text-sm font-semibold">Contas de desenvolvimento</h2>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Senha <code className="bg-muted rounded px-1">selic123</code> para todas. Autenticação
-          real (Better Auth) fica para a etapa do backend.
-        </p>
-        <ul className="mt-3 flex flex-col gap-2 text-xs">
-          {contas.map((conta) => (
-            <li key={conta.id} className="flex flex-col">
-              <span className="font-medium">{conta.rotulo}</span>
-              <span className="text-muted-foreground">{conta.email}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {contas.length > 0 ? (
+        <section className="border-border bg-card w-full max-w-sm rounded-lg border p-4">
+          <h2 className="text-sm font-semibold">Contas de desenvolvimento</h2>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Modo simulado, sem banco de dados. Senha{" "}
+            <code className="bg-muted rounded px-1">selic123</code> para todas.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2 text-xs">
+            {contas.map((conta) => (
+              <li key={conta.id} className="flex flex-col">
+                <span className="font-medium">{conta.rotulo}</span>
+                <span className="text-muted-foreground">{conta.email}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
 }
