@@ -35,7 +35,7 @@ export function AvisoCadastroPendente({ nome }: { nome: string }) {
             <AlertTitle>Por que o acesso está bloqueado?</AlertTitle>
             <AlertDescription>
               Sua matrícula não consta nos registros importados do SIGAA. Depois da decisão da
-              coordenação, o acesso é liberado automaticamente e você recebe um aviso.
+              coordenação, o acesso é liberado automaticamente; basta entrar de novo.
             </AlertDescription>
           </Alert>
 

@@ -22,10 +22,7 @@ import {
 } from "@/components/ui/select";
 import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
 
-import {
-  concluirCadastroAction,
-  validarEtapaUmAction,
-} from "@/app/(publico)/cadastro/acoes";
+import { concluirCadastroAction, validarEtapaUmAction } from "@/app/(publico)/cadastro/acoes";
 
 import {
   esquemaCep,
@@ -228,7 +225,7 @@ export function FormularioCadastro({
             </AlertTitle>
             <AlertDescription>
               {concluido.situacao === "pendente"
-                ? "Você recebe um aviso assim que a coordenação decidir. Enquanto isso, as áreas autenticadas seguem bloqueadas."
+                ? "Tente entrar depois que a coordenação conferir o cadastro. Até lá, as áreas autenticadas seguem bloqueadas."
                 : "Entre com o e-mail e a senha cadastrados para acessar os documentos."}
             </AlertDescription>
           </Alert>
