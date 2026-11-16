@@ -1,0 +1,804 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="4037" height="3319" viewBox="0 0 4037 3319" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace" font-size="13">
+<rect width="4037" height="3319" fill="#ffffff"/>
+<text x="20" y="34" font-size="24" font-weight="bold" fill="#0f172a">SELIC — Diagrama de Entidades e Relacionamentos (notação UML)</text>
+<text x="20" y="56" font-size="13" fill="#475569">Fonte: Contexto/criar-banco-selic.sql — banco MySQL "selic": 30 tabelas, 50 chaves estrangeiras</text>
+<g transform="translate(0,70)">
+<g id="associacoes" fill="none" stroke-width="1.5">
+<polyline points="3372.1240000000003,1659 3656.1659999999997,1659 3656.1659999999997,2490 3776.47,2490" stroke="#b45309"/>
+<polyline points="2520.3,2851 2955.82,2851 2955.82,1902 3054.1240000000003,1902" stroke="#1d4ed8"/>
+<polyline points="2520.3,3022 3672.1659999999997,3022 3672.1659999999997,2566 3776.47,2566" stroke="#b45309"/>
+<polyline points="2520.3,2908 2971.82,2908 2971.82,2683 3088.1240000000003,2683" stroke="#a16207"/>
+<polyline points="2520.3,2965 2987.82,2965 2987.82,2911 3054.1240000000003,2911" stroke="#a16207"/>
+<polyline points="3304.1240000000003,2658 3656.1659999999997,2658 3656.1659999999997,2540 3776.47,2540" stroke="#b45309"/>
+<polyline points="2520.3,2686 2586.6040000000003,2686 2586.6040000000003,2654 2971.82,2654 2971.82,2633 3072.1240000000003,2633" stroke="#a16207"/>
+<polygon points="3088.1240000000003,2633 3080.1240000000003,2628 3072.1240000000003,2633 3080.1240000000003,2638" fill="#a16207" stroke="#a16207"/>
+<polyline points="2520.3,2717 2987.82,2717 2987.82,2845 3038.1240000000003,2845" stroke="#a16207"/>
+<polygon points="3054.1240000000003,2845 3046.1240000000003,2840 3038.1240000000003,2845 3046.1240000000003,2850" fill="#a16207" stroke="#a16207"/>
+<polyline points="2520.3,2187 2586.6040000000003,2187 2586.6040000000003,2031 2891.82,2031 2891.82,1805 3038.1240000000003,1805" stroke="#1d4ed8"/>
+<polygon points="3054.1240000000003,1805 3046.1240000000003,1800 3038.1240000000003,1805 3046.1240000000003,1810" fill="#1d4ed8" stroke="#1d4ed8"/>
+<polyline points="2520.3,1845 2827.82,1845 2827.82,1708 3038.1240000000003,1708" stroke="#1d4ed8"/>
+<polygon points="3054.1240000000003,1708 3046.1240000000003,1703 3038.1240000000003,1708 3046.1240000000003,1713" fill="#1d4ed8" stroke="#1d4ed8"/>
+<polyline points="3372.1240000000003,914 3672.1659999999997,914 3672.1659999999997,2464 3776.47,2464" stroke="#b45309"/>
+<polyline points="2520.3,2440 2602.6040000000003,2440 2602.6040000000003,2090 2907.82,2090 2907.82,1829 3054.1240000000003,1829" stroke="#1d4ed8"/>
+<polyline points="2520.3,2545 2586.6040000000003,2545 2586.6040000000003,2515 3776.47,2515" stroke="#b45309"/>
+<polyline points="2520.3,2493 2618.6040000000003,2493 2618.6040000000003,2107 2923.82,2107 2923.82,1853 3054.1240000000003,1853" stroke="#1d4ed8"/>
+<polyline points="806,115 1163.042,115" stroke="#334155"/>
+<polygon points="1179.042,115 1171.042,110 1163.042,115 1171.042,120" fill="#334155" stroke="#334155"/>
+<polyline points="3372.1240000000003,665 3776.47,665" stroke="#0f766e"/>
+<polyline points="3335.4573333333333,388 3656.1659999999997,388 3656.1659999999997,608 3776.47,608" stroke="#0f766e"/>
+<polyline points="2520.3,350 3072.4573333333333,350" stroke="#0f766e"/>
+<polyline points="2520.3,1236 2939.82,1236 2939.82,1465 3054.1240000000003,1465" stroke="#1d4ed8"/>
+<polyline points="2520.3,1072 2586.6040000000003,1072 2586.6040000000003,1067 2971.82,1067 2971.82,426 3072.4573333333333,426" stroke="#0f766e"/>
+<polyline points="2520.3,1181 2971.82,1181 2971.82,1209 3054.1240000000003,1209" stroke="#be123c"/>
+<polyline points="2520.3,1126 3054.1240000000003,1126" stroke="#be123c"/>
+<polyline points="2520.3,1290 2923.82,1290 2923.82,1489 3054.1240000000003,1489" stroke="#1d4ed8"/>
+<polyline points="2520.3,1345 2907.82,1345 2907.82,1513 3054.1240000000003,1513" stroke="#1d4ed8"/>
+<polyline points="2520.3,1399 2891.82,1399 2891.82,1538 3054.1240000000003,1538" stroke="#1d4ed8"/>
+<polyline points="1774.6059999999998,1163 2147.3,1163" stroke="#15803d"/>
+<polygon points="2163.3,1163 2155.3,1158 2147.3,1163 2155.3,1168" fill="#15803d" stroke="#15803d"/>
+<polyline points="1774.6059999999998,1713 1856.9099999999999,1713 1856.9099999999999,1628 2042.9959999999999,1628 2042.9959999999999,1607 2827.82,1607 2827.82,1635 3054.1240000000003,1635" stroke="#1d4ed8"/>
+<polyline points="1774.6059999999998,1641 1840.9099999999999,1641 1840.9099999999999,1578 2074.996,1578 2074.996,1381 2163.3,1381" stroke="#15803d"/>
+<polyline points="1774.6059999999998,1786 1872.9099999999999,1786 1872.9099999999999,1645 2827.82,1645 2827.82,1659 3054.1240000000003,1659" stroke="#1d4ed8"/>
+<polyline points="1774.6059999999998,1858 1888.9099999999999,1858 1888.9099999999999,1683 3054.1240000000003,1683" stroke="#1d4ed8"/>
+<polyline points="958.912,1105 1275.302,1105 1275.302,1621 1347.6059999999998,1621" stroke="#7e22ce"/>
+<polyline points="958.912,1029 1025.216,1029 1025.216,678 2987.82,678 2987.82,1416 3054.1240000000003,1416" stroke="#1d4ed8"/>
+<polyline points="1774.6059999999998,972 1840.9099999999999,972 1840.9099999999999,1090 2163.3,1090" stroke="#15803d"/>
+<polyline points="1774.6059999999998,875 1840.9099999999999,875 1840.9099999999999,950 2955.82,950 2955.82,1441 3054.1240000000003,1441" stroke="#1d4ed8"/>
+<polyline points="1562.6059999999998,777 1562.6059999999998,767 1668.6059999999998,767 1668.6059999999998,777" stroke="#334155"/>
+<polyline points="958.912,1375 1259.302,1375 1259.302,1672 1347.6059999999998,1672" stroke="#7e22ce"/>
+<polyline points="958.912,1325 1025.216,1325 1025.216,1305 2042.9959999999999,1305 2042.9959999999999,1482 2875.82,1482 2875.82,1562 3054.1240000000003,1562" stroke="#1d4ed8"/>
+<polyline points="958.912,1276 2042.9959999999999,1276 2042.9959999999999,1236 2163.3,1236" stroke="#15803d"/>
+<polyline points="958.912,1946 1025.216,1946 1025.216,1827 1347.6059999999998,1827" stroke="#7e22ce"/>
+<polyline points="958.912,2003 1025.216,2003 1025.216,1996 2042.9959999999999,1996 2042.9959999999999,1985 2859.82,1985 2859.82,1756 3054.1240000000003,1756" stroke="#1d4ed8"/>
+<polyline points="958.912,2149 1025.216,2149 1025.216,2025 1227.302,2025 1227.302,1878 1347.6059999999998,1878" stroke="#7e22ce"/>
+<polyline points="958.912,2194 1041.216,2194 1041.216,2075 1227.302,2075 1227.302,2034 2058.996,2034 2058.996,2002 2875.82,2002 2875.82,1780 3054.1240000000003,1780" stroke="#1d4ed8"/>
+<polyline points="1774.6059999999998,1382 2058.996,1382 2058.996,1308 2163.3,1308" stroke="#15803d"/>
+<polyline points="1774.6059999999998,1429 1856.9099999999999,1429 1856.9099999999999,1532 2859.82,1532 2859.82,1586 3054.1240000000003,1586" stroke="#1d4ed8"/>
+<polyline points="1774.6059999999998,1477 1840.9099999999999,1477 1840.9099999999999,1549 2843.82,1549 2843.82,1610 3054.1240000000003,1610" stroke="#1d4ed8"/>
+<polyline points="953.3466666666667,1730 1227.302,1730 1227.302,1775 1347.6059999999998,1775" stroke="#7e22ce"/>
+<polyline points="953.3466666666667,1787 1243.302,1787 1243.302,1958 2042.9959999999999,1958 2042.9959999999999,1968 2843.82,1968 2843.82,1732 3054.1240000000003,1732" stroke="#1d4ed8"/>
+<polyline points="330,1685 396.304,1685 396.304,1606 1243.302,1606 1243.302,1724 1347.6059999999998,1724" stroke="#7e22ce"/>
+<polyline points="330,1759 706.3466666666667,1759" stroke="#334155"/>
+<polyline points="330,1832 396.304,1832 396.304,2625 2939.82,2625 2939.82,1877 3054.1240000000003,1877" stroke="#1d4ed8"/>
+</g>
+<g id="classes">
+<g transform="translate(3054.1240000000003,1392)">
+<rect width="318" height="534" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="318" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="159" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">usuarios</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="86" fill="#0f172a">email: VARCHAR(191) {unique}</text>
+<text x="10" y="105" fill="#0f172a">emailVerificado: BOOLEAN</text>
+<text x="10" y="124" fill="#0f172a">imagem: TEXT [0..1]</text>
+<text x="10" y="143" fill="#0f172a">papel: VARCHAR(30)</text>
+<text x="10" y="162" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="181" fill="#0f172a">campus: VARCHAR(50)</text>
+<text x="10" y="200" fill="#0f172a">matricula: VARCHAR(20) [0..1] {unique}</text>
+<text x="10" y="219" fill="#0f172a">cursoId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="238" fill="#0f172a">membroComissaoEstagio: BOOLEAN</text>
+<text x="10" y="257" fill="#0f172a">dadosPessoais: JSON [0..1]</text>
+<text x="10" y="276" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="295" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(2226.3,2794)">
+<rect width="294" height="285" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="294" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="147" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">dados_pessoais_alunos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">usuarioId: VARCHAR(64) {FK, unique}</text>
+<text x="10" y="86" fill="#0f172a">cpf: VARCHAR(14)</text>
+<text x="10" y="105" fill="#0f172a">rg: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">dataNascimento: DATE</text>
+<text x="10" y="143" fill="#0f172a">telefone: VARCHAR(20)</text>
+<text x="10" y="162" fill="#0f172a">celular: VARCHAR(20)</text>
+<text x="10" y="181" fill="#0f172a">endereco: JSON</text>
+<text x="10" y="200" fill="#0f172a">cursoId: VARCHAR(64) {FK}</text>
+<text x="10" y="219" fill="#0f172a">turmaId: VARCHAR(64) {FK}</text>
+<text x="10" y="238" fill="#0f172a">periodoId: VARCHAR(64) {FK}</text>
+<text x="10" y="257" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="276" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(3776.47,2439)">
+<rect width="240" height="152" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="240" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="120" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">cursos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="86" fill="#0f172a">codigo: VARCHAR(50) {unique}</text>
+<text x="10" y="105" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="143" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(3088.1240000000003,2582)">
+<rect width="216" height="152" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="216" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="108" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">turmas</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="86" fill="#0f172a">cursoId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="143" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(3054.1240000000003,2779)">
+<rect width="216" height="198" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="216" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="108" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">periodos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">rotulo: VARCHAR(50)</text>
+<text x="10" y="86" fill="#0f172a">ano: INTEGER</text>
+<text x="10" y="105" fill="#0f172a">semestre: INTEGER</text>
+<text x="10" y="124" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="143" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="162" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+<line x1="0" y1="171" x2="216" y2="171" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="189" fill="#334155" font-style="italic">{unique: ano, semestre}</text>
+</g>
+<g transform="translate(2257.3,2654)">
+<rect width="263" height="95" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="263" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="131.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">turmas_periodos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">turmaId: VARCHAR(64) {PK, FK}</text>
+<text x="10" y="67" fill="#0f172a" font-weight="bold">periodoId: VARCHAR(64) {PK, FK}</text>
+<text x="10" y="86" fill="#0f172a">criadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(2179.3,2031)">
+<rect width="341" height="312" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="341" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="170.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">auth_accounts</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(191) {PK}</text>
+<text x="10" y="67" fill="#0f172a">accountId: VARCHAR(191)</text>
+<text x="10" y="86" fill="#0f172a">providerId: VARCHAR(191)</text>
+<text x="10" y="105" fill="#0f172a">userId: VARCHAR(64) {FK}</text>
+<text x="10" y="124" fill="#0f172a">accessToken: TEXT [0..1]</text>
+<text x="10" y="143" fill="#0f172a">refreshToken: TEXT [0..1]</text>
+<text x="10" y="162" fill="#0f172a">idToken: TEXT [0..1]</text>
+<text x="10" y="181" fill="#0f172a">accessTokenExpiresAt: DATETIME(3) [0..1]</text>
+<text x="10" y="200" fill="#0f172a">refreshTokenExpiresAt: DATETIME(3) [0..1]</text>
+<text x="10" y="219" fill="#0f172a">scope: TEXT [0..1]</text>
+<text x="10" y="238" fill="#0f172a">password: TEXT [0..1]</text>
+<text x="10" y="257" fill="#0f172a">createdAt: DATETIME(3)</text>
+<text x="10" y="276" fill="#0f172a">updatedAt: DATETIME(3)</text>
+<line x1="0" y1="285" x2="341" y2="285" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="303" fill="#334155" font-style="italic">{unique: providerId, accountId}</text>
+</g>
+<g transform="translate(2280.3,1750)">
+<rect width="240" height="190" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="240" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="120" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">auth_sessions</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(191) {PK}</text>
+<text x="10" y="67" fill="#0f172a">expiresAt: DATETIME(3)</text>
+<text x="10" y="86" fill="#0f172a">token: VARCHAR(191) {unique}</text>
+<text x="10" y="105" fill="#0f172a">createdAt: DATETIME(3)</text>
+<text x="10" y="124" fill="#0f172a">updatedAt: DATETIME(3)</text>
+<text x="10" y="143" fill="#0f172a">ipAddress: TEXT [0..1]</text>
+<text x="10" y="162" fill="#0f172a">userAgent: TEXT [0..1]</text>
+<text x="10" y="181" fill="#0f172a">userId: VARCHAR(64) {FK}</text>
+</g>
+<g transform="translate(298,20)">
+<rect width="193" height="152" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="193" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="96.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">auth_verifications</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(191) {PK}</text>
+<text x="10" y="67" fill="#0f172a">identifier: TEXT</text>
+<text x="10" y="86" fill="#0f172a">value: TEXT</text>
+<text x="10" y="105" fill="#0f172a">expiresAt: DATETIME(3)</text>
+<text x="10" y="124" fill="#0f172a">createdAt: DATETIME(3)</text>
+<text x="10" y="143" fill="#0f172a">updatedAt: DATETIME(3)</text>
+</g>
+<g transform="translate(3101.1240000000003,828)">
+<rect width="271" height="171" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="271" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="135.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">matriculas</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">matricula: VARCHAR(20) {unique}</text>
+<text x="10" y="86" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="105" fill="#0f172a">curso: VARCHAR(191)</text>
+<text x="10" y="124" fill="#0f172a">cursoId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="143" fill="#0f172a">origem: VARCHAR(30)</text>
+<text x="10" y="162" fill="#0f172a">importadaEm: DATETIME(3)</text>
+</g>
+<g transform="translate(2202.3,2388)">
+<rect width="318" height="209" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="318" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="159" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">solicitacoes_acesso</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">usuarioId: VARCHAR(64) {FK, unique}</text>
+<text x="10" y="86" fill="#0f172a">cursoId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">motivo: TEXT [0..1]</text>
+<text x="10" y="143" fill="#0f172a">decididoPorId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="162" fill="#0f172a">decididoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="181" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="200" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(1179.042,39)">
+<rect width="210" height="152" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="210" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="105" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">importacoes_matriculas</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">arquivo: VARCHAR(255)</text>
+<text x="10" y="86" fill="#0f172a">importadoEm: DATETIME(3)</text>
+<text x="10" y="105" fill="#0f172a">validas: INTEGER</text>
+<text x="10" y="124" fill="#0f172a">rejeitadas: INTEGER</text>
+<text x="10" y="143" fill="#0f172a">ignoradas: INTEGER</text>
+</g>
+<g transform="translate(551,20)">
+<rect width="255" height="190" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="255" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="127.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">itens_importacao_matricula</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">importacaoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">matricula: VARCHAR(20)</text>
+<text x="10" y="105" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="124" fill="#0f172a">curso: VARCHAR(191)</text>
+<text x="10" y="143" fill="#0f172a">resultado: VARCHAR(20)</text>
+<text x="10" y="162" fill="#0f172a">motivo: TEXT [0..1]</text>
+<text x="10" y="181" fill="#0f172a">criadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(3776.47,551)">
+<rect width="227" height="171" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="227" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="113.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">instituicoes_concedentes</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="86" fill="#0f172a">cnpj: VARCHAR(18) {unique}</text>
+<text x="10" y="105" fill="#0f172a">campus: VARCHAR(50)</text>
+<text x="10" y="124" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="143" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="162" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(3109.1240000000003,547)">
+<rect width="263" height="236" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="263" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="131.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">responsaveis_instituicao</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">instituicaoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="105" fill="#0f172a">email: VARCHAR(191)</text>
+<text x="10" y="124" fill="#0f172a">telefone: VARCHAR(20)</text>
+<text x="10" y="143" fill="#0f172a">cargo: VARCHAR(80) [0..1]</text>
+<text x="10" y="162" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="181" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="200" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+<line x1="0" y1="209" x2="263" y2="209" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="227" fill="#334155" font-style="italic">{unique: instituicaoId, email}</text>
+</g>
+<g transform="translate(3072.4573333333333,274)">
+<rect width="263" height="228" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="263" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="131.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">convenios</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">instituicaoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="105" fill="#0f172a">inicioVigencia: DATE</text>
+<text x="10" y="124" fill="#0f172a">fimVigencia: DATE</text>
+<text x="10" y="143" fill="#0f172a">campus: VARCHAR(50)</text>
+<text x="10" y="162" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="181" fill="#0f172a">renovacoes: INTEGER</text>
+<text x="10" y="200" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="219" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(2218.3,270)">
+<rect width="302" height="160" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="302" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="151" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">renovacoes_convenio</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">convenioId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">inicioVigencia: DATE</text>
+<text x="10" y="105" fill="#0f172a">fimVigencia: DATE</text>
+<text x="10" y="124" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<line x1="0" y1="133" x2="302" y2="133" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="151" fill="#334155" font-style="italic">{unique: convenioId, inicioVigencia}</text>
+</g>
+<g transform="translate(3054.1240000000003,1044)">
+<rect width="216" height="247" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="216" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="108" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">pessoas</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">nome: VARCHAR(191)</text>
+<text x="10" y="86" fill="#0f172a">email: VARCHAR(191)</text>
+<text x="10" y="105" fill="#0f172a">telefone: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">papel: VARCHAR(20)</text>
+<text x="10" y="143" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="162" fill="#0f172a">cpf: VARCHAR(14) [0..1]</text>
+<text x="10" y="181" fill="#0f172a">rg: VARCHAR(20) [0..1]</text>
+<text x="10" y="200" fill="#0f172a">endereco: JSON [0..1]</text>
+<text x="10" y="219" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="238" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(2163.3,1017)">
+<rect width="357" height="437" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="357" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="178.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">estagios</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">alunoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">convenioId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">supervisorId: VARCHAR(64) {FK}</text>
+<text x="10" y="124" fill="#0f172a">orientadorId: VARCHAR(64) {FK}</text>
+<text x="10" y="143" fill="#0f172a">dataInicio: DATE</text>
+<text x="10" y="162" fill="#0f172a">dataFim: DATE</text>
+<text x="10" y="181" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="200" fill="#0f172a">cargaHorariaPrevistaMinutos: INTEGER [0..1]</text>
+<text x="10" y="219" fill="#0f172a">encaminhadoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="238" fill="#0f172a">encaminhadoPorId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="257" fill="#0f172a">liberadoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="276" fill="#0f172a">liberadoPorId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="295" fill="#0f172a">canceladoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="314" fill="#0f172a">excluidoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="333" fill="#0f172a">nomeAlunoHistorico: VARCHAR(191) [0..1]</text>
+<text x="10" y="352" fill="#0f172a">cursoIdHistorico: VARCHAR(64) [0..1]</text>
+<text x="10" y="371" fill="#0f172a">editadoPorId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="390" fill="#0f172a">editadoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="409" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="428" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(1511.6059999999998,1115)">
+<rect width="263" height="95" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="263" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="131.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">estagios_templates</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">estagioId: VARCHAR(64) {PK, FK}</text>
+<text x="10" y="67" fill="#0f172a" font-weight="bold">templateId: VARCHAR(100) {PK}</text>
+<text x="10" y="86" fill="#0f172a">criadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(1347.6059999999998,1569)">
+<rect width="427" height="361" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="427" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="213.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">documentos_preenchidos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">templateId: VARCHAR(100)</text>
+<text x="10" y="86" fill="#0f172a">alunoId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">estagioId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="124" fill="#0f172a">versaoTemplate: INTEGER</text>
+<text x="10" y="143" fill="#0f172a">definicaoChecksum: VARCHAR(64)</text>
+<text x="10" y="162" fill="#0f172a">definicaoSnapshot: JSON</text>
+<text x="10" y="181" fill="#0f172a">valores: JSON</text>
+<text x="10" y="200" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="219" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="238" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+<text x="10" y="257" fill="#0f172a">inativadoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="276" fill="#0f172a">registradoPorId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="295" fill="#0f172a">registradoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="314" fill="#0f172a">assinaturasConfirmadasPorId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="333" fill="#0f172a">assinaturasConfirmadasEm: DATETIME(3) [0..1]</text>
+<text x="10" y="352" fill="#0f172a">correcaoAberta: BOOLEAN</text>
+</g>
+<g transform="translate(20,20)">
+<rect width="218" height="114" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="218" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="109" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">remocoes_dados_pessoais</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">alvoTipo: VARCHAR(20)</text>
+<text x="10" y="86" fill="#0f172a">alvoId: VARCHAR(64)</text>
+<text x="10" y="105" fill="#0f172a">registradoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(656.912,953)">
+<rect width="302" height="228" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="302" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="151" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">arquivos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">documentoId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="86" fill="#0f172a">nome: VARCHAR(255)</text>
+<text x="10" y="105" fill="#0f172a">mimeType: VARCHAR(100)</text>
+<text x="10" y="124" fill="#0f172a">finalidade: VARCHAR(20)</text>
+<text x="10" y="143" fill="#0f172a">tamanhoBytes: INTEGER</text>
+<text x="10" y="162" fill="#0f172a">checksum: VARCHAR(64)</text>
+<text x="10" y="181" fill="#0f172a">conteudo: LONGBLOB</text>
+<text x="10" y="200" fill="#0f172a">autorId: VARCHAR(64) {FK}</text>
+<text x="10" y="219" fill="#0f172a">criadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(1456.6059999999998,777)">
+<rect width="318" height="293" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="318" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="159" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">lancamentos_horas</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">estagioId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">alunoId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">data: DATE</text>
+<text x="10" y="124" fill="#0f172a">entrada: VARCHAR(5)</text>
+<text x="10" y="143" fill="#0f172a">saida: VARCHAR(5)</text>
+<text x="10" y="162" fill="#0f172a">almocoDesligado: BOOLEAN</text>
+<text x="10" y="181" fill="#0f172a">minutos: INTEGER</text>
+<text x="10" y="200" fill="#0f172a">tipo: VARCHAR(20)</text>
+<text x="10" y="219" fill="#0f172a">corrigeId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="238" fill="#0f172a">sequenciaCorrecao: INTEGER</text>
+<text x="10" y="257" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<line x1="0" y1="266" x2="318" y2="266" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="284" fill="#334155" font-style="italic">{unique: corrigeId, sequenciaCorrecao}</text>
+</g>
+<g transform="translate(671.912,1226)">
+<rect width="287" height="198" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="287" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="143.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">submissoes_documento</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">documentoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">versao: INTEGER</text>
+<text x="10" y="105" fill="#0f172a">autorId: VARCHAR(64) {FK}</text>
+<text x="10" y="124" fill="#0f172a">submetidoEm: DATETIME(3)</text>
+<text x="10" y="143" fill="#0f172a">observacao: TEXT [0..1]</text>
+<text x="10" y="162" fill="#0f172a">estagioId: VARCHAR(64) [0..1] {FK}</text>
+<line x1="0" y1="171" x2="287" y2="171" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="189" fill="#334155" font-style="italic">{unique: documentoId, versao}</text>
+</g>
+<g transform="translate(711.912,1889)">
+<rect width="247" height="171" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="247" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="123.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">pareceres</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">documentoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">decisao: VARCHAR(20)</text>
+<text x="10" y="105" fill="#0f172a">consideracoes: TEXT [0..1]</text>
+<text x="10" y="124" fill="#0f172a">autorId: VARCHAR(64) {FK}</text>
+<text x="10" y="143" fill="#0f172a">fila: VARCHAR(30)</text>
+<text x="10" y="162" fill="#0f172a">data: DATETIME(3)</text>
+</g>
+<g transform="translate(711.912,2105)">
+<rect width="247" height="133" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="247" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="123.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">observacoes_documento</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">documentoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">conteudo: TEXT</text>
+<text x="10" y="105" fill="#0f172a">autorId: VARCHAR(64) {FK}</text>
+<text x="10" y="124" fill="#0f172a">data: DATETIME(3)</text>
+</g>
+<g transform="translate(1456.6059999999998,1334)">
+<rect width="318" height="190" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="318" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="159" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">solicitacoes_exclusao_estagio</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">estagioId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">solicitanteId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">motivo: TEXT [0..1]</text>
+<text x="10" y="143" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="162" fill="#0f172a">decididoEm: DATETIME(3) [0..1]</text>
+<text x="10" y="181" fill="#0f172a">decididoPorId: VARCHAR(64) [0..1] {FK}</text>
+</g>
+<g transform="translate(706.3466666666667,1673)">
+<rect width="247" height="171" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="247" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="123.5" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">pedidos_envio_documento</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">documentoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">pedidoPorId: VARCHAR(64) {FK}</text>
+<text x="10" y="105" fill="#0f172a">situacao: VARCHAR(20)</text>
+<text x="10" y="124" fill="#0f172a">motivo: TEXT [0..1]</text>
+<text x="10" y="143" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="162" fill="#0f172a">atualizadoEm: DATETIME(3)</text>
+</g>
+<g transform="translate(20,1612)">
+<rect width="310" height="293" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+<rect width="310" height="30" fill="#dbeafe" stroke="#0f172a" stroke-width="1.5"/>
+<text x="155" y="20" text-anchor="middle" font-weight="bold" font-size="14" fill="#0f172a">envios_externos</text>
+<text x="10" y="48" fill="#0f172a" font-weight="bold">id: VARCHAR(64) {PK}</text>
+<text x="10" y="67" fill="#0f172a">documentoId: VARCHAR(64) {FK}</text>
+<text x="10" y="86" fill="#0f172a">pedidoId: VARCHAR(64) [0..1] {FK}</text>
+<text x="10" y="105" fill="#0f172a">destinatario: VARCHAR(191)</text>
+<text x="10" y="124" fill="#0f172a">destinatarioEmail: VARCHAR(191)</text>
+<text x="10" y="143" fill="#0f172a">destinatarioPapel: VARCHAR(50) [0..1]</text>
+<text x="10" y="162" fill="#0f172a">autorId: VARCHAR(64) {FK}</text>
+<text x="10" y="181" fill="#0f172a">status: VARCHAR(20)</text>
+<text x="10" y="200" fill="#0f172a">erro: TEXT [0..1]</text>
+<text x="10" y="219" fill="#0f172a">tentativa: INTEGER</text>
+<text x="10" y="238" fill="#0f172a">criadoEm: DATETIME(3)</text>
+<text x="10" y="257" fill="#0f172a">enviadoEm: DATETIME(3) [0..1]</text>
+<line x1="0" y1="266" x2="310" y2="266" stroke="#0f172a" stroke-width="1.5"/>
+<text x="10" y="284" fill="#334155" font-style="italic">{unique: pedidoId, tentativa}</text>
+</g>
+</g>
+<g id="rotulos">
+<rect x="3543.906" y="1663" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3574.297" y="1676" text-anchor="middle" fill="#b45309" font-style="italic">cursoId</text>
+<rect x="3375.1240000000003" y="1663" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3392.7760000000003" y="1675" text-anchor="middle" fill="#b45309" font-weight="bold">0..*</text>
+<rect x="3738.1659999999997" y="2493.6666666666665" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3755.8179999999998" y="2505.6666666666665" text-anchor="middle" fill="#b45309" font-weight="bold">0..1</text>
+<rect x="2695.9950000000003" y="2855" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2868" text-anchor="middle" fill="#1d4ed8" font-style="italic">usuarioId</text>
+<rect x="2523.3" y="2855" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2867" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="3039.2980000000002" y="1905.7272727272725" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1917.7272727272725" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="3182.733" y="3026" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3213.1240000000003" y="3039" text-anchor="middle" fill="#b45309" font-style="italic">cursoId</text>
+<rect x="2523.3" y="3026" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="3038" text-anchor="middle" fill="#b45309" font-weight="bold">0..*</text>
+<rect x="3761.644" y="2569.6666666666665" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3767.557" y="2581.6666666666665" text-anchor="middle" fill="#b45309" font-weight="bold">1</text>
+<rect x="2703.8210000000004" y="2912" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2925" text-anchor="middle" fill="#a16207" font-style="italic">turmaId</text>
+<rect x="2523.3" y="2912" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2924" text-anchor="middle" fill="#a16207" font-weight="bold">0..*</text>
+<rect x="3073.2980000000002" y="2687.3333333333335" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3079.2110000000002" y="2699.3333333333335" text-anchor="middle" fill="#a16207" font-weight="bold">1</text>
+<rect x="2695.9950000000003" y="2969" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2982" text-anchor="middle" fill="#a16207" font-style="italic">periodoId</text>
+<rect x="2523.3" y="2969" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2981" text-anchor="middle" fill="#a16207" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="2915" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="2927" text-anchor="middle" fill="#a16207" font-weight="bold">1</text>
+<rect x="3543.906" y="2662" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3574.297" y="2675" text-anchor="middle" fill="#b45309" font-style="italic">cursoId</text>
+<rect x="3307.1240000000003" y="2662" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3324.7760000000003" y="2674" text-anchor="middle" fill="#b45309" font-weight="bold">0..*</text>
+<rect x="3761.644" y="2544.3333333333335" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3767.557" y="2556.3333333333335" text-anchor="middle" fill="#b45309" font-weight="bold">1</text>
+<rect x="2703.8210000000004" y="2658" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2671" text-anchor="middle" fill="#a16207" font-style="italic">turmaId</text>
+<rect x="2523.3" y="2689.6666666666665" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2701.6666666666665" text-anchor="middle" fill="#a16207" font-weight="bold">0..*</text>
+<rect x="3073.2980000000002" y="2636.6666666666665" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3079.2110000000002" y="2648.6666666666665" text-anchor="middle" fill="#a16207" font-weight="bold">1</text>
+<rect x="2695.9950000000003" y="2721" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2734" text-anchor="middle" fill="#a16207" font-style="italic">periodoId</text>
+<rect x="2523.3" y="2721.3333333333335" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2733.3333333333335" text-anchor="middle" fill="#a16207" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="2849" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="2861" text-anchor="middle" fill="#a16207" font-weight="bold">1</text>
+<rect x="2707.7340000000004" y="2035" width="52.955999999999996" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2048" text-anchor="middle" fill="#1d4ed8" font-style="italic">userId</text>
+<rect x="2523.3" y="2191" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2203" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1808.6363636363635" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1820.6363636363635" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="2707.7340000000004" y="1849" width="52.955999999999996" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1862" text-anchor="middle" fill="#1d4ed8" font-style="italic">userId</text>
+<rect x="2523.3" y="1849" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1861" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1711.5454545454545" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1723.5454545454545" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="3543.906" y="918" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3574.297" y="931" text-anchor="middle" fill="#b45309" font-style="italic">cursoId</text>
+<rect x="3375.1240000000003" y="917.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3392.7760000000003" y="929.5" text-anchor="middle" fill="#b45309" font-weight="bold">0..*</text>
+<rect x="3738.1659999999997" y="2468.3333333333335" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3755.8179999999998" y="2480.3333333333335" text-anchor="middle" fill="#b45309" font-weight="bold">0..1</text>
+<rect x="2695.9950000000003" y="2069" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2082" text-anchor="middle" fill="#1d4ed8" font-style="italic">usuarioId</text>
+<rect x="2523.3" y="2444.25" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2456.25" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="3039.2980000000002" y="1832.9090909090908" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1844.9090909090908" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="3182.733" y="2519" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3213.1240000000003" y="2532" text-anchor="middle" fill="#b45309" font-style="italic">cursoId</text>
+<rect x="2523.3" y="2548.75" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2560.75" text-anchor="middle" fill="#b45309" font-weight="bold">0..*</text>
+<rect x="3761.644" y="2519" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3767.557" y="2531" text-anchor="middle" fill="#b45309" font-weight="bold">1</text>
+<rect x="2680.3430000000003" y="2111" width="107.738" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="2124" text-anchor="middle" fill="#1d4ed8" font-style="italic">decididoPorId</text>
+<rect x="2523.3" y="2496.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="2508.5" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1857.181818181818" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1869.181818181818" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="954.304" y="119" width="99.91199999999999" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1004.26" y="132" text-anchor="middle" fill="#334155" font-style="italic">importacaoId</text>
+<rect x="809" y="119" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="826.652" y="131" text-anchor="middle" fill="#334155" font-weight="bold">0..*</text>
+<rect x="1164.216" y="119" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1170.129" y="131" text-anchor="middle" fill="#334155" font-weight="bold">1</text>
+<rect x="3520.428" y="669" width="107.738" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3574.297" y="682" text-anchor="middle" fill="#0f766e" font-style="italic">instituicaoId</text>
+<rect x="3375.1240000000003" y="669" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3392.7760000000003" y="681" text-anchor="middle" fill="#0f766e" font-weight="bold">0..*</text>
+<rect x="3761.644" y="669" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3767.557" y="681" text-anchor="middle" fill="#0f766e" font-weight="bold">1</text>
+<rect x="3520.428" y="392" width="107.738" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3574.297" y="405" text-anchor="middle" fill="#0f766e" font-style="italic">instituicaoId</text>
+<rect x="3338.4573333333333" y="392" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3356.1093333333333" y="404" text-anchor="middle" fill="#0f766e" font-weight="bold">0..*</text>
+<rect x="3761.644" y="612" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3767.557" y="624" text-anchor="middle" fill="#0f766e" font-weight="bold">1</text>
+<rect x="2692.0820000000003" y="354" width="84.25999999999999" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="367" text-anchor="middle" fill="#0f766e" font-style="italic">convenioId</text>
+<rect x="2523.3" y="354" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="366" text-anchor="middle" fill="#0f766e" font-weight="bold">0..*</text>
+<rect x="3057.6313333333333" y="354" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3063.5443333333333" y="366" text-anchor="middle" fill="#0f766e" font-weight="bold">1</text>
+<rect x="2703.8210000000004" y="1240" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1253" text-anchor="middle" fill="#1d4ed8" font-style="italic">alunoId</text>
+<rect x="2523.3" y="1239.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1251.5" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1468.8181818181818" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1480.8181818181818" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="2692.0820000000003" y="1071" width="84.25999999999999" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1084" text-anchor="middle" fill="#0f766e" font-style="italic">convenioId</text>
+<rect x="2523.3" y="1075.625" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1087.625" text-anchor="middle" fill="#0f766e" font-weight="bold">0..*</text>
+<rect x="3057.6313333333333" y="430" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3063.5443333333333" y="442" text-anchor="middle" fill="#0f766e" font-weight="bold">1</text>
+<rect x="2684.2560000000003" y="1185" width="99.91199999999999" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1198" text-anchor="middle" fill="#be123c" font-style="italic">supervisorId</text>
+<rect x="2523.3" y="1184.875" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1196.875" text-anchor="middle" fill="#be123c" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1212.6666666666665" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1224.6666666666665" text-anchor="middle" fill="#be123c" font-weight="bold">1</text>
+<rect x="2684.2560000000003" y="1105" width="99.91199999999999" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1118" text-anchor="middle" fill="#be123c" font-style="italic">orientadorId</text>
+<rect x="2523.3" y="1130.25" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1142.25" text-anchor="middle" fill="#be123c" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1130.3333333333335" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1142.3333333333335" text-anchor="middle" fill="#be123c" font-weight="bold">1</text>
+<rect x="2668.6040000000003" y="1294" width="131.216" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1307" text-anchor="middle" fill="#1d4ed8" font-style="italic">encaminhadoPorId</text>
+<rect x="2523.3" y="1294.125" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1306.125" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1493.090909090909" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1505.090909090909" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="2680.3430000000003" y="1349" width="107.738" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1362" text-anchor="middle" fill="#1d4ed8" font-style="italic">liberadoPorId</text>
+<rect x="2523.3" y="1348.75" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1360.75" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1517.3636363636365" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1529.3636363636365" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="2684.2560000000003" y="1403" width="99.91199999999999" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2734.2120000000004" y="1416" text-anchor="middle" fill="#1d4ed8" font-style="italic">editadoPorId</text>
+<rect x="2523.3" y="1403.375" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2540.952" y="1415.375" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1541.6363636363637" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1553.6363636363637" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="1930.7359999999999" y="1167" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="1180" text-anchor="middle" fill="#15803d" font-style="italic">estagioId</text>
+<rect x="1777.6059999999998" y="1166.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1178.5" text-anchor="middle" fill="#15803d" font-weight="bold">0..*</text>
+<rect x="2148.474" y="1166.6666666666667" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2154.387" y="1178.6666666666667" text-anchor="middle" fill="#15803d" font-weight="bold">1</text>
+<rect x="2311.409" y="1611" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2341.8" y="1624" text-anchor="middle" fill="#1d4ed8" font-style="italic">alunoId</text>
+<rect x="1777.6059999999998" y="1717.4" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1729.4" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1638.7272727272727" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1650.7272727272727" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="1930.7359999999999" y="1582" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="1595" text-anchor="middle" fill="#15803d" font-style="italic">estagioId</text>
+<rect x="1777.6059999999998" y="1645.2" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1657.2" text-anchor="middle" fill="#15803d" font-weight="bold">0..*</text>
+<rect x="2124.996" y="1385.1666666666667" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2142.648" y="1397.1666666666667" text-anchor="middle" fill="#15803d" font-weight="bold">0..1</text>
+<rect x="2280.105" y="1649" width="123.39" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2341.8" y="1662" text-anchor="middle" fill="#1d4ed8" font-style="italic">registradoPorId</text>
+<rect x="1777.6059999999998" y="1789.6" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1801.6" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1663" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1675" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="2233.149" y="1687" width="217.302" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2341.7999999999997" y="1700" text-anchor="middle" fill="#1d4ed8" font-style="italic">assinaturasConfirmadasPorId</text>
+<rect x="1777.6059999999998" y="1861.8" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1873.8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1687.2727272727273" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1699.2727272727273" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="1107.216" y="1109" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1153.2589999999998" y="1122" text-anchor="middle" fill="#7e22ce" font-style="italic">documentoId</text>
+<rect x="961.912" y="1109" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="1121" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..*</text>
+<rect x="1309.3019999999997" y="1624.5714285714287" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1326.9539999999997" y="1636.5714285714287" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..1</text>
+<rect x="1938.562" y="682" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="695" text-anchor="middle" fill="#1d4ed8" font-style="italic">autorId</text>
+<rect x="961.912" y="1033" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="1045" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1420.2727272727273" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1432.2727272727273" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="1930.7359999999999" y="1094" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="1107" text-anchor="middle" fill="#15803d" font-style="italic">estagioId</text>
+<rect x="1777.6059999999998" y="976.3333333333334" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="988.3333333333334" text-anchor="middle" fill="#15803d" font-weight="bold">0..*</text>
+<rect x="2148.474" y="1093.8333333333335" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2154.387" y="1105.8333333333335" text-anchor="middle" fill="#15803d" font-weight="bold">1</text>
+<rect x="2311.409" y="954" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2341.8" y="967" text-anchor="middle" fill="#1d4ed8" font-style="italic">alunoId</text>
+<rect x="1777.6059999999998" y="878.6666666666666" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="890.6666666666666" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1444.5454545454545" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1456.5454545454545" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="1577.3889999999997" y="707" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1615.6059999999998" y="720" text-anchor="middle" fill="#334155" font-style="italic">corrigeId</text>
+<rect x="1597.9539999999997" y="728" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1615.6059999999998" y="740" text-anchor="middle" fill="#334155" font-weight="bold">0..*</text>
+<rect x="1597.9539999999997" y="748" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1615.6059999999998" y="760" text-anchor="middle" fill="#334155" font-weight="bold">0..1</text>
+<rect x="1107.216" y="1379" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1153.2589999999998" y="1392" text-anchor="middle" fill="#7e22ce" font-style="italic">documentoId</text>
+<rect x="961.912" y="1378.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="1390.5" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..*</text>
+<rect x="1332.7799999999997" y="1676.142857142857" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1338.6929999999998" y="1688.142857142857" text-anchor="middle" fill="#7e22ce" font-weight="bold">1</text>
+<rect x="1938.562" y="1309" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="1322" text-anchor="middle" fill="#1d4ed8" font-style="italic">autorId</text>
+<rect x="961.912" y="1329" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="1341" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1565.909090909091" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1577.909090909091" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="1522.889" y="1255" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1561.106" y="1268" text-anchor="middle" fill="#15803d" font-style="italic">estagioId</text>
+<rect x="961.912" y="1279.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="1291.5" text-anchor="middle" fill="#15803d" font-weight="bold">0..*</text>
+<rect x="2124.996" y="1239.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2142.648" y="1251.5" text-anchor="middle" fill="#15803d" font-weight="bold">0..1</text>
+<rect x="1107.216" y="1831" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1153.2589999999998" y="1844" text-anchor="middle" fill="#7e22ce" font-style="italic">documentoId</text>
+<rect x="961.912" y="1950" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="1962" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..*</text>
+<rect x="1332.7799999999997" y="1830.857142857143" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1338.6929999999998" y="1842.857142857143" text-anchor="middle" fill="#7e22ce" font-weight="bold">1</text>
+<rect x="1938.562" y="2000" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="2013" text-anchor="middle" fill="#1d4ed8" font-style="italic">autorId</text>
+<rect x="961.912" y="2007" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="2019" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1760.090909090909" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1772.090909090909" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="1107.216" y="2029" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1153.2589999999998" y="2042" text-anchor="middle" fill="#7e22ce" font-style="italic">documentoId</text>
+<rect x="961.912" y="2153.333333333333" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="2165.333333333333" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..*</text>
+<rect x="1332.7799999999997" y="1882.4285714285713" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1338.6929999999998" y="1894.4285714285713" text-anchor="middle" fill="#7e22ce" font-weight="bold">1</text>
+<rect x="1938.562" y="2038" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="2051" text-anchor="middle" fill="#1d4ed8" font-style="italic">autorId</text>
+<rect x="961.912" y="2197.666666666667" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="979.5640000000001" y="2209.666666666667" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1784.3636363636363" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1796.3636363636363" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="1930.7359999999999" y="1386" width="76.434" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.953" y="1399" text-anchor="middle" fill="#15803d" font-style="italic">estagioId</text>
+<rect x="1777.6059999999998" y="1385.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1397.5" text-anchor="middle" fill="#15803d" font-weight="bold">0..*</text>
+<rect x="2148.474" y="1312.3333333333335" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2154.387" y="1324.3333333333335" text-anchor="middle" fill="#15803d" font-weight="bold">1</text>
+<rect x="2287.931" y="1511" width="107.738" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2341.8" y="1524" text-anchor="middle" fill="#1d4ed8" font-style="italic">solicitanteId</text>
+<rect x="1777.6059999999998" y="1433" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1445" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1590.1818181818182" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1602.1818181818182" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="2287.931" y="1553" width="107.738" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="2341.8" y="1566" text-anchor="middle" fill="#1d4ed8" font-style="italic">decididoPorId</text>
+<rect x="1777.6059999999998" y="1480.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1795.2579999999998" y="1492.5" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3015.82" y="1614.4545454545455" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3033.472" y="1626.4545454545455" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..1</text>
+<rect x="1107.216" y="1734" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1153.2589999999998" y="1747" text-anchor="middle" fill="#7e22ce" font-style="italic">documentoId</text>
+<rect x="956.3466666666667" y="1734" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="973.9986666666667" y="1746" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..*</text>
+<rect x="1332.7799999999997" y="1779.2857142857142" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1338.6929999999998" y="1791.2857142857142" text-anchor="middle" fill="#7e22ce" font-weight="bold">1</text>
+<rect x="1922.9099999999999" y="1962" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1968.9529999999997" y="1975" text-anchor="middle" fill="#1d4ed8" font-style="italic">pedidoPorId</text>
+<rect x="956.3466666666667" y="1791" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="973.9986666666667" y="1803" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1735.8181818181818" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1747.8181818181818" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+<rect x="781.021" y="1610" width="92.086" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="827.064" y="1623" text-anchor="middle" fill="#7e22ce" font-style="italic">documentoId</text>
+<rect x="333" y="1689.25" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="350.652" y="1701.25" text-anchor="middle" fill="#7e22ce" font-weight="bold">0..*</text>
+<rect x="1332.7799999999997" y="1727.7142857142858" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1338.6929999999998" y="1739.7142857142858" text-anchor="middle" fill="#7e22ce" font-weight="bold">1</text>
+<rect x="478.304" y="1763" width="68.608" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="512.608" y="1776" text-anchor="middle" fill="#334155" font-style="italic">pedidoId</text>
+<rect x="333" y="1762.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="350.652" y="1774.5" text-anchor="middle" fill="#334155" font-weight="bold">0..*</text>
+<rect x="668.0426666666667" y="1762.5" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="685.6946666666668" y="1774.5" text-anchor="middle" fill="#334155" font-weight="bold">0..1</text>
+<rect x="1530.715" y="2629" width="60.782" height="17" fill="#ffffff" fill-opacity="0.92"/>
+<text x="1561.106" y="2642" text-anchor="middle" fill="#1d4ed8" font-style="italic">autorId</text>
+<rect x="333" y="1835.75" width="35.304" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="350.652" y="1847.75" text-anchor="middle" fill="#1d4ed8" font-weight="bold">0..*</text>
+<rect x="3039.2980000000002" y="1881.4545454545453" width="11.826" height="16" fill="#ffffff" fill-opacity="0.92"/>
+<text x="3045.2110000000002" y="1893.4545454545453" text-anchor="middle" fill="#1d4ed8" font-weight="bold">1</text>
+</g>
+</g>
+<g id="legenda" transform="translate(20,3179)" fill="#0f172a">
+<rect x="0" y="0" width="1500" height="125" fill="#f8fafc" stroke="#94a3b8"/>
+<text x="14" y="24" font-weight="bold" font-size="15">Legenda</text>
+<text x="14" y="46">Classe = tabela; atributo = coluna, no formato  nome: TIPO [multiplicidade] {restrições}.</text>
+<text x="14" y="65">{PK} chave primária (em negrito)   {FK} chave estrangeira   {unique} valor único   [0..1] coluna opcional (aceita NULL).</text>
+<text x="14" y="84">Linha = associação gerada por uma chave estrangeira; o rótulo em itálico é a coluna FK (papel) na tabela filha.</text>
+<text x="14" y="103">Multiplicidades: 1 = obrigatório; 0..1 = opcional; 0..* = zero ou muitos. A cor da linha indica a tabela referenciada.</text>
+<text x="14" y="122">Losango cheio = composição (ON DELETE CASCADE): as linhas da tabela filha são excluídas junto com a tabela pai.</text>
+</g>
+</svg>
