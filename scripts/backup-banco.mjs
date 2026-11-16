@@ -32,13 +32,31 @@ function argsCliente(conexao, ca) {
   return args;
 }
 
+/**
+ * Descreve a falha de um cliente MySQL sem expor a conexão. Código `null` quer
+ * dizer que o programa nem chegou a terminar normalmente: não foi encontrado no
+ * PATH, foi encerrado por sinal ou estourou o limite de saída.
+ */
+export function descreverFalha(rotulo, comando, resultado) {
+  if (resultado.error) {
+    const codigo = resultado.error.code ?? resultado.error.message;
+    const dica =
+      codigo === "ENOENT"
+        ? ` O programa "${comando}" não foi encontrado; instale o cliente MySQL 8 e coloque a pasta "bin" dele no PATH (no Windows, algo como C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin) e abra um novo terminal.`
+        : codigo === "ENOBUFS"
+          ? " A saída passou do limite de memória do script."
+          : "";
+    return `${rotulo} falhou: ${codigo}.${dica}`;
+  }
+  if (resultado.status === null) return `${rotulo} foi interrompido (sinal ${resultado.signal ?? "desconhecido"}).`;
+  // A saída pode conter trechos da conexão; mostramos só o código e a primeira linha.
+  const primeira = (resultado.stderr || "").split("\n").find((linha) => linha.trim()) ?? "";
+  return `${rotulo} falhou (código ${resultado.status}). ${primeira.replace(/password[^ ]*/gi, "***")}`;
+}
+
 function executar(comando, args, env, entrada) {
   const resultado = spawnSync(comando, args, { env, input: entrada, encoding: "utf8", maxBuffer: 1024 * 1024 * 1024 });
-  if (resultado.status !== 0) {
-    // A saída pode conter trechos da conexão; mostramos só o código e a primeira linha.
-    const primeira = (resultado.stderr || "").split("\n").find((linha) => linha.trim()) ?? "";
-    throw new Error(`${comando} falhou (código ${resultado.status}). ${primeira.replace(/password[^ ]*/gi, "***")}`);
-  }
+  if (resultado.status !== 0) throw new Error(descreverFalha(comando, comando, resultado));
   return resultado.stdout;
 }
 

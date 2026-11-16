@@ -21,7 +21,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { lerConexao } from "./backup-banco.mjs";
+import { lerConexao, descreverFalha } from "./backup-banco.mjs";
 import { inspecionar } from "./inspecionar-destino.mjs";
 
 export const TRANSFORMACAO_VERSAO = "13.3-dados-pessoais-v1";
@@ -30,10 +30,7 @@ function mysql(conexao, ca, env, sql) {
   const args = ["-h", conexao.host, "-P", conexao.port, "-u", conexao.user, "--default-character-set=utf8mb4", "-N", "-B", conexao.banco, "-e", sql];
   if (ca) args.push(`--ssl-ca=${ca}`, "--ssl-mode=VERIFY_CA");
   const resultado = spawnSync("mysql", args, { env, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-  if (resultado.status !== 0) {
-    const primeira = (resultado.stderr || "").split("\n").find((linha) => linha.trim()) ?? "";
-    throw new Error(`Comando SQL falhou (código ${resultado.status}). ${primeira.replace(/password[^ ]*/gi, "***")}`);
-  }
+  if (resultado.status !== 0) throw new Error(descreverFalha("Comando SQL", "mysql", resultado));
   return resultado.stdout.split("\n").filter(Boolean).map((linha) => linha.split("\t"));
 }
 
@@ -150,7 +147,7 @@ function principal() {
     const script = ["START TRANSACTION;", ...insercoes, "COMMIT;"].join("\n");
     const resultado = spawnSync("mysql", ["-h", conexao.host, "-P", conexao.port, "-u", conexao.user, "--default-character-set=utf8mb4", conexao.banco, ...(ca ? [`--ssl-ca=${ca}`, "--ssl-mode=VERIFY_CA"] : [])], { env, input: script, encoding: "utf8" });
     if (resultado.status !== 0) {
-      throw new Error(`Gravação revertida (transação não confirmada): código ${resultado.status}.`);
+      throw new Error(`Gravação revertida (transação não confirmada). ${descreverFalha("mysql", "mysql", resultado)}`);
     }
   }
 

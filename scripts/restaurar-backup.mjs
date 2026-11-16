@@ -16,17 +16,14 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { lerConexao, contagensPorTabela } from "./backup-banco.mjs";
+import { lerConexao, contagensPorTabela, descreverFalha } from "./backup-banco.mjs";
 
 const NOME_DE_ENSAIO = /(_ensaio|_restauracao|_teste)$/;
 const NOME_DE_PRODUCAO = "selic";
 
 function executar(comando, args, env, entrada) {
   const resultado = spawnSync(comando, args, { env, input: entrada, encoding: "utf8", maxBuffer: 1024 * 1024 * 1024 });
-  if (resultado.status !== 0) {
-    const primeira = (resultado.stderr || "").split("\n").find((linha) => linha.trim()) ?? "";
-    throw new Error(`${comando} falhou (código ${resultado.status}). ${primeira.replace(/password[^ ]*/gi, "***")}`);
-  }
+  if (resultado.status !== 0) throw new Error(descreverFalha(comando, comando, resultado));
   return resultado.stdout;
 }
 

@@ -11,7 +11,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lerConexao, contagensPorTabela } from "./backup-banco.mjs";
+import { lerConexao, contagensPorTabela, descreverFalha } from "./backup-banco.mjs";
 
 const PAPEIS_VALIDOS = ["aluno", "coordenador_curso", "coordenador_estagio", "administrador"];
 
@@ -23,10 +23,7 @@ function consultar(conexao, ca, env, sql) {
   const args = ["-h", conexao.host, "-P", conexao.port, "-u", conexao.user, "--default-character-set=utf8mb4", "-N", "-B", conexao.banco, "-e", sql];
   if (ca) args.push(`--ssl-ca=${ca}`, "--ssl-mode=VERIFY_CA");
   const resultado = spawnSync("mysql", args, { env, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-  if (resultado.status !== 0) {
-    const primeira = (resultado.stderr || "").split("\n").find((linha) => linha.trim()) ?? "";
-    throw new Error(`Leitura falhou (código ${resultado.status}). ${primeira.replace(/password[^ ]*/gi, "***")}`);
-  }
+  if (resultado.status !== 0) throw new Error(descreverFalha("Leitura", "mysql", resultado));
   return resultado.stdout.split("\n").filter(Boolean).map((linha) => linha.split("\t"));
 }
 
