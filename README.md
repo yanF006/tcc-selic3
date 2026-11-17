@@ -205,11 +205,17 @@ incorporada.
 
 ## Fluxo OpenSpec
 
+As especificações vigentes ficam em `openspec/specs/`, uma pasta por
+capacidade. Cada mudança nova é uma change pequena em `openspec/changes/`,
+arquivada assim que suas tarefas terminam. O contexto do projeto e as regras
+para os artefatos ficam em `openspec/config.yaml`. A change ativa no momento é
+`entrega-final`, que reúne as pendências de fechamento.
+
 ```bash
 openspec list --json
-openspec status --change frontend-website --json
-openspec instructions apply --change frontend-website --json
-openspec validate frontend-website --type change
+openspec status --change entrega-final --json
+openspec instructions apply --change entrega-final --json
+openspec validate entrega-final --type change
 ```
 
 Uma tarefa só deve ser marcada como concluída depois de atender seu cenário e

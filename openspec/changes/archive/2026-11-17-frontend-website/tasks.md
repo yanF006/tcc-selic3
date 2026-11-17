@@ -207,11 +207,11 @@
 > da 16.4, porque o seletor sustenta a demonstração e o teste
 > `test:e2e:seletor`; a 16.4 então valida o build limpo.
 
-- [ ] 16.1 Revisar responsividade e acessibilidade com a cliente e corrigir o que for apontado — verificação: lista de problemas zerada
-- [ ] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo
+- [x] 16.1 Revisar responsividade e acessibilidade com a cliente e corrigir o que for apontado — verificação: lista de problemas zerada — **Transferida em 2026-11-17 para `entrega-final` (1.1).**
+- [x] 16.2 Remover o seletor de papel e os dados de desenvolvimento da entrega — verificação: busca por resíduos sem resultado e build de produção limpo — **Transferida em 2026-11-17 para `entrega-final` (2.1).**
 - [x] 16.3 Revisar o README com o que ainda é simulado e o que depende de backend — verificação: README lista persistência, e-mail e geração de documentos como pendentes
-- [ ] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build após a adequação do fluxo — verificação: todos os comandos passam com os novos critérios de liberação e observações
-- [ ] 16.5 Publicar o Preview atualizado na Vercel para validação das telas — verificação: endereço acessível e fluxo redefinido testado pela cliente
+- [x] 16.4 Rodar lint, typecheck, testes unitários, testes E2E e build após a adequação do fluxo — verificação: todos os comandos passam com os novos critérios de liberação e observações — **Transferida em 2026-11-17 para `entrega-final` (4.1).**
+- [x] 16.5 Publicar o Preview atualizado na Vercel para validação das telas — verificação: endereço acessível e fluxo redefinido testado pela cliente — **Transferida em 2026-11-17 para `entrega-final` (4.2).**
 
 ### Evidências da reconciliação de implementação
 
@@ -232,3 +232,7 @@ As evidências abaixo se referem à implementação anterior à redefinição do
 - `src/lib/services/cadastros.test.ts` e `e2e/cadastros-gestao.spec.ts`: vigência de cinco anos, filtros e contagens de convênio, inativação com vínculos, relacionamento entre curso/turma/período, manutenção do perfil com referências inativas e exclusão dos contatos de responsáveis. Verificação focada: 68 testes unitários e quatro E2E aprovados, com build e typecheck aprovados.
 - Definição confirmada para `termoCompromissoData`, do Termo Aditivo: a data é preenchida ao assinar, fora do sistema. O campo sai do preenchimento automático e da validação obrigatória; o documento mantém um espaço em branco. A confirmação das assinaturas não coleta essa data.
 - Versionamento e data externa: 68 testes unitários focados aprovados e quatro E2E de `e2e/templates.spec.ts` aprovados contra o build compilado. Os arquivos do documento preservam os trechos fixos; novas versões não alteram validação, campos ou download dos preenchimentos anteriores. A consulta por documento mantém a verificação de acesso e permite acessar o histórico preservado pela coordenação.
+
+## Arquivamento (2026-11-17)
+
+As tarefas finais 16.1, 16.2, 16.4 e 16.5 foram transferidas para `entrega-final`. As nove capacidades desta change foram sincronizadas em `openspec/specs/` sem alterações de conteúdo. Requisitos que se sobrepõem às capacidades persistentes de `integrar-banco-backend-completo` (por exemplo, a sinalização de notificações, retirada na tarefa 12.4 daquela change) serão reconciliados na tarefa 5.1 de `entrega-final`.
