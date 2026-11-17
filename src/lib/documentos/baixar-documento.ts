@@ -1,19 +1,17 @@
-import {
-  TIPO_CONTEUDO,
-  gerarDocxDemo,
-  gerarPdfDemo,
-  type FormatoDocumento,
-} from "@/lib/documentos/gerar-demo";
+import "server-only";
+
+import { gerarDocx, TIPO_CONTEUDO_DOCX } from "@/lib/documentos/gerar-docx";
+import { MENSAGEM_SOMENTE_DOCX, temModelo } from "@/lib/documentos/modelos-disponiveis";
 import type { DocumentoPreenchido } from "@/lib/domain/types";
 import { descritorDoDocumento, validarValores } from "@/lib/services/documentos";
-import { camposDoTemplate, classificacaoDoCampo } from "@/lib/templates/descriptors";
 
-export type { FormatoDocumento } from "@/lib/documentos/gerar-demo";
+export type { FormatoDocumento } from "@/lib/documentos/modelos-disponiveis";
 
 /**
- * Monta o arquivo do documento preenchido (8.14, 8.15). A validação roda antes
- * da geração: um campo obrigatório pendente recusa o download com a lista de
- * pendências. Nesta entrega o arquivo é a demonstração de `gerar-demo.ts` (D6).
+ * Monta o DOCX oficial do documento preenchido (8.14, 8.15; change
+ * gerar-documentos-preenchidos). A validação roda antes da geração: um campo
+ * obrigatório pendente recusa o download com a lista de pendências. Só há
+ * DOCX; um pedido de outro formato é recusado.
  */
 
 export interface ResultadoBaixarDocumento {
@@ -25,54 +23,49 @@ export interface ResultadoBaixarDocumento {
   tipoConteudo?: string;
 }
 
+/** Nome em ASCII: acentos no atributo `download` fazem o navegador ignorar o nome. */
+function nomeDoArquivo(titulo: string): string {
+  return titulo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\-. ]+/g, "")
+    .trim();
+}
+
 export function arquivoDoDocumento(
   documento: DocumentoPreenchido,
   templateId: string,
-  formato: FormatoDocumento,
+  formato: string,
 ): ResultadoBaixarDocumento {
+  if (formato !== "docx") {
+    return { ok: false, erro: MENSAGEM_SOMENTE_DOCX };
+  }
+
   const descriptor = descritorDoDocumento(documento);
 
   if (!descriptor) {
     return { ok: false, erro: "Documento não encontrado." };
   }
 
-  const problemas = validarValores(templateId, documento.valores, documento.versaoTemplate, descriptor);
+  if (!temModelo(templateId)) {
+    return { ok: false, erro: "Este documento não tem arquivo para download." };
+  }
+
+  const problemas = validarValores(
+    templateId,
+    documento.valores,
+    documento.versaoTemplate,
+    descriptor,
+  );
 
   if (problemas.length > 0) {
     return { ok: false, erro: "Há campos obrigatórios pendentes.", problemas };
   }
 
-  const linhas = camposDoTemplate(templateId, descriptor)
-    .filter((campo) => classificacaoDoCampo(campo) !== "instrucao")
-    .map((campo) => {
-      if (campo.tipo === "fixo") return `${campo.rotulo}: ${campo.ajuda ?? campo.rotulo}`;
-      const valor = documento.valores[campo.id];
-
-      if (valor === undefined || valor === null || String(valor).trim() === "") return null;
-
-      const exibido = Array.isArray(valor)
-        ? valor
-            .map((linha) =>
-              Object.values(linha as Record<string, unknown>)
-                .filter(Boolean)
-                .join(" | "),
-            )
-            .join(" ; ")
-        : String(valor);
-
-      return `${campo.rotulo}: ${exibido}`;
-    })
-    .filter((linha): linha is string => linha !== null);
-
-  const bytes =
-    formato === "pdf"
-      ? gerarPdfDemo(descriptor.titulo, linhas)
-      : gerarDocxDemo(descriptor.titulo, linhas);
-
   return {
     ok: true,
-    bytes,
-    nomeArquivo: `${descriptor.titulo.replace(/[^\w\-. ]+/g, "").trim()}.${formato}`,
-    tipoConteudo: TIPO_CONTEUDO[formato],
+    bytes: gerarDocx({ ...descriptor, templateId }, documento.valores),
+    nomeArquivo: `${nomeDoArquivo(descriptor.titulo)}.docx`,
+    tipoConteudo: TIPO_CONTEUDO_DOCX,
   };
 }

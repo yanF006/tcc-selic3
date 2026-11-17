@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
+import PizZip from "pizzip";
 import { expect, test } from "./suporte/cep";
 
 /**
@@ -105,10 +107,31 @@ test.describe("preenchimento de documentos", () => {
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "Baixar docx" }).click(),
+      page.getByRole("button", { name: "Baixar DOCX" }).click(),
     ]);
 
     expect(download.suggestedFilename()).toContain("Ficha de Acompanhamento");
+  });
+
+  test("baixa o Plano de Atividades no layout do Kit, só em DOCX", async ({ page }) => {
+    await entrar(page, "maria.souza@aluno.ifrj.edu.br");
+    await page.goto("/documentos/tpl-plano-atividades?estagio=est-maria-tecnoweb");
+
+    await expect(page.getByRole("button", { name: "Baixar pdf" })).toHaveCount(0);
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Baixar DOCX" }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/Plano de Atividades.*\.docx$/);
+    const xml = new PizZip(readFileSync(await download.path()))
+      .file("word/document.xml")!
+      .asText()
+      .replace(/<[^>]+>/g, "");
+    expect(xml).toContain("PLANO DE ATIVIDADES DE ESTÁGIO");
+    expect(xml).toContain("Maria de Souza");
+    expect(xml).not.toMatch(/[{}]/);
   });
 
   test("recusa o download enquanto houver pendência e aponta os campos (8.15)", async ({
@@ -117,7 +140,7 @@ test.describe("preenchimento de documentos", () => {
     await entrar(page, "luiza.santos@aluno.ifrj.edu.br");
     await page.goto("/documentos/tpl-relatorio-semestral?estagio=est-sem-endereco");
 
-    await page.getByRole("button", { name: "Baixar docx" }).click();
+    await page.getByRole("button", { name: "Baixar DOCX" }).click();
 
     await expect(page.getByText("Corrija o documento")).toBeVisible();
     await expect(page.getByText("Há campos obrigatórios pendentes.")).toBeVisible();
@@ -160,7 +183,7 @@ test.describe("preenchimento de documentos", () => {
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "Baixar docx" }).click(),
+      page.getByRole("button", { name: "Baixar DOCX" }).click(),
     ]);
 
     expect(download.suggestedFilename()).toContain("Requerimento");
@@ -175,7 +198,7 @@ test.describe("preenchimento de documentos", () => {
     await grupo.getByRole("button", { name: "Alterar endereço" }).click();
     await expect(grupo.getByLabel("Logradouro")).toBeEditable();
     await expect(grupo.getByLabel("Logradouro")).toHaveValue("");
-    await page.getByRole("button", { name: "Baixar docx" }).click();
+    await page.getByRole("button", { name: "Baixar DOCX" }).click();
     await expect(grupo.getByText("Endereço é obrigatório.")).toBeVisible();
   });
 

@@ -27,9 +27,13 @@ const nextConfig: NextConfig = {
    * Os documentos do Kit de Estágio ficam em `Contexto/kit-estagio` e são lidos
    * por `fs` na rota de download, então o tracing automático não os enxerga.
    * A inclusão explícita garante que o Preview na Vercel sirva o arquivo.
+   * Os modelos DOCX marcados também são lidos por `fs`: pela rota
+   * `baixar-preenchido` e pela server action da página do documento.
    */
   outputFileTracingIncludes: {
     "/documentos/*/baixar": ["./Contexto/kit-estagio/**/*"],
+    "/documentos/*/baixar-preenchido": ["./src/lib/documentos/modelos/*.docx"],
+    "/documentos/*": ["./src/lib/documentos/modelos/*.docx"],
   },
 };
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
-import { arquivoDoDocumento, type FormatoDocumento } from "@/lib/documentos/baixar-documento";
+import { arquivoDoDocumento } from "@/lib/documentos/baixar-documento";
 import {
   documentoPorId,
   podePreencher,
@@ -145,7 +145,7 @@ export interface ResultadoBaixarAction {
 export async function baixarDocumentoAction(
   documentoId: string,
   templateId: string,
-  formato: FormatoDocumento,
+  formato: string = "docx",
 ): Promise<ResultadoBaixarAction> {
   try {
     const usuario = await usuarioDaRequisicaoObrigatorio();

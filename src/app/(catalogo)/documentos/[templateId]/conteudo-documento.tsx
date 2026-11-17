@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { temModelo } from "@/lib/documentos/modelos-disponiveis";
 import type { DocumentoPreenchido, SituacaoDocumento } from "@/lib/domain/types";
 import { conceitoGlobalDasNotas } from "@/lib/domain/avaliacao";
 import { rotuloSituacaoDocumento, varianteSituacaoDocumento } from "@/lib/domain/status";
@@ -103,11 +104,11 @@ export function ConteudoDocumento({
     });
   }
 
-  async function baixar(formato: "docx" | "pdf") {
+  async function baixar() {
     setMensagem(null);
     setErros({});
 
-    const resultado = await baixarDocumentoAction(documento.id, descriptor.templateId, formato);
+    const resultado = await baixarDocumentoAction(documento.id, descriptor.templateId, "docx");
 
     if (!resultado.ok) {
       setErros(
@@ -225,14 +226,12 @@ export function ConteudoDocumento({
           <SaveIcon aria-hidden="true" className="size-4" />
           {salvando ? "Salvando…" : "Salvar rascunho"}
         </Button>
-        <Button type="button" variant="outline" onClick={() => baixar("docx")}>
-          <DownloadIcon aria-hidden="true" className="size-4" />
-          Baixar docx
-        </Button>
-        <Button type="button" variant="outline" onClick={() => baixar("pdf")}>
-          <DownloadIcon aria-hidden="true" className="size-4" />
-          Baixar pdf
-        </Button>
+        {temModelo(descriptor.templateId) ? (
+          <Button type="button" variant="outline" onClick={baixar}>
+            <DownloadIcon aria-hidden="true" className="size-4" />
+            Baixar DOCX
+          </Button>
+        ) : null}
         <Button asChild variant="outline">
           <Link href={`/documentos/${descriptor.templateId}/imprimir?documento=${documento.id}`}>
             <PrinterIcon aria-hidden="true" className="size-4" />

@@ -1,5 +1,6 @@
 import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
-import { arquivoDoDocumento, type FormatoDocumento } from "@/lib/documentos/baixar-documento";
+import { arquivoDoDocumento } from "@/lib/documentos/baixar-documento";
+import { MENSAGEM_SOMENTE_DOCX } from "@/lib/documentos/modelos-disponiveis";
 import {
   documentoPorId,
   podeConsultarDocumento,
@@ -9,7 +10,8 @@ import {
 import { usuarioPorId } from "@/lib/services/administracao";
 
 /**
- * Download do documento preenchido (8.14, 8.15), para acesso direto pela URL.
+ * Download do DOCX oficial do documento preenchido (8.14, 8.15), para acesso
+ * direto pela URL. Só há DOCX: `formato=pdf` é recusado.
  * O formulário usa a server action `baixarDocumentoAction` (mesmo grafo de
  * módulos da página); esta rota atende chamadas programáticas e, no build de
  * produção, o mesmo processamento.
@@ -31,10 +33,10 @@ export async function GET(
   const { templateId } = await params;
   const url = new URL(request.url);
   const documentoId = url.searchParams.get("documento");
-  const formato = (url.searchParams.get("formato") ?? "docx") as FormatoDocumento;
+  const formato = url.searchParams.get("formato") ?? "docx";
 
-  if (!["docx", "pdf"].includes(formato)) {
-    return Response.json({ erro: "Formato de download inválido." }, { status: 400 });
+  if (formato !== "docx") {
+    return Response.json({ erro: MENSAGEM_SOMENTE_DOCX }, { status: 400 });
   }
 
   if (!documentoId) {
