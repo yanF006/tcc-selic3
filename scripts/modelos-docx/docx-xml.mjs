@@ -128,6 +128,35 @@ export function definirTextoDoParagrafo(p, novo) {
   for (const t of textos.slice(1)) definirTexto(t, "");
 }
 
+/**
+ * Prepara o parágrafo que recebe texto longo: alinhamento à esquerda (o
+ * justificado estica a linha que termina em quebra) e sem negrito herdado da
+ * linha "____" do Kit.
+ */
+export function prepararTextoLongo(p) {
+  for (const nome of ["jc", "b", "bCs"]) {
+    for (const no of Array.from(p.getElementsByTagNameNS(W, nome))) {
+      if (nome === "jc" && no.getAttribute("w:val") !== "both") continue;
+      no.parentNode.removeChild(no);
+    }
+  }
+}
+
+/** Tira o marcador de lista do parágrafo e zera o recuo herdado do estilo. */
+export function removerMarcadorDeLista(p) {
+  for (const nome of ["numPr", "ind"]) {
+    for (const no of Array.from(p.getElementsByTagNameNS(W, nome))) no.parentNode.removeChild(no);
+  }
+
+  const pPr = Array.from(p.childNodes).find((no) => no.nodeName === "w:pPr");
+  if (!pPr) return;
+  const ind = p.ownerDocument.createElementNS(W, "w:ind");
+  ind.setAttribute("w:left", "0");
+  ind.setAttribute("w:firstLine", "0");
+  const rPr = Array.from(pPr.childNodes).find((no) => no.nodeName === "w:rPr");
+  pPr.insertBefore(ind, rPr ?? null);
+}
+
 export function removerParagrafo(p) {
   p.parentNode.removeChild(p);
 }

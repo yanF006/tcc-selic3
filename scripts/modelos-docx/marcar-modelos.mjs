@@ -25,6 +25,8 @@ import {
   lerXml,
   linhasDeTabela,
   paragrafos,
+  prepararTextoLongo,
+  removerMarcadorDeLista,
   removerParagrafo,
   trocarNoParagrafo,
 } from "./docx-xml.mjs";
@@ -282,7 +284,7 @@ const MODELOS = {
       ...Object.fromEntries(
         [12, 13, 14, 15, 16, 18, 19, 20, 21, 22].map((p) => [
           p,
-          [[/^/, `( {comprovante_${p < 17 ? p - 11 : p - 17}} ) `]],
+          [[/^/, `({comprovante_${p < 17 ? p - 11 : p - 17}}) `]],
         ]),
       ),
       41: [[L, "{consideracoes}"]],
@@ -292,6 +294,14 @@ const MODELOS = {
       ],
     },
     textos: { 42: "" },
+    // O "(X)" alonga a lista: a caixa de texto ganha duas linhas de altura.
+    ajustesXml: [
+      ['cy="1042670"', 'cy="1360170"'],
+      ["height:82.1pt", "height:107.1pt"],
+      // A linha horizontal abaixo da caixa desce a mesma distância.
+      ["<wp:posOffset>1260475</wp:posOffset>", "<wp:posOffset>1577975</wp:posOffset>"],
+      ["margin-top:99.25pt", "margin-top:124.25pt"],
+    ],
     celulas: {
       1: { 1: "{parecer_plano__sim}", 2: "{parecer_plano__nao}" },
       2: { 1: "{parecer_contextualizacao__sim}", 2: "{parecer_contextualizacao__nao}" },
@@ -326,7 +336,12 @@ const MODELOS = {
 function marcar(templateId, definicao) {
   const origem = path.join(KIT, definicao.arquivo);
   const zip = new PizZip(readFileSync(origem));
-  const doc = lerXml(zip.file("word/document.xml").asText());
+  let xml = zip.file("word/document.xml").asText();
+  for (const [de, para] of definicao.ajustesXml ?? []) {
+    if (!xml.includes(de)) throw new Error(`${templateId}: ajuste "${de}" não encontrado.`);
+    xml = xml.split(de).join(para);
+  }
+  const doc = lerXml(xml);
   const ps = paragrafos(doc);
   const linhas = linhasDeTabela(doc);
 
@@ -336,6 +351,7 @@ function marcar(templateId, definicao) {
 
   for (const [indice, texto] of Object.entries(definicao.textos ?? {})) {
     definirTextoDoParagrafo(ps[Number(indice)], texto);
+    if (texto) prepararTextoLongo(ps[Number(indice)]);
   }
 
   for (const [linha, celulas] of Object.entries(definicao.celulas ?? {})) {
@@ -345,6 +361,7 @@ function marcar(templateId, definicao) {
     }
   }
 
+  for (const indice of definicao.semMarcador ?? []) removerMarcadorDeLista(ps[indice]);
   for (const indice of definicao.remover ?? []) removerParagrafo(ps[indice]);
 
   zip.file("word/document.xml", escreverXml(doc));

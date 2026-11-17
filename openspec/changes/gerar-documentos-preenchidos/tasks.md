@@ -23,3 +23,19 @@
 - [x] 4.2 Atualizar o README (funcionalidades e "o que é simulado"), retirando a geração demonstrativa e o PDF. Rodar typecheck, lint, test:unit e build. Verificação: os quatro comandos passam. Commit e push. Evidência: README atualizado; typecheck, lint (só 1 aviso antigo), test:unit (666 de 666) e build passam.
 - [ ] 4.3 Conferência visual: abrir no LibreOffice ou no Word um DOCX gerado de cada documento e comparar com o original do Kit. Registrar o resultado aqui; o responsável confirma no Preview da Vercel após o deploy. Verificação: registro com data neste arquivo.
 - [ ] 4.4 Arquivar a change (sincronizar o delta em `openspec/specs/documentos-estagio`). Verificação: a pasta foi movida para `openspec/changes/archive/`.
+
+## Registro da conferência visual (tarefa 4.3)
+
+**17/11/2026, conferência no LibreOffice.** Gerei os 9 DOCX com valores de exemplo, converti para PDF com `soffice` e comparei com os originais do Kit. Os textos fixos, a ordem, os cabeçalhos e as tabelas foram preservados, e os valores entram nos lugares certos.
+
+Ajustes feitos depois da conferência:
+- textos longos alinhados à esquerda e sem o negrito herdado da linha `____`;
+- caixa de comprovantes do Requerimento mais alta, com a linha de separação deslocada para baixo.
+
+Limitações aceitas:
+- alguns valores ficam em negrito porque a linha `____` do Kit estava no mesmo trecho do rótulo;
+- linhas sem campo no descritor (local e data da assinatura, endereço do aluno no Termo de Compromisso, curso no Requerimento e na Proposta) continuam em branco para preenchimento à mão;
+- no Formulário de Liberação, o Plano de Atividades que vem junto no arquivo do Kit fica em branco, porque é um documento próprio no sistema.
+
+**Pendente:** o responsável deve conferir no Preview da Vercel, após o deploy.
+
