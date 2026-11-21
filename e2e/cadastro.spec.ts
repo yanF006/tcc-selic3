@@ -86,6 +86,19 @@ test.describe("cadastro público", () => {
     await expect(page.getByRole("heading", { name: "Criar cadastro" })).toBeVisible();
   });
 
+  test("recusa matrícula já vinculada a outra conta mesmo com outro e-mail", async ({ page }) => {
+    await preencherEtapaUm(page, {
+      matricula: "20241006904",
+      email: email("matricula-ocupada"),
+      senha: SENHA,
+      confirmacao: SENHA,
+    });
+
+    await expect(page.getByRole("alert").filter({ hasText: "Cadastro recusado" })).toBeVisible();
+    await expect(page.getByLabel("Nome completo")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Criar cadastro" })).toBeVisible();
+  });
+
   test("confirma matrícula importada e conclui cadastro", async ({ page }) => {
     await preencherEtapaUm(page, {
       matricula: "20231000555",

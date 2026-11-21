@@ -2,7 +2,6 @@ import { Suspense } from "react";
 
 import { CarregandoArea } from "@/components/layout/carregando-area";
 import { Navbar, type GrupoNavbar } from "@/components/layout/navbar";
-import { SeletorPapel } from "@/components/layout/seletor-papel";
 import { TelaIndisponivel } from "@/components/layout/tela-indisponivel";
 import { exigirArea } from "@/lib/auth/guard";
 import { BancoIndisponivelError } from "@/lib/db/erros";
@@ -10,13 +9,11 @@ import { ProvedorSessao } from "@/lib/auth/sessao-contexto";
 import type { Papel, Usuario } from "@/lib/domain/types";
 import { gruposPara, ROTULOS_GRUPO } from "@/nav";
 import { AvisoCadastroPendente } from "@/features/cadastro/aviso-cadastro-pendente";
-import { contasDeDesenvolvimento } from "@/lib/services/sessao";
 import { documentosParaParecer } from "@/lib/services/documentos";
 
 /**
  * Casca única das áreas autenticadas (D1): resolve a sessão, executa a guarda de
- * papel, monta a navbar a partir de `nav.ts` e, com a flag ligada, exibe o
- * seletor de papel. As três áreas (aluno, coordenação e administração) usam
+ * papel e monta a navbar a partir de `nav.ts`. As três áreas (aluno, coordenação e administração) usam
  * este componente com os papéis exigidos de cada uma.
  */
 interface PropsShellArea {
@@ -68,7 +65,6 @@ async function ShellAreaResolvida({
           icone: item.icone,
         })),
       }));
-  const mostrarSeletor = process.env.NEXT_PUBLIC_SELIC_SELADOR_PAPEL === "true";
   const pendenciasParecer = cadastroPendente
     ? 0
     : (await documentosParaParecer("coordenador_curso", usuario)).total +
@@ -76,23 +72,7 @@ async function ShellAreaResolvida({
 
   return (
     <div className="flex min-h-full flex-col">
-      <Navbar
-        usuario={usuario}
-        grupos={grupos}
-        pendenciasParecer={pendenciasParecer}
-        seletorDePapel={
-          mostrarSeletor ? (
-            <SeletorPapel
-              contas={contasDeDesenvolvimento().map((conta) => ({
-                id: conta.id,
-                nome: conta.rotulo,
-                papel: conta.papel,
-              }))}
-              usuarioAtual={usuario}
-            />
-          ) : undefined
-        }
-      />
+      <Navbar usuario={usuario} grupos={grupos} pendenciasParecer={pendenciasParecer} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <ProvedorSessao usuario={usuario}>
           {cadastroPendente ? <AvisoCadastroPendente nome={usuario.nome} /> : children}

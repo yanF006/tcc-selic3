@@ -6,7 +6,7 @@ import { APIError } from "better-auth/api";
 
 import { gravarSessao, encerrarSessao, rotaInicial } from "@/lib/auth/sessao-servidor";
 import { entrar } from "@/lib/services/sessao";
-import { usuarioPorEmail, usuarioPorId } from "@/lib/services/administracao";
+import { usuarioPorEmail } from "@/lib/services/administracao";
 import { mensagemSeguraParaUsuario } from "@/lib/services/erros";
 import type { Usuario } from "@/lib/domain/types";
 import { bancoConfigurado } from "@/lib/db/prisma";
@@ -52,23 +52,6 @@ export async function entrarAction(email: string, senha: string): Promise<Estado
 
   if (!bancoConfigurado()) await gravarSessao(usuario.id);
   redirect(rotaInicial(usuario));
-}
-
-/** Troca a sessão para outra conta, para demonstrar as quatro áreas. */
-export async function trocarSessaoAction(usuarioId: string, destino: string): Promise<void> {
-  if (bancoConfigurado()) redirect("/login");
-  let usuario: Usuario | null;
-
-  try {
-    usuario = await usuarioPorId(usuarioId);
-  } catch {
-    redirect("/login");
-  }
-
-  if (!usuario || usuario.situacao !== "ativo") redirect("/login");
-
-  await gravarSessao(usuario.id);
-  redirect(destino);
 }
 
 export async function sairAction(): Promise<void> {

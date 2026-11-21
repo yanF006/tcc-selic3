@@ -27,7 +27,6 @@ npm run typecheck       # tipos das rotas e TypeScript
 npm run lint
 npm run test:unit
 npm run test:e2e
-npm run test:e2e:seletor # fluxo com seletor de papel habilitado
 npm run build
 npm run start           # serve o build de produção
 ```
@@ -45,8 +44,7 @@ nunca contra o Preview da Vercel, cujo estado é compartilhado entre execuções
 
 Para validar o build compilado, execute `npm run build` e depois
 `PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`. Isso evita a
-compilação de rotas durante os testes. O fluxo do seletor de papel usa o servidor
-de desenvolvimento com sua flag específica.
+compilação de rotas durante os testes.
 
 ## Variáveis na Vercel
 
@@ -118,8 +116,8 @@ A senha das contas de desenvolvimento do simulador é `selic123`.
 | Administrador               | felipe.andrade@ifrj.edu.br      |
 | Aluna com cadastro pendente | paula.batista@aluno.ifrj.edu.br |
 
-O campus é fixo em **Pinheiral**. O seletor de papel é uma ferramenta de
-demonstração, habilitada por `NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true`.
+O campus é fixo em **Pinheiral**. Não há troca de papel na interface: cada
+conta acessa apenas a área do seu papel.
 
 ## Arquitetura
 

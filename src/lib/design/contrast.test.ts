@@ -12,9 +12,9 @@ import {
 const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
 
 const temas = [
-  { nome: "claro", seletor: ":root" },
-  { nome: "escuro", seletor: ".dark" },
-  { nome: "impressao", seletor: ".impressao" },
+  { nome: "claro", escopo: ":root" },
+  { nome: "escuro", escopo: ".dark" },
+  { nome: "impressao", escopo: ".impressao" },
 ] as const;
 
 const paresDeTexto = [
@@ -37,8 +37,8 @@ const paresDeTexto = [
   ["foreground", "muted"],
 ] as const;
 
-describe.each(temas)("contraste no tema $nome", ({ seletor }) => {
-  const tokens = lerTokensDoCss(css, seletor);
+describe.each(temas)("contraste no tema $nome", ({ escopo }) => {
+  const tokens = lerTokensDoCss(css, escopo);
 
   it.each(paresDeTexto)("%s sobre %s atinge 4,5:1", (texto, fundo) => {
     expect(razaoDeContraste(tokens[texto], tokens[fundo])).toBeGreaterThanOrEqual(
@@ -60,14 +60,14 @@ describe.each(temas)("contraste no tema $nome", ({ seletor }) => {
 });
 
 describe("contrastes medidos", () => {
-  it.each(temas)("registra as razões do tema $nome", ({ seletor }) => {
-    const tokens = lerTokensDoCss(css, seletor);
+  it.each(temas)("registra as razões do tema $nome", ({ escopo }) => {
+    const tokens = lerTokensDoCss(css, escopo);
     const medicoes = paresDeTexto.map(
       ([texto, fundo]) =>
         `${texto}/${fundo}=${razaoDeContraste(tokens[texto], tokens[fundo]).toFixed(2)}`,
     );
 
-    console.log(`[contraste ${seletor}] ${medicoes.join(" ")}`);
+    console.log(`[contraste ${escopo}] ${medicoes.join(" ")}`);
 
     expect(medicoes.length).toBe(paresDeTexto.length);
   });

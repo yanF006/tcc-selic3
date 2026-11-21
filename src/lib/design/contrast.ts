@@ -49,12 +49,12 @@ export const CONTRASTE_NAO_TEXTO_AA = 3;
 
 /**
  * Lê as variáveis CSS de um bloco de `globals.css`.
- * `seletor` pode ser `:root`, `.dark` ou `.impressao`.
+ * `escopo` pode ser `:root`, `.dark` ou `.impressao`.
  */
-export function lerTokensDoCss(css: string, seletor: string): Record<string, string> {
-  const inicio = css.indexOf(`${seletor} {`);
+export function lerTokensDoCss(css: string, escopo: string): Record<string, string> {
+  const inicio = css.indexOf(`${escopo} {`);
   if (inicio === -1) {
-    throw new Error(`Bloco ${seletor} não encontrado em globals.css`);
+    throw new Error(`Bloco ${escopo} não encontrado em globals.css`);
   }
 
   const fim = css.indexOf("}", inicio);

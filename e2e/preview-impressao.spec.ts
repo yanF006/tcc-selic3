@@ -13,10 +13,10 @@ import { expect, test } from "@playwright/test";
 
 const FOLHA = "[data-preview-impressao]";
 
-/** Cor de fundo computada do primeiro elemento que casar com o seletor. */
-async function fundoDe(page: import("@playwright/test").Page, seletor: string) {
+/** Cor de fundo computada do primeiro elemento que casar com o localizador. */
+async function fundoDe(page: import("@playwright/test").Page, localizador: string) {
   return page
-    .locator(seletor)
+    .locator(localizador)
     .first()
     .evaluate((el) => getComputedStyle(el).backgroundColor);
 }
@@ -28,7 +28,7 @@ async function fundoDe(page: import("@playwright/test").Page, seletor: string) {
  */
 async function coresForaDoEsperado(
   page: import("@playwright/test").Page,
-  seletor: string,
+  localizador: string,
   propriedade: "backgroundColor" | "color",
 ) {
   return page.evaluate(
@@ -63,7 +63,7 @@ async function coresForaDoEsperado(
 
       return encontradas;
     },
-    { raiz: seletor, propriedade },
+    { raiz: localizador, propriedade },
   );
 }
 

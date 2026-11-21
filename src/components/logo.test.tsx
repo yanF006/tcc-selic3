@@ -21,14 +21,14 @@ const coresDaMarca = [
 ];
 
 const escopos = [
-  { nome: "claro", seletor: ":root" },
-  { nome: "escuro", seletor: ".dark" },
-  { nome: "impressao", seletor: ".impressao" },
+  { nome: "claro", escopo: ":root" },
+  { nome: "escuro", escopo: ".dark" },
+  { nome: "impressao", escopo: ".impressao" },
 ] as const;
 
 describe("nome do logotipo", () => {
-  it.each(escopos)("atinge 4,5:1 no escopo $nome", ({ seletor }) => {
-    const tokens = lerTokensDoCss(css, seletor);
+  it.each(escopos)("atinge 4,5:1 no escopo $nome", ({ escopo }) => {
+    const tokens = lerTokensDoCss(css, escopo);
 
     expect(razaoDeContraste(tokens["logo-texto"], tokens.background)).toBeGreaterThanOrEqual(
       CONTRASTE_TEXTO_AA,
@@ -37,8 +37,8 @@ describe("nome do logotipo", () => {
 });
 
 describe("marca oficial", () => {
-  it.each(escopos)("tem contraste de 3:1 contra o fundo no escopo $nome", ({ seletor }) => {
-    const tokens = lerTokensDoCss(css, seletor);
+  it.each(escopos)("tem contraste de 3:1 contra o fundo no escopo $nome", ({ escopo }) => {
+    const tokens = lerTokensDoCss(css, escopo);
 
     for (const cor of coresDaMarca) {
       expect(razaoDeContraste(cor, tokens.background), cor).toBeGreaterThanOrEqual(
