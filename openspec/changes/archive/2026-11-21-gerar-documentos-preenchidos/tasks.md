@@ -21,8 +21,8 @@
 
 - [x] 4.1 E2E: baixar o Plano de Atividades preenchido em `e2e/` e conferir que o arquivo é DOCX válido e contém o nome do aluno. Verificação: `npm run test:e2e` passa. Evidência: novo teste em `e2e/documentos-preenchimento.spec.ts` passa. Suíte completa no build: 127 passam e 1 falha. A falha é `documentos.spec.ts` › "baixa a Lei de Estágio": cabeçalho `content-disposition` ausente na rota `/baixar`. Ela já falhava antes desta change (conferido com `git stash`) e fica fora do escopo.
 - [x] 4.2 Atualizar o README (funcionalidades e "o que é simulado"), retirando a geração demonstrativa e o PDF. Rodar typecheck, lint, test:unit e build. Verificação: os quatro comandos passam. Commit e push. Evidência: README atualizado; typecheck, lint (só 1 aviso antigo), test:unit (666 de 666) e build passam.
-- [ ] 4.3 Conferência visual: abrir no LibreOffice ou no Word um DOCX gerado de cada documento e comparar com o original do Kit. Registrar o resultado aqui; o responsável confirma no Preview da Vercel após o deploy. Verificação: registro com data neste arquivo.
-- [ ] 4.4 Arquivar a change (sincronizar o delta em `openspec/specs/documentos-estagio`). Verificação: a pasta foi movida para `openspec/changes/archive/`.
+- [x] 4.3 Conferência visual: abrir no LibreOffice ou no Word um DOCX gerado de cada documento e comparar com o original do Kit. Registrar o resultado aqui; o responsável confirma no Preview da Vercel após o deploy. Verificação: registro com data neste arquivo. Evidência: conferência no LibreOffice registrada abaixo; o responsável confirmou no Preview da Vercel em 21/11/2026.
+- [x] 4.4 Arquivar a change (sincronizar o delta em `openspec/specs/documentos-estagio`). Verificação: a pasta foi movida para `openspec/changes/archive/`. Evidência: delta sincronizado em `openspec/specs/documentos-estagio/spec.md` e change arquivada em 21/11/2026.
 
 ## Registro da conferência visual (tarefa 4.3)
 
@@ -37,5 +37,5 @@ Limitações aceitas:
 - linhas sem campo no descritor (local e data da assinatura, endereço do aluno no Termo de Compromisso, curso no Requerimento e na Proposta) continuam em branco para preenchimento à mão;
 - no Formulário de Liberação, o Plano de Atividades que vem junto no arquivo do Kit fica em branco, porque é um documento próprio no sistema.
 
-**Pendente:** o responsável deve conferir no Preview da Vercel, após o deploy.
+**21/11/2026:** o responsável confirmou a conferência no Preview da Vercel.
 
