@@ -8,7 +8,7 @@ Permite que o aluno solicite a criação de estágios, informe os dados para a d
 
 ### Requirement: Cadastro de estágio
 
-O sistema SHALL permitir que o aluno solicite a criação de um estágio e informe instituição concedente, supervisor, orientador, datas previstas e os demais dados necessários ao Termo de Compromisso, ao Formulário de Liberação e ao Plano de Atividades. O sistema SHALL reaproveitar os dados já cadastrados e SHALL registrar o estágio em preparação, sem permitir ao aluno escolher sua situação.
+O sistema SHALL permitir que o aluno solicite a criação de um estágio e informe instituição concedente, supervisor, orientador, datas previstas e os demais dados necessários ao Termo de Compromisso, ao Formulário de Liberação e ao Plano de Atividades. O sistema SHALL reaproveitar os dados já cadastrados e SHALL registrar o estágio em preparação, sem permitir ao aluno escolher sua situação. O estágio e os três documentos iniciais SHALL ser criados como uma única operação, consultável após reinício e em qualquer instância.
 
 #### Scenario: Cadastro válido
 
@@ -29,6 +29,16 @@ O sistema SHALL permitir que o aluno solicite a criação de um estágio e infor
 
 - **WHEN** o aluno deixa em branco um dos campos obrigatórios do estágio
 - **THEN** o sistema SHALL bloquear a gravação e sinalizar o campo correspondente
+
+#### Scenario: Preparação consultada em outra instância
+
+- **WHEN** o aluno conclui uma solicitação válida e abre seus detalhes em outra instância
+- **THEN** o sistema SHALL mostrar o mesmo estágio em preparação e os três documentos iniciais com seus valores salvos e pendências
+
+#### Scenario: Falha ao criar a documentação inicial
+
+- **WHEN** uma falha impede salvar um dos registros obrigatórios da criação do estágio
+- **THEN** o sistema SHALL recusar a conclusão sem deixar estágio ou documentos parcialmente criados
 
 ### Requirement: Validação do período do estágio
 
@@ -85,7 +95,7 @@ O sistema SHALL listar os estágios do aluno com nome da instituição, supervis
 #### Scenario: Aluno sem estágios
 
 - **WHEN** o aluno não possui nenhum estágio cadastrado
-- **THEN** o sistema SHALL exibir um estado vazio informando que não há estágios e offering a ação de cadastrar um novo estágio
+- **THEN** o sistema SHALL exibir um estado vazio informando que não há estágios e oferecendo a ação de cadastrar um novo estágio
 
 #### Scenario: Filtro do histórico
 
@@ -157,23 +167,23 @@ O sistema SHALL bloquear a edição, pelo aluno, dos dados iniciais de uma solic
 #### Scenario: Cancelamento antes da liberação
 
 - **WHEN** o aluno cancela uma solicitação que ainda aguarda liberação
-- **THEN** o sistema SHALL impedir sua continuidade e preservar o registro histórico do cancelamento
+- **THEN** o sistema SHALL persistir o cancelamento com data, impedir sua continuidade e preservar o registro histórico após reinício
 
 #### Scenario: Exclusão com histórico preservado
 
 - **WHEN** o aluno exclui um estágio próprio
 - **THEN** o sistema SHALL retirar o estágio dos processos ativos e remover os dados pessoais do aluno vinculados àquele estágio, preservando seu nome e as informações históricas do estágio sem excluir o perfil do aluno
 
-### Requirement: Acesso do coordenador de curso aos estágios de seu curso
+### Requirement: Registros funcionais do processo
 
-O sistema SHALL permitir que o Coordenador de Curso consulte, edite e exclua os estágios dos alunos de seu próprio curso, conforme as regras de autorização de exclusão.
+O sistema SHALL preservar os registros necessários para explicar decisões de acesso, pareceres, conferências de assinaturas, correções de horas, cancelamentos e exclusões, com responsável, data e resultado quando aplicáveis. Esses registros SHALL NOT exigir uma trilha genérica de toda edição de campo nem um painel de histórico completo de alterações, e SHALL NOT poder ser apagados pelas operações do fluxo.
 
-#### Scenario: Listagem por curso
+#### Scenario: Correção seguida de nova decisão
 
-- **WHEN** o Coordenador de Curso abre a gestão de estágios
-- **THEN** o sistema SHALL listar os estágios dos alunos de seu curso e não SHALL exibir estágios de alunos de outros cursos
+- **WHEN** um documento indeferido é corrigido e recebe outro parecer
+- **THEN** o sistema SHALL preservar os pareceres com seus responsáveis e datas, sem exigir histórico de cada edição de campo intermediária
 
-#### Scenario: Edição de estágio de aluno do curso
+#### Scenario: Consulta de conferência concluída
 
-- **WHEN** o Coordenador de Curso edita os dados de um estágio de um aluno de seu curso
-- **THEN** o sistema SHALL persistir a alteração e registrar que a edição foi feita pelo coordenador, e não pelo aluno
+- **WHEN** o responsável consulta um estágio já liberado
+- **THEN** o sistema SHALL identificar quem conferiu as assinaturas e quando

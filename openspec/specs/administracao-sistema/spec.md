@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define as telas do Administrador para cadastro e gestão de alunos, coordenadores de estágio, coordenadores de curso, administradores, templates de documento e importação de matrículas do SIGAA.
+Define as telas do Administrador para cadastro e gestão de alunos, coordenadores de estágio, coordenadores de curso, administradores e importação de matrículas do SIGAA, com alterações duráveis e visíveis em qualquer instância.
 
 ## Requirements
 
@@ -22,12 +22,12 @@ O sistema SHALL conceder ao Administrador acesso a todas as áreas do sistema, i
 
 ### Requirement: Cadastro de alunos pelo administrador
 
-O sistema SHALL permitir ao administrador cadastrar, editar e excluir alunos, informando os mesmos dados do cadastro do próprio aluno, e SHALL registrar automaticamente a matrícula informada no cadastro quando ela ainda não constar do registro, liberando o acesso do aluno na mesma operação.
+O sistema SHALL permitir ao administrador cadastrar, editar e excluir alunos, informando os mesmos dados do cadastro do próprio aluno. Quando a matrícula informada ainda não constar do registro, o sistema SHALL registrá-la e criar a conta ativa como uma única operação, respeitando a vinculação de cada matrícula a no máximo uma conta. O titular SHALL estabelecer a própria senha pelo fluxo de definição de senha, sem senha de demonstração.
 
 #### Scenario: Cadastro de aluno pelo administrador
 
 - **WHEN** o administrador cadastra um aluno com matrícula, e-mail e dados pessoais válidos
-- **THEN** o sistema SHALL gravar o cadastro e disponibilizar o acesso ao aluno
+- **THEN** o sistema SHALL gravar o cadastro, disponibilizar o perfil em qualquer instância e oferecer ao titular o estabelecimento de senha
 
 #### Scenario: Matrícula registrada no cadastro do aluno
 
@@ -36,32 +36,47 @@ O sistema SHALL permitir ao administrador cadastrar, editar e excluir alunos, in
 
 #### Scenario: Matrícula já registrada
 
-- **WHEN** o administrador cadastra um aluno com matrícula já existente
+- **WHEN** o administrador cadastra um aluno com matrícula registrada e ainda sem conta vinculada
 - **THEN** o sistema SHALL manter o registro existente sem duplicá-lo e liberar o acesso do aluno
+
+#### Scenario: Matrícula já vinculada a outra conta
+
+- **WHEN** o administrador cadastra um aluno com matrícula já vinculada a outra conta
+- **THEN** o sistema SHALL recusar o cadastro sem criar conta nem alterar a conta existente
 
 #### Scenario: E-mail já utilizado
 
 - **WHEN** o administrador cadastra um aluno com e-mail já usado por outro usuário
 - **THEN** o sistema SHALL recusar o cadastro e sinalizar que o e-mail já está em uso
 
+#### Scenario: Falha no cadastro administrativo
+
+- **WHEN** ocorre falha ao persistir parte do cadastro que criaria matrícula e conta
+- **THEN** o sistema SHALL informar a falha sem deixar matrícula ou conta nova resultante de uma operação parcialmente aplicada
+
 ### Requirement: Cadastro dos demais cargos pelo administrador
 
-O sistema SHALL permitir ao administrador cadastrar, editar e excluir coordenadores de estágio, coordenadores de curso e administradores, informando nome, e-mail, curso, quando aplicável, e situação do cadastro.
+O sistema SHALL permitir ao administrador cadastrar, editar e excluir coordenadores de estágio, coordenadores de curso e administradores, informando nome, e-mail, um único cargo, curso, quando aplicável, e situação do cadastro. Formulários e perfis SHALL apresentar um único cargo, sem seleção múltipla. Alterações de cargo ou curso SHALL valer nas requisições protegidas seguintes, em qualquer instância.
 
 #### Scenario: Cadastro de coordenador de curso
 
 - **WHEN** o administrador cadastra um coordenador de curso informando o curso
-- **THEN** o sistema SHALL gravar o cadastro com o papel de Coordenador de Curso vinculado ao curso informado
+- **THEN** o sistema SHALL gravar o cadastro com o cargo de Coordenador de Curso vinculado ao curso informado
 
 #### Scenario: Cadastro de administrador
 
 - **WHEN** o administrador cadastra outro administrador
-- **THEN** o sistema SHALL gravar o cadastro com o papel de Administrador e permitir que esse usuário acesse todas as áreas
+- **THEN** o sistema SHALL gravar o cadastro com o cargo de Administrador e permitir que esse usuário acesse todas as áreas
 
 #### Scenario: Cadastro sem cargo definido
 
-- **WHEN** o administrador inicia o cadastro de um usuário de coordenação sem informar o papel
-- **THEN** o sistema SHALL exigir a escolha do papel antes de concluir o cadastro
+- **WHEN** o administrador inicia o cadastro de um usuário de coordenação sem informar o cargo
+- **THEN** o sistema SHALL exigir a escolha do cargo antes de concluir o cadastro
+
+#### Scenario: Alteração de cargo ou curso
+
+- **WHEN** a administração conclui uma alteração autorizada de cargo ou curso de uma conta
+- **THEN** as requisições protegidas seguintes SHALL aplicar o cargo e o vínculo atualizados, sem acumular permissões anteriores
 
 #### Scenario: Exclusão de coordenador ou administrador
 
@@ -70,12 +85,12 @@ O sistema SHALL permitir ao administrador cadastrar, editar e excluir coordenado
 
 ### Requirement: Gestão de usuários por situação
 
-O sistema SHALL permitir ao administrador listar usuários por papel, por situação e por curso, buscá-los por nome, e-mail ou matrícula, abrir o perfil completo de um cadastro e inativá-lo sem excluí-lo.
+O sistema SHALL permitir ao administrador listar usuários por cargo, por situação e por curso, buscá-los por nome, e-mail ou matrícula, abrir o perfil completo de um cadastro e inativá-lo sem excluí-lo.
 
 #### Scenario: Lista por papel
 
 - **WHEN** o administrador abre a gestão de usuários
-- **THEN** o sistema SHALL listar os usuários e permitir filtrar por papel, por situação e por curso, exibindo o total de resultados
+- **THEN** o sistema SHALL listar os usuários e permitir filtrar por cargo, por situação e por curso, exibindo o total de resultados
 
 #### Scenario: Filtro por curso
 
@@ -85,65 +100,41 @@ O sistema SHALL permitir ao administrador listar usuários por papel, por situa�
 #### Scenario: Perfil completo do cadastro
 
 - **WHEN** o administrador abre o perfil completo de um cadastro
-- **THEN** o sistema SHALL exibir situação, papéis, matrícula, curso, turma, período, contato e endereço registrados
+- **THEN** o sistema SHALL exibir situação, cargo, matrícula, curso, turma, período, contato e endereço registrados
 
 #### Scenario: Inativação de cadastro
 
 - **WHEN** o administrador inativa o cadastro de um usuário
 - **THEN** o sistema SHALL bloquear o acesso do usuário e preservar os registros que ele criou
 
-### Requirement: Gerenciamento de templates de documento
-
-O sistema SHALL permitir ao administrador cadastrar novas versões de template dos documentos, informando o arquivo do template e os campos de preenchimento correspondentes, e SHALL permitir inativar templates.
-
-#### Scenario: Cadastro de nova versão de template
-
-- **WHEN** o administrador cadastra um template com o arquivo e a definição dos campos de preenchimento
-- **THEN** o sistema SHALL gravar a nova versão como vigente e disponibilizá-la para novos preenchimentos
-
-#### Scenario: Nome e tipo de template
-
-- **WHEN** o administrador cadastra um template
-- **THEN** o sistema SHALL exigir o documento ao qual o template pertence e os campos de preenchimento, e recusar arquivos que não estejam no formato docx
-
-#### Scenario: Histórico de versões
-
-- **WHEN** o administrador consulta um documento com mais de uma versão de template
-- **THEN** o sistema SHALL exibir as versões com a data de cadastro e indicar qual é a vigente
-
-#### Scenario: Documentos preenchidos com versão anterior
-
-- **WHEN** um documento foi preenchido com uma versão anterior do template
-- **THEN** o sistema SHALL manter o preenchimento e a versão utilizados e não SHALL reaplicar os campos da nova versão
-
-#### Scenario: Inativação de template
-
-- **WHEN** o administrador inativa um template que possui documentos gerados
-- **THEN** o sistema SHALL manter os documentos já gerados disponíveis e sinalizar a inatividade do template
-
 ### Requirement: Importação de matrículas do SIGAA
 
-O sistema SHALL permitir ao administrador importar matrículas de aluno, enquanto não houver integração formal com o SIGAA, por meio de arquivo ou lançamento manual.
+O sistema SHALL permitir ao administrador registrar matrículas de aluno, enquanto não houver integração formal com o SIGAA, por arquivo CSV ou lançamento manual. Cada registro SHALL guardar matrícula, nome, curso, origem e data, mantendo distinto o registro que autoriza o cadastro do vínculo da matrícula com uma conta. Uma matrícula já registrada SHALL NOT ser duplicada, inclusive em operações concorrentes.
 
 #### Scenario: Importação por arquivo
 
 - **WHEN** o administrador envia um arquivo com matrículas e o sistema processa a importação
-- **THEN** o sistema SHALL gravar as matrículas válidas, informar quantas foram importadas e listar as rejeitadas com o motivo
+- **THEN** o sistema SHALL gravar as matrículas válidas e informar as aceitas, as ignoradas e as rejeitadas com o motivo
 
 #### Scenario: Lançamento manual de matrícula
 
-- **WHEN** o administrador lança uma matrícula com dez dígitos, nome e curso
-- **THEN** o sistema SHALL gravar a matrícula como válida, recusar duplicatas e registrar a origem do lançamento
+- **WHEN** o administrador lança uma matrícula de onze dígitos, com nome e curso
+- **THEN** o sistema SHALL gravar a matrícula como válida e registrar a origem do lançamento
 
 #### Scenario: Matrícula duplicada
 
-- **WHEN** a importação ou o lançamento manual contém uma matrícula já registrada
-- **THEN** o sistema SHALL não duplicar o registro e informar a matrícula como ignorada
+- **WHEN** a importação ou o lançamento manual contém uma matrícula já registrada, inclusive em duas operações simultâneas
+- **THEN** o sistema SHALL manter um único registro, sem sobrescrevê-lo, e informar a matrícula como ignorada
+
+#### Scenario: Matrícula registrada mas ainda sem conta
+
+- **WHEN** uma matrícula é registrada e um aluno inicia o cadastro em outra instância
+- **THEN** o sistema SHALL identificá-la como registrada e permitir seu uso enquanto não existir conta vinculada
 
 #### Scenario: Registro de matrícula sem integração com o SIGAA
 
 - **WHEN** o administrador importa ou lança matrículas
-- **THEN** o sistema SHALL informar que o registro é manual e temporário, pois não há acesso oficial ao SIGAA, e SHALL informar que a matrícula registrada é a que libera o cadastro do aluno
+- **THEN** o sistema SHALL informar que o registro é manual e temporário, pois não há acesso oficial ao SIGAA, e que a matrícula registrada é a que libera o cadastro do aluno
 
 #### Scenario: Consulta de matrículas importadas
 

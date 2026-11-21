@@ -124,7 +124,7 @@ O sistema SHALL listar os estágios concluídos que possuem documentos sem parec
 
 ### Requirement: Restrição de visibilidade por papel
 
-O sistema SHALL limitar as estatísticas e a pesquisa de estágios ao Coordenador de Estágio e ao Administrador em todo o campus, e ao Coordenador de Curso apenas aos alunos de seu curso.
+O sistema SHALL limitar as estatísticas e a pesquisa de estágios ao Coordenador de Estágio e ao Administrador em todo o campus, e ao Coordenador de Curso apenas aos alunos de seu curso, inclusive quando os filtros enviados forem manipulados.
 
 #### Scenario: Estatísticas do campus
 
@@ -136,11 +136,26 @@ O sistema SHALL limitar as estatísticas e a pesquisa de estágios ao Coordenado
 - **WHEN** o Coordenador de Curso abre as estatísticas
 - **THEN** o sistema SHALL calcular os indicadores apenas sobre os alunos de seu curso e sinalizar esse recorte no título do painel
 
+#### Scenario: Filtro manipulado para outro curso
+
+- **WHEN** um Coordenador de Curso consulta indicadores com filtros manipulados para outro curso
+- **THEN** o sistema SHALL manter o recorte autorizado e SHALL NOT revelar totais ou registros de outro curso
+
 ### Requirement: Apresentação dos indicadores
 
-O sistema SHALL apresentar os indicadores em visões de tabela e de gráfico, e cada indicador SHALL exibir o total que o originou e SHALL permitir abrir a lista dos registros que o compõem.
+O sistema SHALL apresentar os indicadores em visões de tabela e de gráfico, e cada indicador SHALL exibir o total que o originou e SHALL permitir abrir a lista dos registros que o compõem. Listas, totais e indicadores SHALL ser calculados sobre todos os registros persistidos que atendam aos filtros e às permissões, sem depender de páginas pré-carregadas, de dados de demonstração ou de reinício.
 
 #### Scenario: Abrir a lista a partir do indicador
 
 - **WHEN** o usuário seleciona um valor exibido em um indicador
 - **THEN** o sistema SHALL abrir a lista dos registros que compõem aquele valor
+
+#### Scenario: Indicador e lista com o mesmo recorte
+
+- **WHEN** o coordenador filtra um indicador por curso e período e abre a lista dos registros que o compõem
+- **THEN** o sistema SHALL usar o mesmo recorte autorizado no total e na lista, permitindo percorrer todos os registros
+
+#### Scenario: Situação alterada em outra instância
+
+- **WHEN** um coordenador conclui um estágio válido e outro processo consulta as estatísticas em nova requisição
+- **THEN** o sistema SHALL contabilizá-lo como concluído sem depender de reinício

@@ -34,19 +34,29 @@ O sistema SHALL disponibilizar para download a Lei de Estágio e o Regulamento d
 - **WHEN** o usuário baixa a Lei de Estágio no catálogo
 - **THEN** o sistema SHALL fornecer o arquivo e registrar que o documento é de uso exclusivo para download
 
-### Requirement: Campos de preenchimento por versão de template
+### Requirement: Catálogo fixo e preenchimentos preservados
 
-O sistema SHALL definir os campos de preenchimento de cada documento a partir da versão vigente do respective template, e SHALL oferecer apenas os campos correspondentes a essa versão.
+Os documentos do Kit de Estágio, seus arquivos e seus campos SHALL ser mantidos pelo desenvolvedor como catálogo fixo; a interface SHALL NOT oferecer editor de templates, upload, publicação ou gerenciamento administrativo de versões. O preenchimento SHALL oferecer exatamente os campos da definição vigente do documento. Cada documento preenchido SHALL guardar seus vínculos, situação, valores e a identificação da definição utilizada, e uma atualização do catálogo SHALL NOT reinterpretar silenciosamente preenchimentos existentes.
 
-#### Scenario: Documento com versão vigente
+#### Scenario: Documento com definição vigente
 
-- **WHEN** o aluno abre o preenchimento de um documento com versão vigente cadastrada
-- **THEN** o sistema SHALL exibir exatamente os campos correspondentes a essa versão
+- **WHEN** o aluno abre o preenchimento de um documento do catálogo
+- **THEN** o sistema SHALL exibir exatamente os campos da definição vigente desse documento
 
-#### Scenario: Documento sem versão vigente
+#### Scenario: Documento sem definição disponível
 
-- **WHEN** o usuário tenta abrir o preenchimento de um documento que não possui versão vigente cadastrada
-- **THEN** o sistema SHALL informar que o documento está indisponível e oferecer a alternativa de download
+- **WHEN** o usuário tenta abrir o preenchimento de um documento cuja definição não está disponível
+- **THEN** o sistema SHALL informar que o documento está indisponível sem criar preenchimento
+
+#### Scenario: Reabertura de preenchimento salvo
+
+- **WHEN** um documento salvo é reaberto em outra instância ou após uma atualização da aplicação
+- **THEN** o sistema SHALL preservar seus valores, incluindo endereços corrigidos manualmente, e a identificação de sua definição, sem substituí-los por novos campos ou valores do catálogo
+
+#### Scenario: Catálogo sem edição administrativa
+
+- **WHEN** administrador ou coordenador abre o catálogo, ou uma requisição direta tenta publicar ou alterar uma definição
+- **THEN** o sistema SHALL apresentar apenas os recursos fixos e as ações de uso autorizadas, sem operação de publicação, preservando as definições usadas pelos registros existentes
 
 ### Requirement: Preenchimento automático com dados do aluno
 
@@ -117,7 +127,7 @@ O sistema SHALL permitir ao aluno preparar somente os três documentos iniciais 
 
 ### Requirement: Observações da coordenação por documento
 
-O sistema SHALL disponibilizar, em cada documento registrado, observações com conteúdo, autor e data. Apenas o Coordenador de Curso e o Coordenador de Estágio com acesso ao documento SHALL acrescentar observações, ao emitir parecer, ao confirmar assinaturas ou a qualquer momento, independentemente dessas ações. Cada acréscimo SHALL preservar as observações anteriores e não SHALL alterar por si só o parecer, a conferência das assinaturas ou a situação do estágio.
+O sistema SHALL disponibilizar, em cada documento registrado, observações com conteúdo, autor e data. Apenas o Coordenador de Curso, nos documentos dos alunos de seu curso, e o Coordenador de Estágio, nos documentos do campus, SHALL acrescentar observações, ao emitir parecer, ao confirmar assinaturas ou a qualquer momento, independentemente dessas ações. Cada acréscimo SHALL preservar as observações anteriores e não SHALL alterar por si só o parecer, a conferência das assinaturas ou a situação do estágio.
 
 #### Scenario: Observação durante o parecer
 
@@ -138,6 +148,16 @@ O sistema SHALL disponibilizar, em cada documento registrado, observações com 
 
 - **WHEN** um usuário sem papel de Coordenador de Curso ou Coordenador de Estágio tenta acrescentar uma observação, inclusive por requisição direta
 - **THEN** o sistema SHALL recusar a operação e preservar os registros existentes
+
+#### Scenario: Documento de outro curso
+
+- **WHEN** um Coordenador de Curso tenta acrescentar uma observação a um documento de aluno de outro curso
+- **THEN** o sistema SHALL recusar o acesso e a gravação
+
+#### Scenario: Observações simultâneas
+
+- **WHEN** dois coordenadores autorizados acrescentam observações ao mesmo documento em instâncias diferentes
+- **THEN** o sistema SHALL preservar ambas com seus autores e datas, sem substituir o histórico anterior
 
 ### Requirement: Gravação e consulta de documento preenchido
 
@@ -258,6 +278,11 @@ O sistema SHALL oferecer o download do documento preenchido em formato docx, no 
 - **WHEN** o usuário consulta uma Ficha de Frequência e Avaliação registrada no estágio
 - **THEN** o sistema SHALL exibir o registro sem oferecer a geração de arquivo do documento
 
+#### Scenario: Arquivo não disponível
+
+- **WHEN** o usuário solicita um arquivo que não pode ser gerado ou cuja referência não pode ser resolvida
+- **THEN** o sistema SHALL informar a indisponibilidade e SHALL NOT confirmar geração ou download bem-sucedido
+
 ### Requirement: Registro de horas do estágio
 
 O sistema SHALL permitir que o aluno registre as horas do estágio conforme digita, informando por dia a data, a presença e as horas trabalhadas, e SHALL apresentar o total acumulado do estágio.
@@ -306,9 +331,14 @@ O sistema SHALL aplicar, ao registrar horas, os limites previstos no Regulamento
 - **WHEN** o lançamento respeita os limites diário e semanal e está dentro do período do estágio
 - **THEN** o sistema SHALL aceitar o lançamento e somá-lo ao total acumulado do estágio
 
+#### Scenario: Lançamentos concorrentes acima do limite
+
+- **WHEN** dois lançamentos simultâneos seriam individualmente válidos mas juntos ultrapassariam o limite diário ou semanal
+- **THEN** o sistema SHALL impedir o excesso no resultado persistido e informar a rejeição da operação incompatível
+
 ### Requirement: Correção de lançamento sem rasura
 
-O sistema SHALL mantém imutável cada lançamento de horas registrado e SHALL permitir corrigir um lançamento por meio de um lançamento de correção que identifica o lançamento corrigido, preservando o histórico, porque a Ficha de Acompanhamento não deve conter rasuras.
+O sistema SHALL manter imutável cada lançamento de horas registrado e SHALL permitir corrigir um lançamento por meio de um lançamento de correção que identifica o lançamento corrigido, preservando o histórico, porque a Ficha de Acompanhamento não deve conter rasuras.
 
 #### Scenario: Edição de lançamento já registrado
 
@@ -323,7 +353,12 @@ O sistema SHALL mantém imutável cada lançamento de horas registrado e SHALL p
 #### Scenario: Histórico sem apagamento
 
 - **WHEN** o usuário consulta os lançamentos do estágio
-- **THEN** o sistema SHALL exibir o lançamento original e a correção identificados como tales, sem apagar nenhum dos dois
+- **THEN** o sistema SHALL exibir o lançamento original e a correção identificados como tais, sem apagar nenhum dos dois
+
+#### Scenario: Correção consultada após reinício
+
+- **WHEN** o aluno registra uma correção válida e consulta o estágio após reinício ou em outra instância
+- **THEN** o sistema SHALL mostrar original e correção identificados e o total ajustado, sem contar duas vezes as horas corrigidas
 
 ### Requirement: Limite de palavras por seção
 

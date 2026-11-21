@@ -1,8 +1,8 @@
-# Parecer e notificações
+# Parecer, acompanhamento e envios
 
 ## Purpose
 
-Governa a submissão e a correção de documentos sujeitos a parecer, o envio da documentação inicial para assinaturas após parecer favorável, a notificação da liberação do estágio e os demais envios externos previstos no Kit.
+Governa a submissão e a correção de documentos sujeitos a parecer, o acompanhamento de pendências e resultados nas situações e filas, o envio da documentação inicial para assinaturas após parecer favorável e os demais envios externos previstos no Kit, com registros duráveis. Não há central de notificações nesta entrega.
 
 ## Requirements
 
@@ -47,16 +47,16 @@ O sistema SHALL permitir ao aluno solicitar o encaminhamento dos três documento
 #### Scenario: Parecer favorável após o pedido do aluno
 
 - **WHEN** o Coordenador de Curso aprova o Formulário de Liberação de uma solicitação já encaminhada pelo aluno
-- **THEN** o sistema SHALL liberar e executar o envio solicitado dos documentos iniciais aos respectivos assinantes por e-mail, registrando os resultados e mantendo o estágio em preparação até a confirmação das assinaturas
+- **THEN** o sistema SHALL liberar o envio solicitado dos documentos iniciais aos respectivos assinantes, registrando cada tentativa e seu resultado e mantendo o estágio em preparação até a confirmação das assinaturas
 
 ### Requirement: Submissão do documento a parecer
 
-O sistema SHALL permitir que o aluno submeta a parecer o documento preenchido que exige avaliação, e o documento SHALL passar à situação de submetido a parecer e o responsável SHALL ser notificado.
+O sistema SHALL permitir que o aluno submeta a parecer o documento preenchido que exige avaliação; o documento SHALL passar à situação de submetido a parecer e entrar na fila do responsável.
 
 #### Scenario: Submissão pelo aluno
 
 - **WHEN** o aluno submete a parecer um documento preenchido que exige avaliação
-- **THEN** o sistema SHALL registrar a submissão com data e responsável, alterar a situação do documento e notificar o responsável
+- **THEN** o sistema SHALL registrar a submissão com data e responsável, alterar a situação do documento e incluí-lo na fila de pareceres do responsável
 
 #### Scenario: Documento incompleto
 
@@ -94,7 +94,7 @@ O sistema SHALL devolver ao aluno o Formulário de Liberação com parecer desfa
 #### Scenario: Parecer desfavorável no formulário
 
 - **WHEN** o Coordenador de Curso indefere o Formulário de Liberação
-- **THEN** o sistema SHALL notificar o aluno sobre a necessidade de correção, disponibilizar o ajuste e preservar o parecer e suas observações no histórico
+- **THEN** o sistema SHALL apresentar ao aluno o indeferimento na situação do documento, disponibilizar o ajuste e preservar o parecer e suas observações no histórico
 
 #### Scenario: Nova submissão após correção
 
@@ -103,7 +103,7 @@ O sistema SHALL devolver ao aluno o Formulário de Liberação com parecer desfa
 
 ### Requirement: Parecer de usuário do sistema
 
-O sistema SHALL permitir que o responsável que é usuário do sistema registre o parecer com a decisão de aprovar, indeferir e as considerações, e o parecer SHALL ser exibido ao aluno. O Coordenador de Curso SHALL poder acrescentar observações do documento durante a emissão do parecer, registradas com autor e data conforme a regra de observações por documento.
+O sistema SHALL permitir que o responsável que é usuário do sistema registre o parecer com a decisão de aprovar, indeferir e as considerações, e o parecer SHALL ser exibido ao aluno. A decisão, com autor e data, e a alteração de situação do documento SHALL ser gravadas conjuntamente, preservando as decisões anteriores. O Coordenador de Curso SHALL poder acrescentar observações do documento durante a emissão do parecer, registradas com autor e data conforme a regra de observações por documento.
 
 #### Scenario: Coordenador de Curso analisa o Formulário de Liberação
 
@@ -125,88 +125,83 @@ O sistema SHALL permitir que o responsável que é usuário do sistema registre 
 - **WHEN** o responsável tenta registrar o parecer sem escolher entre aprovar e indeferir
 - **THEN** o sistema SHALL recusar o registro e exigir a decisão
 
-### Requirement: Notificação de parecer na interface
+#### Scenario: Falha ao registrar decisão
 
-O sistema SHALL sinalizar na interface, para o usuário autenticado, a existência de pareceres e solicitações que aguardam sua ação.
+- **WHEN** uma falha impede concluir a gravação de uma decisão e de seus efeitos obrigatórios
+- **THEN** o sistema SHALL manter a situação anterior, sem apresentar decisão concluída nem parecer parcialmente aplicado
+
+### Requirement: Acompanhamento de pendências e resultados
+
+O sistema SHALL permitir acompanhar pendências e resultados pelas situações dos documentos e estágios, por seus detalhes e pelas filas autorizadas de parecer e conferência. Totais de pendências SHALL refletir os registros atuais, sem avisos com estado lido ou não lido. Uma central de notificações gerais SHALL NOT fazer parte desta entrega.
 
 #### Scenario: Sinalização de pendência
 
-- **WHEN** um Coordenador de Curso possui documentos aguardando parecer
+- **WHEN** um coordenador possui documentos aguardando seu parecer
 - **THEN** o sistema SHALL exibir a contagem de pendências na navegação e disponibilizar a fila de pareceres
 
-#### Scenario: Acesso à fila
+#### Scenario: Fila após decisão em outra instância
 
-- **WHEN** o responsável abre a fila de pareceres
-- **THEN** o sistema SHALL listar os documentos que aguardam a decisão dele, com aluno, documento e estágio associados
+- **WHEN** uma decisão remove a pendência e o responsável consulta novamente sua fila em outra instância
+- **THEN** o sistema SHALL atualizar a fila e o total a partir dos documentos atuais
 
-#### Scenario: Aluno notificado de decisão
+#### Scenario: Resultado de parecer consultado pelo aluno
 
-- **WHEN** o parecer de um documento do aluno é registrado
-- **THEN** o sistema SHALL sinalizar ao aluno que existe um parecer novo para aquele documento
+- **WHEN** um parecer é concluído e o aluno abre o documento
+- **THEN** o sistema SHALL mostrar a decisão, o autor, a data e as considerações, sem exigir uma notificação para acessar o resultado
 
-#### Scenario: Aluno notificado de liberação do estágio
+#### Scenario: Liberação do estágio consultada pelo aluno
 
-- **WHEN** o Coordenador de Estágio confirma as assinaturas dos três documentos iniciais de um estágio com parecer favorável no Formulário de Liberação
-- **THEN** o sistema SHALL notificar o aluno de que pode seguir com os processos de estágio e acessar os demais documentos daquele estágio
+- **WHEN** o Coordenador de Estágio libera um estágio
+- **THEN** o sistema SHALL apresentar ao aluno, nos detalhes do estágio, a situação em andamento e os demais documentos liberados
 
 ### Requirement: Parecer de responsável externo
 
-O sistema SHALL enviar por e-mail o documento preenchido ao responsável externo que não é usuário do sistema, com o documento em anexo, para que o parecer seja obtido fora do sistema.
+O parecer de responsável externo, que não é usuário do sistema, SHALL ser obtido fora do sistema. O pedido de envio do documento ao responsável externo SHALL ser registrado conforme os registros de envio; enquanto a integração de envio de anexos estiver indisponível, o sistema SHALL informar ao aluno que obtenha o parecer pelo meio convencional, sem indicar envio concluído.
 
-#### Scenario: Envio para o professor orientador
+#### Scenario: Pedido de envio ao professor orientador
 
-- **WHEN** o aluno submete a parecer o Relatório Semestral e o professor orientador possui e-mail cadastrado
-- **THEN** o sistema SHALL enviar o e-mail com o documento em anexo ao professor orientador e registrar o envio
+- **WHEN** o aluno pede o envio do Relatório Semestral ao professor orientador
+- **THEN** o sistema SHALL registrar o pedido com destinatário e resultado, informando a indisponibilidade do envio quando a integração não estiver disponível
 
-#### Scenario: E-mail do responsável externo indisponível
+#### Scenario: Responsável externo sem e-mail cadastrado
 
-- **WHEN** o aluno submete a parecer um documento cujo responsável externo não possui e-mail cadastrado
-- **THEN** o sistema SHALL notificar o aluno de que o e-mail está indisponível e de que ele deve obter a resposta pelo meio convencional
-
-#### Scenario: Responsável externo sem cadastro de e-mail
-
-- **WHEN** o aluno informa um responsável externo sem e-mail
-- **THEN** o sistema SHALL recusar o envio por e-mail e oferecer a notificação ao aluno
+- **WHEN** o documento é destinado a um responsável externo sem e-mail cadastrado
+- **THEN** o sistema SHALL recusar o envio por e-mail e informar ao aluno que ele deve obter a resposta pelo meio convencional
 
 ### Requirement: Envio de documento para assinatura externa
 
-O sistema SHALL enviar, exclusivamente por e-mail e como anexo, o documento que precisa de assinatura externa, sem oferecer assinatura eletrônica. Para os três documentos iniciais, o envio SHALL depender de solicitação do aluno e de parecer favorável no Formulário de Liberação; o resultado do envio não SHALL ser tratado como comprovação da assinatura.
+As assinaturas SHALL ser sempre externas ao sistema, sem assinatura eletrônica. O envio do documento aos assinantes SHALL ocorrer por e-mail com anexo quando a integração de envio de anexos estiver disponível; enquanto ela não estiver, o sistema SHALL registrar o pedido e a indisponibilidade sem confirmação fictícia de envio ou assinatura. Para os três documentos iniciais, o envio SHALL depender de solicitação do aluno e de parecer favorável no Formulário de Liberação, e o resultado do envio SHALL NOT ser tratado como comprovação de assinatura.
 
-#### Scenario: Envio do Termo de Compromisso
+#### Scenario: Envio sem integração disponível
 
-- **WHEN** o envio do Termo de Compromisso solicitado pelo aluno é liberado pelo parecer favorável no Formulário de Liberação
-- **THEN** o sistema SHALL enviar o documento em anexo aos respectivos assinantes e SHALL registrar o envio com data e destinatário
+- **WHEN** há pedido de envio de documento e a integração de anexos não está disponível
+- **THEN** o sistema SHALL registrar o pedido e a indisponibilidade, orientar a obtenção da assinatura pelo meio convencional e SHALL NOT indicar envio concluído
 
 #### Scenario: Assinatura externa fora do sistema
 
-- **WHEN** um assinante externo recebe o documento
-- **THEN** o sistema SHALL oferecer apenas o envio do arquivo, sem opção de assinatura eletrônica
-
-#### Scenario: Confirmação do envio
-
-- **WHEN** o usuário visualiza um documento enviado para assinatura
-- **THEN** o sistema SHALL informar a data do envio, o destinatário e que a assinatura é feita fora do sistema
+- **WHEN** um documento precisa de assinatura
+- **THEN** o sistema SHALL oferecer apenas o envio ou o download do arquivo, sem opção de assinatura eletrônica
 
 #### Scenario: Envio não libera o estágio
 
-- **WHEN** os documentos iniciais são enviados com sucesso para assinatura
+- **WHEN** há registro de envio dos documentos iniciais, com sucesso ou não
 - **THEN** o sistema SHALL manter o estágio em preparação e informar que aguarda a conferência das assinaturas pelo Coordenador de Estágio
 
 #### Scenario: Reenvio do documento
 
 - **WHEN** o usuário reenvia um documento para assinatura
-- **THEN** o sistema SHALL registrar um novo envio, preservando o histórico dos envios anteriores e aplicando a exigência de parecer favorável quando se tratar de documentação inicial
+- **THEN** o sistema SHALL registrar uma nova tentativa, preservando as anteriores e aplicando a exigência de parecer favorável quando se tratar de documentação inicial
 
 ### Requirement: Registro do envio
 
-O sistema SHALL registrar quem enviou o documento, quando, para quem e com qual resultado, e o registro SHALL ser exibido ao aluno e ao coordenador.
+O sistema SHALL persistir cada tentativa de envio com documento, autor, data, destinatário e resultado, distinguindo pedido de envio, envio confirmado, indisponibilidade e falha. O registro SHALL ser exibido ao aluno e ao coordenador no contexto do documento.
 
 #### Scenario: Consulta do histórico de envios
 
-- **WHEN** o aluno consulta o documento enviado
-- **THEN** o sistema SHALL exibir a lista de envios com autor, data, destinatário e resultado
+- **WHEN** o aluno ou o coordenador consulta o documento
+- **THEN** o sistema SHALL exibir a lista de tentativas com autor, data, destinatário e resultado
 
-#### Scenario: Falha no envio
+#### Scenario: Falha seguida de nova tentativa
 
-- **WHEN** o envio por e-mail não é concluído
-- **THEN** o sistema SHALL registrar a falha, manter o documento como não enviado e informar o erro ao usuário, mantendo a possibilidade de tentar novamente
+- **WHEN** uma tentativa de envio falha e posteriormente ocorre uma nova tentativa
+- **THEN** o sistema SHALL manter os resultados das duas consultáveis, informar o erro ao usuário e SHALL NOT presumir envio ou assinatura externa
