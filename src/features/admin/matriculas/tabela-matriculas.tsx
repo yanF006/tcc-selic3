@@ -569,7 +569,9 @@ function rotuloResultado(resultado: ResultadoImportacao["itens"][number]["result
 }
 
 function analisarLinhas(texto: string): LinhaImportacao[] {
+  // Planilhas salvas como "CSV UTF-8" começam com BOM, que grudaria na 1ª matrícula.
   const linhas = texto
+    .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
     .map((linha) => linha.trim())
     .filter(Boolean);
