@@ -111,6 +111,9 @@ test.describe("cadastro público", () => {
 
     await expect(page.getByRole("heading", { name: "Cadastro enviado" })).toBeVisible();
     await expect(page.getByText("Acesso liberado")).toBeVisible();
+
+    await page.getByRole("link", { name: "Voltar para o login" }).click();
+    await expect(page).toHaveURL(/\/login$/);
   });
 
   test("mantém cadastro pendente quando a matrícula não está registrada", async ({ page }) => {
