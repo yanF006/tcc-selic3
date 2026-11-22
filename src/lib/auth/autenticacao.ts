@@ -8,6 +8,7 @@ import { APIError } from "better-auth/api";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { esquemaPapel } from "@/lib/domain/schemas";
+import { mensagemCadastroRecusado } from "@/lib/domain/status";
 import type { DadosPessoais } from "@/lib/domain/types";
 import {
   agendarConfirmacaoDeEmail,
@@ -161,6 +162,20 @@ export function criarAutenticacao(
                 code: "CONTA_PENDENTE",
                 message: "Cadastro pendente de autorização.",
               });
+            }
+            if (usuario?.situacao === "inativo") {
+              // A senha já conferiu: o próprio aluno pode saber por que o
+              // cadastro foi recusado. Inativação administrativa segue genérica.
+              const solicitacao = await cliente.solicitacaoAcesso.findUnique({
+                where: { usuarioId: sessao.userId },
+                select: { situacao: true, motivo: true },
+              });
+              if (solicitacao?.situacao === "recusado") {
+                throw new APIError("FORBIDDEN", {
+                  code: "CADASTRO_RECUSADO",
+                  message: mensagemCadastroRecusado(solicitacao.motivo),
+                });
+              }
             }
             if (usuario?.situacao !== "ativo" || !esquemaPapel.safeParse(usuario.papel).success) {
               throw new APIError("UNAUTHORIZED", {

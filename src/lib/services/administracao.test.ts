@@ -349,6 +349,21 @@ describe("solicitações de acesso", () => {
     );
   });
 
+  it("mostra o motivo da recusa no login, só com a senha correta", async () => {
+    const administrador = await entrarComoAdministrador();
+
+    await decidirSolicitacao("sol-pendente-1", "recusado", administrador.id, "Matrícula não consta no SIGAA.");
+
+    expect(await entrar("rafaela.nogueira@aluno.ifrj.edu.br", "Selic@123")).toEqual({
+      ok: false,
+      erro: "Cadastro recusado. Motivo: Matrícula não consta no SIGAA.",
+    });
+    expect(await entrar("rafaela.nogueira@aluno.ifrj.edu.br", "senha-errada")).toEqual({
+      ok: false,
+      erro: "E-mail ou senha inválidos.",
+    });
+  });
+
   it("recusa deferir solicitação inexistente", async () => {
     const administrador = await entrarComoAdministrador();
 

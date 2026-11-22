@@ -1,8 +1,8 @@
-import { rotuloPapel } from "@/lib/domain/status";
+import { mensagemCadastroRecusado, rotuloPapel } from "@/lib/domain/status";
 import type { Papel, Usuario } from "@/lib/domain/types";
 import { CONTAS_DE_DESENVOLVIMENTO } from "@/lib/fixtures/base";
 
-import { agora } from "./store";
+import { agora, obterEstado } from "./store";
 import { conferirSenha } from "./credenciais";
 import { usuarioPorEmail } from "./administracao";
 
@@ -72,8 +72,19 @@ export async function entrar(email: string, senha: string): Promise<ResultadoLog
 
   // E-mail inexistente e senha incorreta recebem a mesma mensagem (5.1), e o
   // cadastro inativo também: o login não diz o que existe no sistema.
-  if (!(await conferirSenha(alvo, senha)) || !usuario || usuario.situacao === "inativo") {
+  if (!(await conferirSenha(alvo, senha)) || !usuario) {
     return { ok: false, erro: "E-mail ou senha inválidos." };
+  }
+
+  if (usuario.situacao === "inativo") {
+    // Senha conferida: o cadastro recusado mostra o motivo ao próprio aluno.
+    const recusa = obterEstado().solicitacoes.find(
+      (item) => item.email.toLowerCase() === alvo && item.situacao === "recusado",
+    );
+    return {
+      ok: false,
+      erro: recusa ? mensagemCadastroRecusado(recusa.motivo) : "E-mail ou senha inválidos.",
+    };
   }
 
   sessaoAtual = { usuario, iniciadaEm: agora() };
