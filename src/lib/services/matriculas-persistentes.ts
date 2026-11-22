@@ -9,7 +9,7 @@ import { executarTransacao } from "@/lib/db/transacoes";
 import { ErroDeRegra } from "./erros";
 import { novoId } from "./store";
 
-type Linha = Pick<MatriculaImportada, "matricula" | "nome" | "curso">;
+type Linha = Pick<MatriculaImportada, "matricula" | "nome"> & { curso?: string };
 export interface ConsultaMatriculas {
   busca?: string;
   origem?: MatriculaImportada["origem"];
@@ -17,8 +17,10 @@ export interface ConsultaMatriculas {
   tamanho?: number;
 }
 
-function motivoInvalido(linha: Linha): string | undefined {
-  if (!linha.matricula || !linha.nome || !linha.curso) return "Matrícula, nome e curso são obrigatórios.";
+// O curso não é mais pedido: o do aluno vem do cadastro dele. A coluna legada
+// `matriculas.curso` continua existindo e recebe texto vazio nos novos registros.
+function motivoInvalido(linha: Required<Linha>): string | undefined {
+  if (!linha.matricula || !linha.nome) return "Matrícula e nome são obrigatórios.";
   if (!MATRICULA_SIGAA.test(linha.matricula)) return "Informe a matrícula com 11 dígitos.";
   if (linha.nome.length > 191 || linha.curso.length > 191) return "Nome e curso devem ter no máximo 191 caracteres.";
 }
@@ -40,7 +42,7 @@ export async function listarMatriculasPersistentes(consulta: ConsultaMatriculas)
 }
 
 export async function registrarMatriculaPersistente(entrada: Linha): Promise<MatriculaImportada> {
-  const linha = { matricula: entrada.matricula.trim(), nome: entrada.nome.trim(), curso: entrada.curso.trim() };
+  const linha = { matricula: entrada.matricula.trim(), nome: entrada.nome.trim(), curso: entrada.curso?.trim() ?? "" };
   const motivo = motivoInvalido(linha);
   if (motivo) throw new ErroDeRegra(motivo, "matricula_invalida");
   const { prisma } = await carregarCliente();
@@ -61,7 +63,7 @@ export async function importarMatriculasPersistentes(arquivo: string, entradas: 
     const lote = await tx.importacaoMatriculas.create({ data: { id: novoId("imp"), arquivo: arquivo.trim() } });
     const resultado: ResultadoImportacao = { id: lote.id, arquivo: lote.arquivo, importadoEm: lote.importadoEm.toISOString(), validas: 0, rejeitadas: 0, ignoradas: 0, itens: [] };
     // Ordem consistente de inserção reduz disputas entre lotes sobre as mesmas matrículas.
-    const linhas = entradas.map((entrada, indice) => ({ indice, matricula: entrada.matricula.trim(), nome: entrada.nome.trim(), curso: entrada.curso.trim() }));
+    const linhas = entradas.map((entrada, indice) => ({ indice, matricula: entrada.matricula.trim(), nome: entrada.nome.trim(), curso: entrada.curso?.trim() ?? "" }));
     const itens = new Map<number, ResultadoImportacao["itens"][number]>();
     for (const linha of [...linhas].sort((a, b) => a.matricula.localeCompare(b.matricula))) {
       let motivo = motivoInvalido(linha);

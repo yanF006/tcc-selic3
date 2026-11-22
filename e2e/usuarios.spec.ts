@@ -8,7 +8,7 @@ import { expect, test } from "@playwright/test";
  * inativar sem excluir, abrir o perfil completo e filtrar por curso.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 /**
  * O estado do simulador vive em memória no processo do servidor, então cada
@@ -75,7 +75,7 @@ test.describe("cadastro pela administração", () => {
     await dialogo
       .getByLabel("E-mail", { exact: true })
       .fill(`aluno.matriculado${SUFIXO}@aluno.ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
     await dialogo.getByLabel("Matrícula", { exact: true }).fill(matricula);
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
@@ -102,7 +102,7 @@ test.describe("cadastro pela administração", () => {
     await dialogo
       .getByLabel("E-mail", { exact: true })
       .fill(`sem.matricula${SUFIXO}@aluno.ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
     await dialogo.getByLabel("Matrícula", { exact: true }).fill(matricula);
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
@@ -142,7 +142,7 @@ test.describe("cadastro pela administração", () => {
     await dialogo
       .getByLabel("E-mail", { exact: true })
       .fill(`ja.registrado${SUFIXO}@aluno.ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
     await dialogo.getByLabel("Matrícula", { exact: true }).fill(matricula);
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
@@ -165,7 +165,7 @@ test.describe("cadastro pela administração", () => {
 
     await dialogo.getByLabel("Nome", { exact: true }).fill(`Aluno Formato ${SUFIXO}`);
     await dialogo.getByLabel("E-mail", { exact: true }).fill(`formato${SUFIXO}@aluno.ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
     await dialogo.getByLabel("Matrícula", { exact: true }).fill("123");
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
@@ -182,7 +182,7 @@ test.describe("cadastro pela administração", () => {
     await dialogo.getByLabel("E-mail", { exact: true }).fill(`sem.papel${SUFIXO}@ifrj.edu.br`);
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
 
-    await expect(page.getByRole("alert").filter({ hasText: "Escolha o papel" })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "Escolha o cargo" })).toBeVisible();
   });
 
   test("cadastra coordenador de curso vinculado ao curso", async ({ page }) => {
@@ -195,7 +195,7 @@ test.describe("cadastro pela administração", () => {
     await dialogo
       .getByLabel("E-mail", { exact: true })
       .fill(`coordenador.curso${SUFIXO}@ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Coordenador de Curso" }).click();
     await dialogo.getByLabel("Curso", { exact: true }).click();
     await page.getByRole("option", { name: /Eletricidade/ }).click();
@@ -222,7 +222,7 @@ test.describe("edição, inativação e exclusão", () => {
 
     await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
     await dialogo.getByLabel("E-mail", { exact: true }).fill(`rita.nogueira${SUFIXO}@ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Administrador" }).click();
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
 
@@ -304,13 +304,13 @@ test.describe("filtros e perfil", () => {
     await expect(linha.getByText("Inativo")).toBeVisible();
 
     // Papel sem resultado: a pessoa não é aluna.
-    await page.getByLabel("Papel", { exact: true }).click();
+    await page.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Aluno", exact: true }).click();
 
     await expect(page.getByTestId("total-usuarios")).toContainText("Nenhum usuário encontrado");
 
     // Coordenador de curso devolve o mesmo cadastro.
-    await page.getByLabel("Papel", { exact: true }).click();
+    await page.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Coordenador de Curso" }).click();
 
     await expect(linha).toHaveCount(1);
@@ -382,7 +382,7 @@ test.describe("listagem completa no servidor", () => {
     await dialogo
       .getByLabel("E-mail", { exact: true })
       .fill(`zuleica.servidor${SUFIXO}@ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Administrador" }).click();
     await dialogo.getByRole("button", { name: "Cadastrar" }).click();
 
@@ -411,7 +411,7 @@ test.describe("ações pendentes", () => {
 
     await dialogo.getByLabel("Nome", { exact: true }).fill(nome);
     await dialogo.getByLabel("E-mail", { exact: true }).fill(`duplo.clique${SUFIXO}@ifrj.edu.br`);
-    await dialogo.getByLabel("Papel", { exact: true }).click();
+    await dialogo.getByLabel("Cargo", { exact: true }).click();
     await page.getByRole("option", { name: "Administrador" }).click();
 
     await dialogo.getByRole("button", { name: "Cadastrar" }).dblclick();

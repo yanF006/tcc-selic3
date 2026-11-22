@@ -5,7 +5,6 @@ import { TabelaMatriculas } from "@/features/admin/matriculas/tabela-matriculas"
 import { exigirPapeis } from "@/lib/auth/guard";
 import type { MatriculaImportada } from "@/lib/domain/types";
 import { listarImportacoesMatriculas, listarMatriculas } from "@/lib/services/administracao";
-import { listarCursos } from "@/lib/services/catalogo";
 
 export const metadata: Metadata = {
   title: "Matrículas",
@@ -42,14 +41,13 @@ export default async function PaginaMatriculas({ searchParams }: PageProps<"/adm
   const origem = ehOrigem(origemBruta) ? origemBruta : undefined;
   const paginaSolicitada = numeroDaPagina(texto(parametros.pagina));
 
-  const [pagina, cursos, importacoes] = await Promise.all([
+  const [pagina, importacoes] = await Promise.all([
     listarMatriculas({
       busca,
       origem,
       pagina: paginaSolicitada,
       tamanho: TAMANHO_PAGINA_MATRICULAS,
     }),
-    listarCursos("ativo"),
     listarImportacoesMatriculas(),
   ]);
 
@@ -64,7 +62,6 @@ export default async function PaginaMatriculas({ searchParams }: PageProps<"/adm
         paginaAtual={pagina.pagina}
         tamanhoPagina={pagina.tamanhoPagina}
         filtros={{ busca, origem: origem ?? "todas" }}
-        cursos={cursos}
       />
       {importacoes.length > 0 && (
         <section aria-labelledby="historico-importacoes" className="mt-6 flex flex-col gap-3">

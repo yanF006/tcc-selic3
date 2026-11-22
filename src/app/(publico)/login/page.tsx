@@ -46,7 +46,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <h2 className="text-sm font-semibold">Contas de desenvolvimento</h2>
           <p className="text-muted-foreground mt-1 text-xs">
             Modo simulado, sem banco de dados. Senha{" "}
-            <code className="bg-muted rounded px-1">selic123</code> para todas.
+            <code className="bg-muted rounded px-1">Selic@123</code> para todas.
           </p>
           <ul className="mt-3 flex flex-col gap-2 text-xs">
             {contas.map((conta) => (

@@ -11,7 +11,7 @@ import { obterEstado, reiniciarEstado } from "./store";
  * matrícula importada e cadastro pendente.
  */
 
-const senha = "selic123";
+const senha = "Selic@2026";
 
 const etapaUm = {
   matricula: "20230444555",
@@ -45,7 +45,7 @@ describe("cadastro público", () => {
     reiniciarEstado();
   });
 
-  it.each(["2024100690", "202410069040", "2024100690A"])(
+  it.each(["2024100690", "202300001230", "2024100690A"])(
     "recusa matrícula fora do formato de onze dígitos: %s",
     async (matricula) => {
       const resultado = await validarEtapaUm({ ...etapaUm, matricula });

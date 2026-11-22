@@ -41,7 +41,8 @@ interface RotuloCampoProps {
  */
 export function RotuloCampo({ htmlFor, children, obrigatorio = false }: RotuloCampoProps) {
   return (
-    <div className="flex items-center gap-1">
+    // Altura fixa: com ou sem asterisco, os campos lado a lado ficam alinhados.
+    <div className="flex min-h-4 items-center gap-1">
       <Label htmlFor={htmlFor}>{children}</Label>
       {obrigatorio ? (
         <span aria-hidden="true" className="text-destructive text-base leading-none">
@@ -134,6 +135,7 @@ interface CampoTextoProps {
   name?: string;
   disabled?: boolean;
   maxLength?: number;
+  /** Classes do contêiner do campo (por exemplo, `sm:col-span-2` na grade). */
   className?: string;
 }
 
@@ -190,7 +192,7 @@ export function CampoTexto({
     .join(" ");
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex min-w-0 flex-col gap-2", className)}>
       <RotuloCampo htmlFor={id} obrigatorio={obrigatorio}>
         {rotulo}
       </RotuloCampo>
@@ -217,7 +219,6 @@ export function CampoTexto({
         aria-required={obrigatorio || undefined}
         aria-invalid={erro || emailInvalido ? true : undefined}
         aria-describedby={descricoes || undefined}
-        className={className}
       />
 
       {erro ? (
@@ -273,14 +274,14 @@ export function CampoSenha({
   const idDescricao = descricao ? `${id}-descricao` : undefined;
   const idMensagem = `${id}-mensagem`;
 
-  const minima =
-    conferirMinimo && tocado && valor.length > 0 && !esquemaSenha.safeParse(valor).success;
+  const validacao = conferirMinimo && tocado && valor.length > 0 ? esquemaSenha.safeParse(valor) : null;
+  const minima = validacao !== null && !validacao.success;
   const descricoes = [idDescricao, erro || minima ? idMensagem : null].filter(Boolean).join(" ");
 
   const mensagemMinima =
     !erro && minima ? (
       <MensagemCampo id={idMensagem} tipo="erro">
-        A senha deve ter ao menos 8 caracteres.
+        {validacao && !validacao.success ? validacao.error.issues[0]?.message : null}
       </MensagemCampo>
     ) : null;
 

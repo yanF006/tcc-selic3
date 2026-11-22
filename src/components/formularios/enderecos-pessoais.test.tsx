@@ -33,10 +33,10 @@ async function preparar(tipo: "cadastro" | "perfil") {
     mensagem: "Etapa conferida",
   });
   const tela = render(<FormularioCadastro {...opcoes} />);
-  mudar("Matrícula", "20241006904");
+  mudar("Matrícula", "20230000123");
   mudar("E-mail", "novo@aluno.ifrj.edu.br");
-  mudar("Senha", "selic123");
-  mudar("Confirmar senha", "selic123");
+  mudar("Senha", "Selic@123");
+  mudar("Confirmar senha", "Selic@123");
   fireEvent.submit(tela.container.querySelector("form")!);
   await screen.findByLabelText("CEP");
   return tela;

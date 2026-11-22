@@ -104,7 +104,7 @@ o recria a cada `npm install`. A conexão do app é montada em
 
 As contas abaixo existem só no modo `simulado` (ou no seed de demonstração
 em banco de ensaio). Em modo `persistente`, nenhuma conta de demonstração é criada.
-A senha das contas de desenvolvimento do simulador é `selic123`.
+A senha das contas de desenvolvimento do simulador é `Selic@123`.
 
 | Perfil                      | E-mail                          |
 | --------------------------- | ------------------------------- |

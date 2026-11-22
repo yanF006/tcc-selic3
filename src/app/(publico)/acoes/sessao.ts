@@ -42,6 +42,9 @@ export async function entrarAction(email: string, senha: string): Promise<Estado
     if (erro instanceof APIError && erro.body?.code === "CONTA_PENDENTE") {
       return { ok: false, erro: "Cadastro pendente de autorização." };
     }
+    if (erro instanceof APIError && erro.body?.code === "CADASTRO_RECUSADO") {
+      return { ok: false, erro: erro.body.message ?? "Cadastro recusado." };
+    }
     if (erro instanceof APIError && erro.statusCode === 401) {
       return { ok: false, erro: "E-mail ou senha inválidos." };
     }

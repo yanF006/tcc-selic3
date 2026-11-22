@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
  * sistema quando a opção é Sistema.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 /** Login comum para verificar a persistência depois de sair e entrar de novo. */
 async function entrar(page: import("@playwright/test").Page) {

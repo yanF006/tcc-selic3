@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
  * atrás de um botão sem perder as ações principais.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 /** 375 px é a largura de celular comum; 639 px é o limite logo abaixo de 640. */
 const CELULAR = { width: 375, height: 667 };

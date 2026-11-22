@@ -9,6 +9,7 @@ import {
   cpfValido,
   esquemaCelular,
   esquemaCpf,
+  esquemaSenha,
   esquemaDadosPessoais,
   esquemaEmail,
   esquemaEstagio,
@@ -222,5 +223,17 @@ describe("cálculo de horas", () => {
   it("publica os limites do regulamento", () => {
     expect(LIMITE_HORAS_DIA).toBe(6);
     expect(LIMITE_HORAS_SEMANA).toBe(30);
+  });
+});
+
+describe("esquemaSenha", () => {
+  it("recusa senhas fracas", () => {
+    for (const senha of ["Ab1!", "selic12345", "SELIC@1234", "selic@1234", "Selic@abcd", "Selic1234", "Aaaa1111!x"]) {
+      expect(esquemaSenha.safeParse(senha).success, senha).toBe(false);
+    }
+  });
+
+  it("aceita senha com maiúscula, minúscula, número e símbolo", () => {
+    expect(esquemaSenha.safeParse("Selic@2026").success).toBe(true);
   });
 });

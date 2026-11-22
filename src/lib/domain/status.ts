@@ -253,3 +253,9 @@ export const METADADOS_SITUACAO = {
   estagio: situacoesEstagio,
   usuario: situacoesUsuario,
 } as const;
+
+/** Mensagem do login para cadastro recusado, com o motivo registrado na decisão. */
+export function mensagemCadastroRecusado(motivo?: string | null): string {
+  const texto = motivo?.trim();
+  return texto ? `Cadastro recusado. Motivo: ${texto}` : "Cadastro recusado.";
+}

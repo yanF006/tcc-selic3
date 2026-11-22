@@ -17,7 +17,7 @@ import { reiniciarEstado } from "./store";
 
 async function mariaLogada(): Promise<Usuario> {
   await sair();
-  await entrar("maria.souza@aluno.ifrj.edu.br", "selic123");
+  await entrar("maria.souza@aluno.ifrj.edu.br", "Selic@123");
   return usuarioAtual() as Usuario;
 }
 

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { CampoTexto, LegendaObrigatorios, RotuloCampo } from "@/components/formularios/campo";
+import { CampoTexto, LegendaObrigatorios } from "@/components/formularios/campo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/table";
 import { AlertCircleIcon, CheckCircle2Icon, GraduationCapIcon, InfoIcon } from "lucide-react";
 
-import type { Curso, MatriculaImportada, ResultadoImportacao } from "@/lib/domain/types";
+import type { MatriculaImportada, ResultadoImportacao } from "@/lib/domain/types";
 import type { LinhaImportacao } from "@/lib/services/administracao";
 
 import {
@@ -54,7 +54,6 @@ interface Props {
   paginaAtual: number;
   tamanhoPagina: number;
   filtros: FiltrosMatriculas;
-  cursos: Curso[];
 }
 
 const ORIGENS: { valor: string; rotulo: string }[] = [
@@ -69,14 +68,12 @@ export function TabelaMatriculas({
   paginaAtual,
   tamanhoPagina,
   filtros,
-  cursos,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [busca, setBusca] = React.useState(filtros.busca);
   const [matricula, setMatricula] = React.useState("");
   const [nome, setNome] = React.useState("");
-  const [curso, setCurso] = React.useState("");
   const [erro, setErro] = React.useState<string | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
   const [enviando, setEnviando] = React.useState(false);
@@ -178,7 +175,7 @@ export function TabelaMatriculas({
     setEnviando(true);
 
     try {
-      const resultado = await registrarMatriculaAction({ matricula, nome, curso });
+      const resultado = await registrarMatriculaAction({ matricula, nome });
 
       if (!resultado.ok) {
         setErro(resultado.erro ?? "Não foi possível registrar a matrícula.");
@@ -189,7 +186,6 @@ export function TabelaMatriculas({
       setAviso(`Matrícula ${matricula.trim()} registrada como válida.`);
       setMatricula("");
       setNome("");
-      setCurso("");
       router.refresh();
     } finally {
       envioEmAndamento.current = false;
@@ -214,15 +210,14 @@ export function TabelaMatriculas({
           <form className="flex flex-col gap-4" onSubmit={registrar}>
             <LegendaObrigatorios />
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
               <CampoTexto
                 id="matricula-nova"
                 rotulo="Matrícula"
                 obrigatorio
                 inputMode="numeric"
                 maxLength={11}
-                placeholder="20241006904"
-                descricao="11 dígitos."
+                placeholder="Ex.: 20230000123"
                 valor={matricula}
                 aoMudar={setMatricula}
               />
@@ -233,23 +228,6 @@ export function TabelaMatriculas({
                 valor={nome}
                 aoMudar={setNome}
               />
-              <div className="flex flex-col gap-2">
-                <RotuloCampo htmlFor="matricula-nova-curso" obrigatorio>
-                  Curso
-                </RotuloCampo>
-                <Select value={curso} onValueChange={setCurso}>
-                  <SelectTrigger id="matricula-nova-curso" aria-required="true">
-                    <SelectValue placeholder="Selecione o curso" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cursos.map((item) => (
-                      <SelectItem key={item.id} value={item.nome}>
-                        {item.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             {erro ? (
@@ -284,7 +262,7 @@ export function TabelaMatriculas({
             Importar matrículas por arquivo
           </CardTitle>
           <CardDescription>
-            Envie um arquivo .csv com as colunas matrícula, nome e curso. O relatório mostra as
+            Envie um arquivo .csv com as colunas matrícula e nome. O relatório mostra as
             válidas, as rejeitadas e as ignoradas com o motivo.
           </CardDescription>
         </CardHeader>
@@ -369,7 +347,7 @@ export function TabelaMatriculas({
       <div className="flex flex-col gap-4">
         <form className="flex flex-wrap items-end gap-3" onSubmit={buscar}>
           <div className="flex min-w-64 flex-1 flex-col gap-2">
-            <Label htmlFor="busca-matricula">Buscar por nome, matrícula ou curso</Label>
+            <Label htmlFor="busca-matricula">Buscar por nome ou matrícula</Label>
             <Input
               id="busca-matricula"
               value={busca}
@@ -429,7 +407,6 @@ export function TabelaMatriculas({
               <TableRow>
                 <TableHead>Matrícula</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead>Curso</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Registrada em</TableHead>
               </TableRow>
@@ -439,7 +416,6 @@ export function TabelaMatriculas({
                 <TableRow key={registro.id} data-matricula={registro.matricula}>
                   <TableCell className="font-medium">{registro.matricula}</TableCell>
                   <TableCell>{registro.nome}</TableCell>
-                  <TableCell>{registro.curso}</TableCell>
                   <TableCell>
                     <Badge variant={registro.origem === "importacao" ? "info" : "outline"}>
                       {rotuloOrigem(registro.origem)}
@@ -500,6 +476,6 @@ function analisarLinhas(texto: string): LinhaImportacao[] {
     const separador = linha.includes(";") ? ";" : ",";
     const partes = linha.split(separador).map((parte) => parte.trim().replace(/^"|"$/g, ""));
 
-    return { matricula: partes[0] ?? "", nome: partes[1] ?? "", curso: partes[2] ?? "" };
+    return { matricula: partes[0] ?? "", nome: partes[1] ?? "" };
   });
 }

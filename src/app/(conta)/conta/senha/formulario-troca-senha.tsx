@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2Icon } from "lucide-react";
 
 import { trocarSenhaAction, type EstadoTrocaSenha } from "@/app/(conta)/conta/senha/acoes";
+import { REGRA_SENHA } from "@/lib/domain/schemas";
 
 const estadoInicial: EstadoTrocaSenha = { ok: false };
 
@@ -73,7 +74,7 @@ export function FormularioTrocaSenha() {
             obrigatorio
             conferirMinimo
             autoComplete="new-password"
-            descricao="Mínimo de 8 caracteres."
+            descricao={REGRA_SENHA}
             valor={senha}
             aoMudar={setSenha}
             erro={erroDoCampo("senha")}

@@ -20,7 +20,7 @@ import { usuarioPorEmail } from "./administracao";
  */
 
 const ALUNO = "joao.lima@aluno.ifrj.edu.br";
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 /** Token do link de redefinição, para as chamadas de serviço. */
 function tokenDoLink(link: string | undefined): string {
@@ -82,9 +82,9 @@ describe("pedido de redefinição", () => {
   it("usa o e-mail informado sem distinguir maiúsculas e espaços", async () => {
     const pedido = await solicitarRedefinicao(`  ${ALUNO.toUpperCase()} `);
 
-    await redefinirSenhaComLink(tokenDoLink(pedido.link), "senha-nova-123", "senha-nova-123");
+    await redefinirSenhaComLink(tokenDoLink(pedido.link), "Senha-Nova-123", "Senha-Nova-123");
 
-    const resultado = await entrar(ALUNO, "senha-nova-123");
+    const resultado = await entrar(ALUNO, "Senha-Nova-123");
 
     expect(resultado.ok).toBe(true);
   });
@@ -95,32 +95,32 @@ describe("uso do link de redefinição", () => {
     const pedido = await solicitarRedefinicao(ALUNO);
     const resultado = await redefinirSenhaComLink(
       tokenDoLink(pedido.link),
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
     );
 
     expect(resultado.ok).toBe(true);
-    expect((await entrar(ALUNO, "senha-nova-123")).ok).toBe(true);
+    expect((await entrar(ALUNO, "Senha-Nova-123")).ok).toBe(true);
     expect((await entrar(ALUNO, SENHA)).ok).toBe(false);
   });
 
   it("recusa o mesmo link pela segunda vez", async () => {
     const token = tokenDoLink((await solicitarRedefinicao(ALUNO)).link);
 
-    await redefinirSenhaComLink(token, "senha-nova-123", "senha-nova-123");
+    await redefinirSenhaComLink(token, "Senha-Nova-123", "Senha-Nova-123");
 
-    const segunda = await redefinirSenhaComLink(token, "outra-senha-123", "outra-senha-123");
+    const segunda = await redefinirSenhaComLink(token, "Outra-Senha-123", "Outra-Senha-123");
 
     expect(segunda).toEqual({ ok: false, campo: "link", erro: LINK_INVALIDO });
     // A senha continua sendo a da primeira redefinição.
-    expect((await entrar(ALUNO, "senha-nova-123")).ok).toBe(true);
+    expect((await entrar(ALUNO, "Senha-Nova-123")).ok).toBe(true);
   });
 
   it("recusa token que nunca existiu", async () => {
     const resultado = await redefinirSenhaComLink(
       "rst_inventado",
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
     );
 
     expect(resultado).toEqual({ ok: false, campo: "link", erro: LINK_INVALIDO });
@@ -135,8 +135,8 @@ describe("uso do link de redefinição", () => {
 
     const resultado = await redefinirSenhaComLink(
       tokenDoLink(pedido.link),
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
     );
 
     expect(resultado).toEqual({ ok: false, campo: "link", erro: LINK_INVALIDO });
@@ -153,7 +153,7 @@ describe("uso do link de redefinição", () => {
       erro: "A senha deve ter ao menos 8 caracteres.",
     });
 
-    const divergente = await redefinirSenhaComLink(token, "senha-nova-123", "outra-senha-123");
+    const divergente = await redefinirSenhaComLink(token, "Senha-Nova-123", "Outra-Senha-123");
 
     expect(divergente).toEqual({
       ok: false,
@@ -162,12 +162,12 @@ describe("uso do link de redefinição", () => {
     });
 
     // O link continua válido depois dos dois erros.
-    expect((await redefinirSenhaComLink(token, "senha-nova-123", "senha-nova-123")).ok).toBe(true);
+    expect((await redefinirSenhaComLink(token, "Senha-Nova-123", "Senha-Nova-123")).ok).toBe(true);
   });
 
   it("não redefine senha de e-mail sem conta", async () => {
     const token = tokenDoLink((await solicitarRedefinicao("ninguem@aluno.ifrj.edu.br")).link);
-    const resultado = await redefinirSenhaComLink(token, "senha-nova-123", "senha-nova-123");
+    const resultado = await redefinirSenhaComLink(token, "Senha-Nova-123", "Senha-Nova-123");
 
     expect(resultado).toEqual({ ok: false, campo: "link", erro: LINK_INVALIDO });
     expect(await usuarioPorEmail("ninguem@aluno.ifrj.edu.br")).toBeNull();
@@ -177,10 +177,10 @@ describe("uso do link de redefinição", () => {
 describe("troca autenticada de senha", () => {
   it("altera a senha quando a senha atual confere", async () => {
     const usuario = await usuarioPorEmail(ALUNO);
-    const resultado = await trocarSenha(usuario!, SENHA, "senha-nova-123", "senha-nova-123");
+    const resultado = await trocarSenha(usuario!, SENHA, "Senha-Nova-123", "Senha-Nova-123");
 
     expect(resultado.ok).toBe(true);
-    expect((await entrar(ALUNO, "senha-nova-123")).ok).toBe(true);
+    expect((await entrar(ALUNO, "Senha-Nova-123")).ok).toBe(true);
     expect((await entrar(ALUNO, SENHA)).ok).toBe(false);
   });
 
@@ -189,8 +189,8 @@ describe("troca autenticada de senha", () => {
     const resultado = await trocarSenha(
       usuario!,
       "senha-errada",
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
     );
 
     expect(resultado).toEqual({
@@ -203,7 +203,7 @@ describe("troca autenticada de senha", () => {
 
   it("exige a confirmação da nova senha", async () => {
     const usuario = await usuarioPorEmail(ALUNO);
-    const resultado = await trocarSenha(usuario!, SENHA, "senha-nova-123", "outra-senha-123");
+    const resultado = await trocarSenha(usuario!, SENHA, "Senha-Nova-123", "Outra-Senha-123");
 
     expect(resultado).toEqual({
       ok: false,

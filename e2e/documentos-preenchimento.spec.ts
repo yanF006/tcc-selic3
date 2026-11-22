@@ -11,7 +11,7 @@ import { expect, test } from "./suporte/cep";
  * documento preenchido, aceito (8.14) ou recusado por pendência (8.15).
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 async function entrar(page: Page, email: string) {
   await page.goto("/login");

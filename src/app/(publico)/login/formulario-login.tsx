@@ -41,11 +41,10 @@ export function FormularioLogin({ destino }: { destino?: string }) {
         <CardTitle className="text-base">
           <h1 className="text-base font-semibold">Entrar</h1>
         </CardTitle>
+        <LegendaObrigatorios />
       </CardHeader>
       <CardContent>
         <form action={enviar} className="flex flex-col gap-4">
-          <LegendaObrigatorios />
-
           <CampoTexto
             id="email"
             rotulo="E-mail"

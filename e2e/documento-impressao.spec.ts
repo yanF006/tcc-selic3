@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  * interface ao redor, e imprime o documento com fundo branco e texto preto.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 const FOLHA = "[data-preview-impressao]";
 
 async function entrar(page: Page, email: string) {

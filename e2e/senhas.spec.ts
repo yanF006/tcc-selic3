@@ -6,11 +6,11 @@ import { expect, test } from "@playwright/test";
  *
  * Os dois testes usam a conta do aluno com estágio concluído e devolvem a senha
  * ao final, percorrendo o próprio fluxo testado: a suíte inteira continua
- * dependendo da senha `selic123`.
+ * dependendo da senha `Selic@123`.
  */
 
-const SENHA = "selic123";
-const SENHA_NOVA = "selic-nova-456";
+const SENHA = "Selic@123";
+const SENHA_NOVA = "Selic-Nova-456";
 const ALUNO = "joao.lima@aluno.ifrj.edu.br";
 
 /** Pede o link de redefinição e devolve o endereço da tela de redefinição. */
@@ -112,7 +112,7 @@ test.describe("recuperação de senha", () => {
     await expect(page.getByText("E-mail ou senha inválidos.")).toBeVisible();
 
     // O mesmo link não serve uma segunda vez.
-    await definirPeloLink(page, link, "outra-senha-789");
+    await definirPeloLink(page, link, "Outra-Senha-789");
     await expect(page.getByRole("heading", { name: "Link não utilizável" })).toBeVisible();
     await expect(
       page.getByText("Este link é inválido, expirou ou já foi utilizado."),
@@ -190,7 +190,7 @@ test.describe("troca de senha autenticada", () => {
 
     await page.getByLabel("Senha atual", { exact: true }).fill(SENHA);
     await page.getByLabel("Nova senha", { exact: true }).fill(SENHA_NOVA);
-    await page.getByLabel("Confirmar nova senha").fill("outra-senha-789");
+    await page.getByLabel("Confirmar nova senha").fill("Outra-Senha-789");
     await page.getByRole("button", { name: "Alterar senha" }).click();
 
     await expect(page.locator("#confirmacao-mensagem")).toHaveText(

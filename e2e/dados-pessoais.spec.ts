@@ -10,7 +10,7 @@ import { expect, test } from "./suporte/cep";
  */
 
 const SUFIXO = Date.now().toString(36);
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 // Matrícula livre: as das fixtures já têm conta e o cadastro recusa matrícula ocupada.
 const MATRICULA = `2027${Date.now().toString().slice(-7)}`;
 

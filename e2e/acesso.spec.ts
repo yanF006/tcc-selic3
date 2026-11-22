@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * papel: cada conta vê apenas a navegação da sua área.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 /**
  * Entra com uma conta de desenvolvimento e espera a navegação. O tempo é
@@ -155,7 +155,7 @@ test.describe("login e logout", () => {
     const mensagemSenha = await aviso.textContent();
 
     await page.getByLabel("E-mail", { exact: true }).fill("conta.inexistente@aluno.ifrj.edu.br");
-    await page.getByLabel("Senha", { exact: true }).fill("selic123");
+    await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
     await page.getByRole("button", { name: "Entrar" }).click();
 
     const mensagemInexistente = await aviso.textContent();

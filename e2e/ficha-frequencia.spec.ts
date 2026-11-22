@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  * e ela fica associada ao estágio como documento consultável.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 async function entrar(page: Page, email: string) {
   await page.goto("/login");

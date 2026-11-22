@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle2Icon, Link2OffIcon } from "lucide-react";
 
 import { redefinirSenhaAction, type EstadoRedefinicao } from "@/app/(publico)/acoes/senha";
+import { REGRA_SENHA } from "@/lib/domain/schemas";
 const estadoInicial: EstadoRedefinicao = { ok: false };
 
 /**
@@ -98,7 +99,7 @@ export function FormularioRedefinicao({ token }: { token: string }) {
             obrigatorio
             conferirMinimo
             autoComplete="new-password"
-            descricao="Mínimo de 8 caracteres."
+            descricao={REGRA_SENHA}
             valor={senha}
             aoMudar={setSenha}
             erro={estado.campo === "senha" ? estado.erro : null}

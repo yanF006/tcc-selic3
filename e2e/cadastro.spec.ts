@@ -8,7 +8,7 @@ import { expect, test } from "./suporte/cep";
  */
 
 const SUFIXO = Date.now().toString(36);
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 function email(prefixo: string): string {
   return `${prefixo}.${SUFIXO}@aluno.ifrj.edu.br`;
@@ -45,7 +45,7 @@ test.describe("cadastro público", () => {
 
   test("bloqueia confirmação divergente com erro no campo", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "20241006904",
+      matricula: "20230000123",
       email: email("divergente"),
       senha: SENHA,
       confirmacao: "outra-senha",
@@ -75,7 +75,7 @@ test.describe("cadastro público", () => {
 
   test("recusa e-mail já cadastrado sem revelar a conta", async ({ page }) => {
     await preencherEtapaUm(page, {
-      matricula: "20241006904",
+      matricula: "20230000123",
       email: "maria.souza@aluno.ifrj.edu.br",
       senha: SENHA,
       confirmacao: SENHA,
