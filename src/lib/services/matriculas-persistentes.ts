@@ -54,26 +54,69 @@ export async function registrarMatriculaPersistente(entrada: Linha): Promise<Mat
   }, { cliente: prisma });
 }
 
+export async function removerMatriculaPersistente(id: string): Promise<void> {
+  const { prisma } = await carregarCliente();
+  return executarTransacao(async (tx) => {
+    const registro = await tx.matriculaImportada.findUnique({ where: { id } });
+    if (!registro) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+    const aluno = await tx.usuario.findUnique({ where: { matricula: registro.matricula }, select: { nome: true } });
+    if (aluno) throw new ErroDeRegra(`A matrícula ${registro.matricula} está vinculada ao aluno ${aluno.nome}. Exclua o cadastro do aluno antes de remover a matrícula.`, "matricula_em_uso");
+    await tx.matriculaImportada.delete({ where: { id } });
+  }, { cliente: prisma });
+}
+
 export async function importarMatriculasPersistentes(arquivo: string, entradas: Linha[]): Promise<ResultadoImportacao> {
   if (!arquivo.trim() || arquivo.length > 255 || !entradas.length) {
     throw new ErroDeRegra("Informe um arquivo com linhas para importar e nome de até 255 caracteres.", "importacao_invalida");
   }
   const { prisma } = await carregarCliente();
+  // Número fixo de consultas, independente do tamanho do arquivo: com o banco
+  // remoto, uma ida e volta por linha estourava o tempo limite da transação.
   return executarTransacao(async (tx) => {
     const lote = await tx.importacaoMatriculas.create({ data: { id: novoId("imp"), arquivo: arquivo.trim() } });
+    const linhas = entradas.map((entrada) => ({
+      matricula: (entrada.matricula ?? "").trim(),
+      nome: (entrada.nome ?? "").trim(),
+      curso: entrada.curso?.trim() ?? "",
+    }));
+    const motivos = linhas.map((linha) => motivoInvalido(linha));
+    const candidatas = [...new Set(linhas.filter((_, i) => !motivos[i]).map((linha) => linha.matricula))];
+    const existentes = new Set(
+      candidatas.length
+        ? (await tx.matriculaImportada.findMany({ where: { matricula: { in: candidatas } }, select: { matricula: true } })).map((r) => r.matricula)
+        : [],
+    );
+
+    // A primeira ocorrência de cada matrícula nova é inserida; repetições são ignoradas.
+    const novas = new Map<string, { id: string; indice: number }>();
+    linhas.forEach((linha, indice) => {
+      if (!motivos[indice] && !existentes.has(linha.matricula) && !novas.has(linha.matricula)) {
+        novas.set(linha.matricula, { id: novoId("mat"), indice });
+      }
+    });
+    const ordenadas = [...novas.entries()].sort(([a], [b]) => a.localeCompare(b));
+    if (ordenadas.length) {
+      await tx.matriculaImportada.createMany({
+        data: ordenadas.map(([matricula, { id, indice }]) => ({
+          id, matricula, nome: linhas[indice].nome, curso: linhas[indice].curso, origem: "importacao", importadaEm: lote.importadoEm,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    // Confirma o que entrou de fato: outro lote simultâneo pode ter registrado a mesma matrícula.
+    const inseridas = new Set(
+      ordenadas.length
+        ? (await tx.matriculaImportada.findMany({ where: { id: { in: ordenadas.map(([, v]) => v.id) } }, select: { id: true } })).map((r) => r.id)
+        : [],
+    );
+
     const resultado: ResultadoImportacao = { id: lote.id, arquivo: lote.arquivo, importadoEm: lote.importadoEm.toISOString(), validas: 0, rejeitadas: 0, ignoradas: 0, itens: [] };
-    // Ordem consistente de inserção reduz disputas entre lotes sobre as mesmas matrículas.
-    const linhas = entradas.map((entrada, indice) => ({ indice, matricula: entrada.matricula.trim(), nome: entrada.nome.trim(), curso: entrada.curso?.trim() ?? "" }));
-    const itens = new Map<number, ResultadoImportacao["itens"][number]>();
-    for (const linha of [...linhas].sort((a, b) => a.matricula.localeCompare(b.matricula))) {
-      let motivo = motivoInvalido(linha);
+    resultado.itens = linhas.map((linha, indice) => {
+      let motivo = motivos[indice];
       let classificacao: ResultadoImportacao["itens"][number]["resultado"] = "rejeitada";
       if (!motivo) {
-        const inserida = await tx.matriculaImportada.createMany({
-          data: [{ id: novoId("mat"), matricula: linha.matricula, nome: linha.nome, curso: linha.curso, origem: "importacao", importadaEm: lote.importadoEm }],
-          skipDuplicates: true,
-        });
-        classificacao = inserida.count === 1 ? "valida" : "ignorada";
+        const nova = novas.get(linha.matricula);
+        classificacao = nova && nova.indice === indice && inseridas.has(nova.id) ? "valida" : "ignorada";
         if (classificacao === "ignorada") motivo = "Matrícula já registrada; a linha foi ignorada.";
       }
       if (classificacao === "valida") resultado.validas++;
@@ -81,16 +124,16 @@ export async function importarMatriculasPersistentes(arquivo: string, entradas: 
       else resultado.rejeitadas++;
       // Entradas rejeitadas podem exceder as colunas: o motivo preserva o original.
       const excedente = linha.matricula.length > 20 || linha.nome.length > 191 || linha.curso.length > 191;
-      if (excedente) motivo = `${motivo} Entrada original: ${JSON.stringify({ matricula: linha.matricula, nome: linha.nome, curso: linha.curso })}`;
-      const item = {
-        matricula: linha.matricula.slice(0, 20) || "(vazia)", nome: linha.nome.slice(0, 191) || "(vazio)", resultado: classificacao, motivo,
-      };
-      await tx.itemImportacaoMatricula.create({ data: {
-        id: novoId("item"), importacaoId: lote.id, ...item, curso: linha.curso.slice(0, 191),
-      } });
-      itens.set(linha.indice, item);
-    }
-    resultado.itens = linhas.map((linha) => itens.get(linha.indice)!);
+      if (excedente) motivo = `${motivo} Entrada original: ${JSON.stringify(linha)}`;
+      return { matricula: linha.matricula.slice(0, 20) || "(vazia)", nome: linha.nome.slice(0, 191) || "(vazio)", resultado: classificacao, motivo };
+    });
+
+    await tx.itemImportacaoMatricula.createMany({
+      data: resultado.itens.map((item, indice) => ({
+        // Id ordenável: o relatório salvo mantém a ordem das linhas do arquivo.
+        id: `item-${lote.id}-${String(indice).padStart(6, "0")}`, importacaoId: lote.id, ...item, curso: linhas[indice].curso.slice(0, 191),
+      })),
+    });
     await tx.importacaoMatriculas.update({ where: { id: lote.id }, data: { validas: resultado.validas, rejeitadas: resultado.rejeitadas, ignoradas: resultado.ignoradas } });
     return resultado;
   }, { cliente: prisma });

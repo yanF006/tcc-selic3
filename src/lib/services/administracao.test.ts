@@ -16,6 +16,8 @@ import {
   listarSolicitacoes,
   listarUsuarios,
   registrarMatricula,
+  removerMatricula,
+  matriculaRegistrada,
   reativarUsuario,
   usuarioPorId,
   type CadastroUsuario,
@@ -454,6 +456,31 @@ describe("importação manual de matrículas", () => {
     await expect(
       registrarMatricula({ matricula: "123", nome: "Matrícula curta", curso: "Informática" }),
     ).rejects.toThrow(/11 dígitos/);
+  });
+
+  it("remove matrícula registrada e recusa remover a inexistente", async () => {
+    await entrarComoAdministrador();
+
+    const registro = await registrarMatricula({ matricula: "20260555999", nome: "Aluno Removido" });
+    await removerMatricula(registro.id);
+
+    expect(await matriculaRegistrada("20260555999")).toBe(false);
+    await expect(removerMatricula(registro.id)).rejects.toThrow(/não encontrada/);
+  });
+
+  it("recusa remover matrícula usada por aluno cadastrado", async () => {
+    await entrarComoAdministrador();
+
+    const registro = await registrarMatricula({ matricula: "20260555888", nome: "Aluno Vinculado" });
+    await cadastrarUsuario({
+      nome: "Aluno Vinculado",
+      email: "aluno.vinculado@aluno.ifrj.edu.br",
+      papel: "aluno",
+      matricula: "20260555888",
+    });
+
+    await expect(removerMatricula(registro.id)).rejects.toThrow(/vinculada ao aluno Aluno Vinculado/);
+    expect(await matriculaRegistrada("20260555888")).toBe(true);
   });
 });
 

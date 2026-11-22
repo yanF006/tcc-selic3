@@ -21,7 +21,7 @@ import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
 import { criarRepositorioUsuarios } from "@/lib/db/repositorios/usuarios";
 import { criarRepositorioSolicitacoes } from "@/lib/db/repositorios/solicitacoes";
-import { importarMatriculasPersistentes, listarImportacoesPersistentes, listarMatriculasPersistentes, registrarMatriculaPersistente } from "./matriculas-persistentes";
+import { importarMatriculasPersistentes, listarImportacoesPersistentes, listarMatriculasPersistentes, registrarMatriculaPersistente, removerMatriculaPersistente } from "./matriculas-persistentes";
 
 import { ErroDeRegra } from "./erros";
 
@@ -1186,6 +1186,21 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   estado.matriculas.push(registro);
 
   return registro;
+}
+
+/**
+ * Remove uma matrícula registrada que nenhum aluno usa. Se houver cadastro
+ * com ela (em qualquer situação), a remoção é recusada.
+ */
+export async function removerMatricula(id: string): Promise<void> {
+  if (bancoConfigurado()) return removerMatriculaPersistente(id);
+  const estado = obterEstado();
+  const indice = estado.matriculas.findIndex((registro) => registro.id === id);
+  if (indice === -1) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+  const registro = estado.matriculas[indice];
+  const aluno = estado.usuarios.find((usuario) => usuario.matricula === registro.matricula);
+  if (aluno) throw new ErroDeRegra(`A matrícula ${registro.matricula} está vinculada ao aluno ${aluno.nome}. Exclua o cadastro do aluno antes de remover a matrícula.`, "matricula_em_uso");
+  estado.matriculas.splice(indice, 1);
 }
 
 /** Relatórios duráveis; no simulador permanece o relatório imediato da importação. */
