@@ -7,15 +7,16 @@ import { ErroDeRegra } from "@/lib/domain/erros";
 export const runtime = "nodejs";
 
 /**
- * Download dos documentos fixos do Kit (8.4): a Lei de Estágio e o Regulamento.
- * A rota recusa template preenchível de propósito — o download do documento
- * preenchido é outra rota, a que devolve a demonstração (8.14) — e assim o
- * "apenas download" do catálogo nunca abre nem devolve formulário.
+ * Download dos arquivos originais do Kit (8.4): os documentos fixos (Lei de
+ * Estágio e Regulamento) e o modelo em branco dos documentos preenchíveis, que
+ * pode ser baixado sem estágio cadastrado. O documento preenchido é outra rota
+ * (8.14); esta só devolve o arquivo oficial validado por checksum.
  */
 
 const TIPOS_POR_EXTENSAO: Record<string, string> = {
   ".pdf": "application/pdf",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".doc": "application/msword",
 };
 
 export async function GET(
@@ -35,13 +36,6 @@ export async function GET(
 
   if (!template) {
     return Response.json({ erro: "Documento não encontrado." }, { status: 404 });
-  }
-
-  if (template.tipo !== "download") {
-    return Response.json(
-      { erro: "Este documento é preenchível e não é baixado pelo catálogo." },
-      { status: 409 },
-    );
   }
 
   try {

@@ -97,19 +97,28 @@ function CartaoDocumento({ item, podePreencher }: { item: ItemCatalogo; podePree
             )}
           </>
         ) : preenchivel ? (
-          podePreencher ? (
-            <Link
-              href={`/documentos/${item.id}`}
+          <div className="flex flex-col gap-2">
+            {podePreencher ? (
+              <Link
+                href={`/documentos/${item.id}`}
+                className="text-primary inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
+              >
+                <FileTextIcon aria-hidden="true" className="h-4 w-4" />
+                Preencher documento
+              </Link>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                O preenchimento deste documento cabe a outro perfil.
+              </p>
+            )}
+            <a
+              href={`/documentos/${item.id}/baixar`}
               className="text-primary inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
             >
-              <FileTextIcon aria-hidden="true" className="h-4 w-4" />
-              Preencher documento
-            </Link>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              O preenchimento deste documento cabe a outro perfil.
-            </p>
-          )
+              <DownloadIcon aria-hidden="true" className="h-4 w-4" />
+              Baixar modelo em branco (.docx)
+            </a>
+          </div>
         ) : (
           <Link
             href={`/documentos/${item.id}/baixar`}
