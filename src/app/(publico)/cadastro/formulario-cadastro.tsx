@@ -440,7 +440,6 @@ export function FormularioCadastro({
                 id="cadastro-complemento"
                 rotulo="Complemento"
                 className="sm:col-span-2"
-                descricao="Opcional: apartamento, bloco ou sala."
                 valor={complemento}
                 aoMudar={setComplemento}
               />
