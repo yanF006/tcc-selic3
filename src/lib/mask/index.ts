@@ -27,6 +27,44 @@ export function mascaraCpf(valor: string): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+export function mascaraCnpj(valor: string): string {
+  const d = digitosLimitados(valor, 14);
+
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
+/**
+ * Número livre (inteiro ou decimal): descarta letras e símbolos. Com
+ * `decimal`, aceita uma vírgula (ou ponto) e devolve sempre com vírgula.
+ */
+export function mascaraNumero(
+  valor: string,
+  { decimal = false, maximoDigitos = 6 }: { decimal?: boolean; maximoDigitos?: number } = {},
+): string {
+  if (!decimal) return digitosLimitados(valor, maximoDigitos);
+
+  const [inteiro = "", ...resto] = valor
+    .replace(/\./g, ",")
+    .replace(/[^\d,]/g, "")
+    .split(",");
+  const parteInteira = inteiro.slice(0, maximoDigitos);
+
+  return resto.length > 0 ? `${parteInteira},${resto.join("").slice(0, 2)}` : parteInteira;
+}
+
+/** Converte o texto de `mascaraNumero` em número; vazio vira `""`. */
+export function numeroDoTexto(valor: string): number | "" {
+  if (valor.trim() === "") return "";
+  const numero = Number(valor.replace(",", "."));
+
+  return Number.isFinite(numero) ? numero : "";
+}
+
 export function mascaraRg(valor: string): string {
   const d = digitosLimitados(valor, 9);
 
@@ -102,6 +140,9 @@ export function mascaraHora(valor: string): string {
 export const MASCARAS = {
   cpf: mascaraCpf,
   rg: mascaraRg,
+  cnpj: mascaraCnpj,
+  numero: (valor: string) => mascaraNumero(valor),
+  ano: (valor: string) => digitosLimitados(valor, 4),
   celular: mascaraCelular,
   telefone: mascaraTelefone,
   telefoneOuCelular: mascaraTelefoneOuCelular,

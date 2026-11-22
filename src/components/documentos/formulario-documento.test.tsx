@@ -124,8 +124,11 @@ describe("FormularioDocumento", () => {
 
     for (const rotulo of ["Telefone", "Celular", "Telefone do(a) supervisor(a)"]) {
       expect(screen.getByText(rotulo)).toBeInTheDocument();
-      expect(screen.getByRole("textbox", { name: rotulo })).toBeRequired();
     }
+    // Telefone fixo do aluno é opcional (Problema006); celular segue obrigatório.
+    expect(screen.getByRole("textbox", { name: "Telefone" })).not.toBeRequired();
+    expect(screen.getByRole("textbox", { name: "Celular" })).toBeRequired();
+    expect(screen.getByRole("textbox", { name: "Telefone do(a) supervisor(a)" })).toBeRequired();
 
     const grupo = within(screen.getByRole("group", { name: "Endereço do aluno" }));
     expect(grupo.getByRole("textbox", { name: "CEP" })).toBeRequired();

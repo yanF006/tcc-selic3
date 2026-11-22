@@ -29,7 +29,7 @@ async function criarSolicitacao(page: Page, orientador = "Carla Menezes") {
   await local.getByLabel("Logradouro", { exact: true }).fill("Rua da Empresa");
   await local.getByLabel("Número", { exact: true }).fill("10");
   await page.getByLabel("Telefone do(a) supervisor(a)", { exact: true }).fill("2133331000");
-  await page.getByLabel("Dados dos documentos iniciais").selectOption("tpl-termo-compromisso");
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
   const concedente = page.getByRole("group", { name: "Endereço da concedente", exact: true });
   await concedente.getByRole("button", { name: "Alterar endereço" }).click();
   await concedente.getByLabel("Logradouro", { exact: true }).fill("Rua da Empresa");
@@ -41,12 +41,12 @@ async function criarSolicitacao(page: Page, orientador = "Carla Menezes") {
   await page.getByLabel("Número da apólice", { exact: true }).fill("AP-120");
   await page.getByLabel("Carga horária semanal", { exact: true }).fill("30");
   await page.getByLabel("Horário do estágio", { exact: true }).fill("09:00 às 15:00");
-  await page.getByLabel("Dados dos documentos iniciais").selectOption("tpl-plano-atividades");
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
   await page.getByRole("radio", { name: "Estágio", exact: true }).check();
   await page
     .getByLabel("Atividades", { exact: true })
     .fill("Apoio ao ensino e desenvolvimento de sistemas.");
-  await page.getByRole("button", { name: "Salvar Estágio", exact: true }).click();
+  await page.getByRole("button", { name: "Concluir", exact: true }).click();
   await expect(page).toHaveURL(/\/estagio\?estagio=/);
   return new URL(page.url()).searchParams.get("estagio")!;
 }
@@ -101,18 +101,18 @@ test("solicitação, indeferimento excepcional, assinaturas, liberação e hist�
   await page.getByRole("button", { name: "Corrigir indeferimento" }).click();
   await expect(page.getByRole("button", { name: "Solicitar encaminhamento" })).toBeVisible();
   await page.getByRole("button", { name: "Editar estágio", exact: true }).click();
-  await page.getByLabel("Dados dos documentos iniciais").selectOption("tpl-formulario-liberacao");
   const localCorrigido = page.getByRole("group", {
     name: "Endereço do local de estágio",
     exact: true,
   });
   await localCorrigido.getByRole("button", { name: "Alterar endereço" }).click();
   await localCorrigido.getByLabel("Logradouro", { exact: true }).fill("Rua da Empresa Corrigida");
-  await page.getByLabel("Dados dos documentos iniciais").selectOption("tpl-plano-atividades");
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
+  await page.getByRole("button", { name: "Próximo", exact: true }).click();
   await page
     .getByLabel("Atividades", { exact: true })
     .fill("Atividades conferidas: apoio pedagógico e desenvolvimento de sistemas.");
-  await page.getByRole("button", { name: "Salvar Estágio", exact: true }).click();
+  await page.getByRole("button", { name: "Concluir", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/estagio\\?estagio=${estagioId}`));
   await page.getByRole("button", { name: "Solicitar encaminhamento" }).click();
   await expect(page.getByTestId("fluxo-estagio")).toContainText("Aguarde o parecer");

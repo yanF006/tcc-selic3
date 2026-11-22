@@ -52,8 +52,6 @@ const EXCECOES: Record<string, string[]> = {
     "seguradora",
     "numeroApolice",
     "cargaHorariaSemanal",
-    "duracaoMinimaDias",
-    "vias",
     "horario",
   ],
   "tpl-convenio-estagio": [
