@@ -54,6 +54,12 @@ export async function registrarMatriculaPersistente(entrada: Linha): Promise<Mat
   }, { cliente: prisma });
 }
 
+export async function removerMatriculaPersistente(id: string): Promise<void> {
+  const { prisma } = await carregarCliente();
+  const resultado = await prisma.matriculaImportada.deleteMany({ where: { id } });
+  if (resultado.count !== 1) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+}
+
 export async function importarMatriculasPersistentes(arquivo: string, entradas: Linha[]): Promise<ResultadoImportacao> {
   if (!arquivo.trim() || arquivo.length > 255 || !entradas.length) {
     throw new ErroDeRegra("Informe um arquivo com linhas para importar e nome de até 255 caracteres.", "importacao_invalida");

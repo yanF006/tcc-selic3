@@ -8,6 +8,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,7 +33,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertCircleIcon, CheckCircle2Icon, GraduationCapIcon, InfoIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  GraduationCapIcon,
+  InfoIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 import type { MatriculaImportada, ResultadoImportacao } from "@/lib/domain/types";
 import type { LinhaImportacao } from "@/lib/services/administracao";
@@ -33,6 +47,7 @@ import type { LinhaImportacao } from "@/lib/services/administracao";
 import {
   importarMatriculasAction,
   registrarMatriculaAction,
+  removerMatriculaAction,
 } from "@/app/(admin)/admin/matriculas/acoes";
 
 /**
@@ -89,6 +104,10 @@ export function TabelaMatriculas({
   const [importando, setImportando] = React.useState(false);
   const importacaoEmAndamento = React.useRef(false);
   const [navegando, iniciarNavegacao] = React.useTransition();
+  const [paraRemover, setParaRemover] = React.useState<MatriculaImportada | null>(null);
+  const [removendo, setRemovendo] = React.useState(false);
+  const [erroRemocao, setErroRemocao] = React.useState<string | null>(null);
+  const [avisoRemocao, setAvisoRemocao] = React.useState<string | null>(null);
 
   const totalPaginas = Math.max(1, Math.ceil(total / tamanhoPagina));
   const paginaCorrente = Math.min(Math.max(1, paginaAtual), totalPaginas);
@@ -190,6 +209,28 @@ export function TabelaMatriculas({
     } finally {
       envioEmAndamento.current = false;
       setEnviando(false);
+    }
+  }
+
+  async function remover() {
+    if (!paraRemover || removendo) return;
+
+    setRemovendo(true);
+    setErroRemocao(null);
+
+    try {
+      const resultado = await removerMatriculaAction(paraRemover.id);
+
+      if (!resultado.ok) {
+        setErroRemocao(resultado.erro ?? "Não foi possível remover a matrícula.");
+        return;
+      }
+
+      setAvisoRemocao(`Matrícula ${paraRemover.matricula} removida.`);
+      setParaRemover(null);
+      router.refresh();
+    } finally {
+      setRemovendo(false);
     }
   }
 
@@ -391,6 +432,14 @@ export function TabelaMatriculas({
           </AlertDescription>
         </Alert>
 
+        {avisoRemocao ? (
+          <Alert role="status">
+            <CheckCircle2Icon className="size-4" aria-hidden="true" />
+            <AlertTitle>Matrícula removida</AlertTitle>
+            <AlertDescription>{avisoRemocao}</AlertDescription>
+          </Alert>
+        ) : null}
+
         <p
           className="text-muted-foreground text-sm"
           data-testid="total-matriculas"
@@ -409,6 +458,7 @@ export function TabelaMatriculas({
                 <TableHead>Nome</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Registrada em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -422,6 +472,23 @@ export function TabelaMatriculas({
                     </Badge>
                   </TableCell>
                   <TableCell>{new Date(registro.importadaEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      aria-label={`Remover matrícula ${registro.matricula}`}
+                      onClick={() => {
+                        setErroRemocao(null);
+                        setAvisoRemocao(null);
+                        setParaRemover(registro);
+                      }}
+                    >
+                      <Trash2Icon className="size-4" aria-hidden="true" />
+                      Remover
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -452,6 +519,43 @@ export function TabelaMatriculas({
           </nav>
         ) : null}
       </div>
+
+      <Dialog
+        open={paraRemover !== null}
+        onOpenChange={(aberto) => (aberto || removendo ? null : setParaRemover(null))}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remover matrícula?</DialogTitle>
+            <DialogDescription>
+              A matrícula {paraRemover?.matricula} ({paraRemover?.nome}) deixa de valer para novos
+              cadastros. Contas de alunos já criadas com ela não são afetadas.
+            </DialogDescription>
+          </DialogHeader>
+
+          {erroRemocao ? (
+            <Alert variant="destructive" role="alert">
+              <AlertCircleIcon className="size-4" aria-hidden="true" />
+              <AlertTitle>Matrícula não removida</AlertTitle>
+              <AlertDescription>{erroRemocao}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={removendo}
+              onClick={() => setParaRemover(null)}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" variant="destructive" disabled={removendo} onClick={remover}>
+              {removendo ? "Removendo…" : "Remover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

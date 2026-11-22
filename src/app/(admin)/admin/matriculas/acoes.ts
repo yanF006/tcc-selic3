@@ -6,6 +6,7 @@ import { exigirPapeis } from "@/lib/auth/guard";
 import {
   importarMatriculas,
   registrarMatricula,
+  removerMatricula,
   type LinhaImportacao,
 } from "@/lib/services/administracao";
 import type { ResultadoImportacao } from "@/lib/domain/types";
@@ -54,4 +55,19 @@ export async function importarMatriculasAction(
   } catch (erro) {
     return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
   }
+}
+
+/** Remove uma matrícula registrada por engano ou que não vale mais. */
+export async function removerMatriculaAction(id: string): Promise<ResultadoAcao> {
+  try {
+    await exigirPapeis(["administrador"]);
+    await removerMatricula(id);
+  } catch (erro) {
+    return { ok: false, erro: mensagemSeguraParaUsuario(erro) };
+  }
+
+  revalidatePath("/admin/matriculas");
+  revalidatePath("/admin/usuarios");
+
+  return { ok: true };
 }

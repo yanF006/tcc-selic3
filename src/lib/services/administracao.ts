@@ -21,7 +21,7 @@ import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
 import { criarRepositorioUsuarios } from "@/lib/db/repositorios/usuarios";
 import { criarRepositorioSolicitacoes } from "@/lib/db/repositorios/solicitacoes";
-import { importarMatriculasPersistentes, listarImportacoesPersistentes, listarMatriculasPersistentes, registrarMatriculaPersistente } from "./matriculas-persistentes";
+import { importarMatriculasPersistentes, listarImportacoesPersistentes, listarMatriculasPersistentes, registrarMatriculaPersistente, removerMatriculaPersistente } from "./matriculas-persistentes";
 
 import { ErroDeRegra } from "./erros";
 
@@ -1186,6 +1186,18 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   estado.matriculas.push(registro);
 
   return registro;
+}
+
+/**
+ * Remove uma matrícula registrada. Contas já criadas com ela continuam
+ * existindo; apenas novos cadastros com essa matrícula deixam de ser aceitos.
+ */
+export async function removerMatricula(id: string): Promise<void> {
+  if (bancoConfigurado()) return removerMatriculaPersistente(id);
+  const estado = obterEstado();
+  const indice = estado.matriculas.findIndex((registro) => registro.id === id);
+  if (indice === -1) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+  estado.matriculas.splice(indice, 1);
 }
 
 /** Relatórios duráveis; no simulador permanece o relatório imediato da importação. */
