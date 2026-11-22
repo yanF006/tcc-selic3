@@ -467,6 +467,21 @@ describe("importação manual de matrículas", () => {
     expect(await matriculaRegistrada("20260555999")).toBe(false);
     await expect(removerMatricula(registro.id)).rejects.toThrow(/não encontrada/);
   });
+
+  it("recusa remover matrícula usada por aluno cadastrado", async () => {
+    await entrarComoAdministrador();
+
+    const registro = await registrarMatricula({ matricula: "20260555888", nome: "Aluno Vinculado" });
+    await cadastrarUsuario({
+      nome: "Aluno Vinculado",
+      email: "aluno.vinculado@aluno.ifrj.edu.br",
+      papel: "aluno",
+      matricula: "20260555888",
+    });
+
+    await expect(removerMatricula(registro.id)).rejects.toThrow(/vinculada ao aluno Aluno Vinculado/);
+    expect(await matriculaRegistrada("20260555888")).toBe(true);
+  });
 });
 
 describe("isolamento dos serviços", () => {

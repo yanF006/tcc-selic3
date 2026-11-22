@@ -56,8 +56,13 @@ export async function registrarMatriculaPersistente(entrada: Linha): Promise<Mat
 
 export async function removerMatriculaPersistente(id: string): Promise<void> {
   const { prisma } = await carregarCliente();
-  const resultado = await prisma.matriculaImportada.deleteMany({ where: { id } });
-  if (resultado.count !== 1) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+  return executarTransacao(async (tx) => {
+    const registro = await tx.matriculaImportada.findUnique({ where: { id } });
+    if (!registro) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+    const aluno = await tx.usuario.findUnique({ where: { matricula: registro.matricula }, select: { nome: true } });
+    if (aluno) throw new ErroDeRegra(`A matrícula ${registro.matricula} está vinculada ao aluno ${aluno.nome}. Exclua o cadastro do aluno antes de remover a matrícula.`, "matricula_em_uso");
+    await tx.matriculaImportada.delete({ where: { id } });
+  }, { cliente: prisma });
 }
 
 export async function importarMatriculasPersistentes(arquivo: string, entradas: Linha[]): Promise<ResultadoImportacao> {

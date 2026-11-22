@@ -1189,14 +1189,17 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
 }
 
 /**
- * Remove uma matrícula registrada. Contas já criadas com ela continuam
- * existindo; apenas novos cadastros com essa matrícula deixam de ser aceitos.
+ * Remove uma matrícula registrada que nenhum aluno usa. Se houver cadastro
+ * com ela (em qualquer situação), a remoção é recusada.
  */
 export async function removerMatricula(id: string): Promise<void> {
   if (bancoConfigurado()) return removerMatriculaPersistente(id);
   const estado = obterEstado();
   const indice = estado.matriculas.findIndex((registro) => registro.id === id);
   if (indice === -1) throw new ErroDeRegra("Matrícula não encontrada.", "matricula_nao_encontrada");
+  const registro = estado.matriculas[indice];
+  const aluno = estado.usuarios.find((usuario) => usuario.matricula === registro.matricula);
+  if (aluno) throw new ErroDeRegra(`A matrícula ${registro.matricula} está vinculada ao aluno ${aluno.nome}. Exclua o cadastro do aluno antes de remover a matrícula.`, "matricula_em_uso");
   estado.matriculas.splice(indice, 1);
 }
 

@@ -529,7 +529,7 @@ export function TabelaMatriculas({
             <DialogTitle>Remover matrícula?</DialogTitle>
             <DialogDescription>
               A matrícula {paraRemover?.matricula} ({paraRemover?.nome}) deixa de valer para novos
-              cadastros. Contas de alunos já criadas com ela não são afetadas.
+              cadastros. Só é possível remover matrículas que nenhum aluno usa.
             </DialogDescription>
           </DialogHeader>
 
