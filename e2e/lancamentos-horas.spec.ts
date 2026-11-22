@@ -8,7 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
  * no estágio `est-maria-tecnoweb`.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 async function entrar(page: Page, email: string) {
   await page.goto("/login");

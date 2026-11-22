@@ -254,7 +254,7 @@ describe("paginação das listagens", () => {
   });
 
   it("documentos do aluno incluem as duas situações de todos os fixtures", async () => {
-    await entrar("maria.souza@aluno.ifrj.edu.br", "selic123");
+    await entrar("maria.souza@aluno.ifrj.edu.br", "Selic@123");
     const lista = await documentosDoAluno("usr-maria");
 
     expect(lista.some((documento) => documento.situacao === "rascunho")).toBe(true);
@@ -262,7 +262,7 @@ describe("paginação das listagens", () => {
   });
 
   it("estágios do aluno trazem convenênio, supervisor e orientador", async () => {
-    await entrar("maria.souza@aluno.ifrj.edu.br", "selic123");
+    await entrar("maria.souza@aluno.ifrj.edu.br", "Selic@123");
 
     const usuario = usuarioAtual() as Usuario;
     const lista = await estagiosDoAluno(usuario.id);

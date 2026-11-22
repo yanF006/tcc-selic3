@@ -41,7 +41,7 @@ test.describe("login", () => {
   test("mostra e esconde a senha", async ({ page }) => {
     const senha = page.getByLabel("Senha", { exact: true });
 
-    await senha.fill("selic123");
+    await senha.fill("Selic@123");
     await expect(senha).toHaveAttribute("type", "password");
 
     await page.getByRole("button", { name: "Mostrar a senha" }).click();
@@ -50,19 +50,19 @@ test.describe("login", () => {
     const ocultar = page.getByRole("button", { name: "Ocultar a senha" });
 
     await expect(senha).toHaveAttribute("type", "text");
-    await expect(senha).toHaveValue("selic123");
+    await expect(senha).toHaveValue("Selic@123");
     await expect(ocultar).toHaveAttribute("aria-pressed", "true");
 
     await ocultar.click();
 
     await expect(senha).toHaveAttribute("type", "password");
-    await expect(senha).toHaveValue("selic123");
+    await expect(senha).toHaveValue("Selic@123");
   });
 
   test("conferir a senha não impede o acesso", async ({ page }) => {
     await page.getByLabel("E-mail", { exact: true }).fill("maria.souza@aluno.ifrj.edu.br");
     await page.getByRole("button", { name: "Mostrar a senha" }).click();
-    await page.getByLabel("Senha", { exact: true }).fill("selic123");
+    await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
 
     await Promise.all([
       page.waitForURL((url) => url.pathname === "/documentos", { timeout: 60_000 }),
@@ -95,8 +95,8 @@ test.describe("cadastro público", () => {
     await expect(page.getByText("A senha deve ter ao menos 8 caracteres.")).toBeVisible();
 
     // As duas senhas podem ser exibidas digitando.
-    await page.getByLabel("Senha", { exact: true }).fill("selic123");
-    await page.getByLabel("Confirmar senha").fill("selic123");
+    await page.getByLabel("Senha", { exact: true }).fill("Selic@2026");
+    await page.getByLabel("Confirmar senha").fill("Selic@2026");
     await page.getByRole("button", { name: "Mostrar a senha" }).click();
     await page.getByRole("button", { name: "Mostrar a confirmação" }).click();
 
@@ -119,7 +119,7 @@ test.describe("tela estreita", () => {
     expect(await rolagemHorizontal()).toBeLessThanOrEqual(1);
 
     await page.getByLabel("E-mail", { exact: true }).fill("felipe.andrade@ifrj.edu.br");
-    await page.getByLabel("Senha", { exact: true }).fill("selic123");
+    await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
 
     await Promise.all([
       page.waitForURL((url) => url.pathname === "/admin/usuarios", { timeout: 60_000 }),

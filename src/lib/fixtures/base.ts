@@ -252,7 +252,7 @@ export const usuarios: Usuario[] = [
     papel: "aluno",
     situacao: "ativo",
     campus: "Pinheiral",
-    matricula: "20241006904",
+    matricula: "20230000123",
     dadosPessoais: dadosPessoaisMaria,
     criadoEm: "2026-02-10T14:00:00-03:00",
   },
@@ -824,7 +824,7 @@ export const solicitacoesAcesso: SolicitacaoAcesso[] = [
 export const matriculasImportadas: MatriculaImportada[] = [
   {
     id: "mat-1",
-    matricula: "20241006904",
+    matricula: "20230000123",
     nome: "Maria de Souza Oliveira",
     curso: "Análise e Desenvolvimento de Sistemas",
     origem: "importacao",
@@ -856,61 +856,61 @@ export const matriculasImportadas: MatriculaImportada[] = [
   },
 ];
 
-/** Contas de desenvolvimento, com senha `selic123`. */
+/** Contas de desenvolvimento, com senha `Selic@123`. */
 export const CONTAS_DE_DESENVOLVIMENTO = [
   {
     id: "usr-sem-endereco",
     email: "luiza.santos@aluno.ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "aluno",
     rotulo: "Aluno com endereço pendente",
   },
   {
     id: "usr-maria",
     email: "maria.souza@aluno.ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "aluno",
     rotulo: "Aluno",
   },
   {
     id: "usr-joao",
     email: "joao.lima@aluno.ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "aluno",
     rotulo: "Aluno (estágio concluído)",
   },
   {
     id: "usr-ana",
     email: "ana.correia@ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "coordenador_estagio",
     rotulo: "Coordenador de Estágio",
   },
   {
     id: "usr-carla",
     email: "carla.menezes@ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "coordenador_curso",
     rotulo: "Coordenador de Curso",
   },
   {
     id: "usr-paula",
     email: "paula.batista@aluno.ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "aluno",
     rotulo: "Aluno com cadastro pendente",
   },
   {
     id: "usr-rafaela",
     email: "rafaela.nogueira@aluno.ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "aluno",
     rotulo: "Aluno com cadastro pendente",
   },
   {
     id: "usr-admin",
     email: "felipe.andrade@ifrj.edu.br",
-    senha: "selic123",
+    senha: "Selic@123",
     papel: "administrador",
     rotulo: "Administrador",
   },

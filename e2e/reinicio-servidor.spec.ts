@@ -11,7 +11,7 @@ import { construirServidorDedicado, iniciarServidorDedicado } from "./suporte/se
 
 const PORTA = 3110;
 const SUFIXO = Date.now().toString(36);
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 /** Servidor dedicado de produção em modo simulado, como os demais E2E de cadastro. */
 function servidor() {

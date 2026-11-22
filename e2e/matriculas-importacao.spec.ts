@@ -4,7 +4,7 @@ async function entrar(page: Page, email: string) {
   await page.context().clearCookies();
   await page.goto("/login");
   await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
   await Promise.all([
     page.waitForURL((url) => url.pathname !== "/login"),
     page.getByRole("button", { name: "Entrar", exact: true }).click(),
@@ -19,7 +19,7 @@ test("importa matrículas por arquivo e relata válidas, rejeitadas e ignoradas 
 
   const conteudo = [
     "matricula;nome;curso",
-    "20241006904;Maria Duplicada;Análise e Desenvolvimento de Sistemas",
+    "20230000123;Maria Duplicada;Análise e Desenvolvimento de Sistemas",
     "20241007777;Aluno Importado;Análise e Desenvolvimento de Sistemas",
     "123;Matrícula Curta;Análise e Desenvolvimento de Sistemas",
   ].join("\n");
@@ -45,7 +45,7 @@ test("importa matrículas por arquivo e relata válidas, rejeitadas e ignoradas 
   await expect(relatorio.getByRole("row").filter({ hasText: "123" })).toContainText(
     "11 dígitos",
   );
-  const ignorada = relatorio.getByRole("row").filter({ hasText: "20241006904" });
+  const ignorada = relatorio.getByRole("row").filter({ hasText: "20230000123" });
   await expect(ignorada).toContainText("Ignorada");
   await expect(ignorada).toContainText("já registrada");
 

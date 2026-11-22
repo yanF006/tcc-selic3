@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 async function entrar(page: Page, email: string) {
   await page.context().clearCookies();

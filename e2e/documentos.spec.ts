@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
  * documento preenchível e documento apenas para download é a mesma nos dois.
  */
 
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 const CATALOGO = "Catálogo dos documentos do Kit de Estágio";
 
 async function entrar(page: Page, email: string) {

@@ -74,7 +74,7 @@ export default async function PaginaUsuarios({ searchParams }: PageProps<"/admin
   return (
     <PaginaArea
       titulo="Usuários"
-      descricao="Cadastre, edite e inative usuários, filtre por papel, situação e curso e abra o perfil completo de cada cadastro. Inativar bloqueia o acesso e preserva os registros criados pela pessoa."
+      descricao="Cadastre, edite e inative usuários, filtre por cargo, situação e curso e abra o perfil completo de cada cadastro. Inativar bloqueia o acesso e preserva os registros criados pela pessoa."
     >
       <TabelaUsuarios
         usuarios={pagina.itens}

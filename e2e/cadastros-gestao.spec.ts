@@ -6,7 +6,7 @@ async function entrar(page: Page, email = "ana.correia@ifrj.edu.br") {
   await page.context().clearCookies();
   await page.goto("/login");
   await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL((url) => url.pathname !== "/login");
 }
@@ -72,8 +72,8 @@ test("curso, turma e períodos ficam vinculados e aparecem nas opções corretas
   const sufixo = Date.now().toString().slice(-7);
   await page.getByLabel("Matrícula", { exact: true }).fill(`2026${sufixo}`);
   await page.getByLabel("E-mail", { exact: true }).fill(`turma.${sufixo}@exemplo.com`);
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
-  await page.getByLabel("Confirmar senha").fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@2026");
+  await page.getByLabel("Confirmar senha").fill("Selic@2026");
   await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByLabel("Curso", { exact: true }).click();
   await page.getByRole("option", { name: "Curso de revisão", exact: true }).click();

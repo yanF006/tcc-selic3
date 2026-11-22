@@ -7,7 +7,7 @@ async function entrar(page: Page, email: string) {
   await page.context().clearCookies();
   await page.goto("/login");
   await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL((url) => url.pathname !== "/login");
 }

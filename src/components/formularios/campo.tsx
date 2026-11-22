@@ -273,14 +273,14 @@ export function CampoSenha({
   const idDescricao = descricao ? `${id}-descricao` : undefined;
   const idMensagem = `${id}-mensagem`;
 
-  const minima =
-    conferirMinimo && tocado && valor.length > 0 && !esquemaSenha.safeParse(valor).success;
+  const validacao = conferirMinimo && tocado && valor.length > 0 ? esquemaSenha.safeParse(valor) : null;
+  const minima = validacao !== null && !validacao.success;
   const descricoes = [idDescricao, erro || minima ? idMensagem : null].filter(Boolean).join(" ");
 
   const mensagemMinima =
     !erro && minima ? (
       <MensagemCampo id={idMensagem} tipo="erro">
-        A senha deve ter ao menos 8 caracteres.
+        {validacao && !validacao.success ? validacao.error.issues[0]?.message : null}
       </MensagemCampo>
     ) : null;
 

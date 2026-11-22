@@ -50,7 +50,7 @@ Alternativa rejeitada: manter a inserção antecipada no estado e apenas captura
 
 ### 4. Corrigir a preparação dos testes
 
-O teste positivo de `src/lib/services/cadastro.test.ts` usa `20231000788`, que já pertence a um usuário fixture. Outros testes da segunda etapa usam `20241006904`, também ocupada. Os cenários de sucesso e validação dos dados pessoais precisam preparar uma matrícula importada livre no seu próprio ambiente de teste; testes de rejeição devem continuar usando uma matrícula ocupada.
+O teste positivo de `src/lib/services/cadastro.test.ts` usa `20231000788`, que já pertence a um usuário fixture. Outros testes da segunda etapa usam `20230000123`, também ocupada. Os cenários de sucesso e validação dos dados pessoais precisam preparar uma matrícula importada livre no seu próprio ambiente de teste; testes de rejeição devem continuar usando uma matrícula ocupada.
 
 O mesmo vale para os cenários de segunda etapa de `e2e/cadastro.spec.ts`. Preparar matrículas livres pela funcionalidade administrativa existente e evitar ampliar as fixtures de produção apenas para acomodar os testes.
 

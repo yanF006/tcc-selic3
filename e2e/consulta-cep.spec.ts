@@ -4,7 +4,7 @@ import { expect, test } from "./suporte/cep";
 async function entrar(page: Page, email = "joao.lima@aluno.ifrj.edu.br") {
   await page.goto("/login");
   await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
   await Promise.all([
     page.waitForURL((url) => url.pathname !== "/login"),
     page.getByRole("button", { name: "Entrar", exact: true }).click(),
@@ -30,8 +30,8 @@ test("cadastro: consulta automaticamente e persiste a correção manual", async 
   await page.goto("/cadastro");
   await page.getByLabel("Matrícula", { exact: true }).fill(matricula);
   await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
-  await page.getByLabel("Confirmar senha").fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@2026");
+  await page.getByLabel("Confirmar senha").fill("Selic@2026");
   await page.getByRole("button", { name: "Continuar" }).click();
   await page.getByLabel("CPF", { exact: true }).fill("52998224725");
   await page.getByLabel("Data de nascimento").fill("12031998");

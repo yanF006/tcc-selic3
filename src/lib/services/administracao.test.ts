@@ -77,7 +77,7 @@ describe("cargo único nas mutações administrativas", () => {
 });
 
 async function entrarComoAdministrador() {
-  await entrar("felipe.andrade@ifrj.edu.br", "selic123");
+  await entrar("felipe.andrade@ifrj.edu.br", "Selic@123");
 
   return usuarioAtual()!;
 }
@@ -193,7 +193,7 @@ describe("usuários", () => {
     expect(matriculas.itens).toHaveLength(1);
   });
 
-  it.each(["123", "2024100690", "202410069040", "2024100690A"])(
+  it.each(["123", "2024100690", "202300001230", "2024100690A"])(
     "recusa a matrícula fora do formato de onze dígitos: %s",
     async (matricula) => {
       await entrarComoAdministrador();
@@ -231,7 +231,7 @@ describe("usuários", () => {
         email: "sem.papel@ifrj.edu.br",
         papel: undefined as unknown as Papel,
       }),
-    ).rejects.toThrow(/papel/);
+    ).rejects.toThrow(/cargo/);
     await expect(
       cadastrarUsuario({
         nome: "Ana Correia",
@@ -365,7 +365,7 @@ describe("importação manual de matrículas", () => {
       { matricula: "20260000001", nome: "Ana Paula Souza", curso: "Informática" },
       { matricula: "", nome: "Sem matrícula", curso: "Informática" },
       { matricula: "2024100690", nome: "Matrícula curta", curso: "Informática" },
-      { matricula: "202410069040", nome: "Matrícula longa", curso: "Informática" },
+      { matricula: "202300001230", nome: "Matrícula longa", curso: "Informática" },
       { matricula: "2024100690A", nome: "Matrícula com letra", curso: "Informática" },
     ]);
 
@@ -377,7 +377,7 @@ describe("importação manual de matrículas", () => {
     expect(resultado.itens.slice(3).every((item) => item.motivo?.includes("11 dígitos"))).toBe(
       true,
     );
-    expect((await listarMatriculas({ busca: "2024100690" })).itens).toHaveLength(1);
+    expect((await listarMatriculas({ busca: "2023000012" })).itens).toHaveLength(1);
     expect(resultado.arquivo).toBe("matriculas-2026-1.csv");
   });
 
@@ -434,7 +434,7 @@ describe("isolamento dos serviços", () => {
   });
 
   it("mantém os papéis da sessão simulada", async () => {
-    await entrar("carla.menezes@ifrj.edu.br", "selic123");
+    await entrar("carla.menezes@ifrj.edu.br", "Selic@123");
 
     expect(temPapel("coordenador_curso")).toBe(true);
   });

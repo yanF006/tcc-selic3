@@ -59,7 +59,7 @@ const VALORES_LIBERACAO = {
 };
 
 async function login(email: string) {
-  const resultado = await entrar(email, "selic123");
+  const resultado = await entrar(email, "Selic@123");
 
   expect(resultado.ok).toBe(true);
 

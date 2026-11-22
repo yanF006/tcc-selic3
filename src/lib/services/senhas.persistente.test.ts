@@ -106,13 +106,13 @@ describe("uso do link persistente", () => {
   it("redefine a senha pelo token do provedor", async () => {
     const resultado = await redefinirSenhaComLink(
       "  token-valido  ",
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
       CABECALHOS,
     );
 
     expect(mocks.auth.api.resetPassword).toHaveBeenCalledWith({
-      body: { token: "token-valido", newPassword: "senha-nova-123" },
+      body: { token: "token-valido", newPassword: "Senha-Nova-123" },
       headers: CABECALHOS,
     });
     expect(resultado).toEqual({ ok: true, mensagem: "Senha redefinida. Entre com a nova senha." });
@@ -128,8 +128,8 @@ describe("uso do link persistente", () => {
 
       const resultado = await redefinirSenhaComLink(
         "token-qualquer",
-        "senha-nova-123",
-        "senha-nova-123",
+        "Senha-Nova-123",
+        "Senha-Nova-123",
         CABECALHOS,
       );
 
@@ -141,8 +141,8 @@ describe("uso do link persistente", () => {
     const curta = await redefinirSenhaComLink("token", "curta", "curta", CABECALHOS);
     const divergente = await redefinirSenhaComLink(
       "token",
-      "senha-nova-123",
-      "outra-senha-123",
+      "Senha-Nova-123",
+      "Outra-Senha-123",
       CABECALHOS,
     );
 
@@ -157,8 +157,8 @@ describe("troca autenticada persistente", () => {
     const resultado = await trocarSenha(
       USUARIO,
       "senha-atual-123",
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
       CABECALHOS,
     );
 
@@ -170,7 +170,7 @@ describe("troca autenticada persistente", () => {
       headers: CABECALHOS,
       body: {
         currentPassword: "senha-atual-123",
-        newPassword: "senha-nova-123",
+        newPassword: "Senha-Nova-123",
         revokeOtherSessions: true,
       },
     });
@@ -189,8 +189,8 @@ describe("troca autenticada persistente", () => {
     const resultado = await trocarSenha(
       USUARIO,
       "senha-errada",
-      "senha-nova-123",
-      "senha-nova-123",
+      "Senha-Nova-123",
+      "Senha-Nova-123",
       CABECALHOS,
     );
 
@@ -210,8 +210,8 @@ describe("troca autenticada persistente", () => {
       const resultado = await trocarSenha(
         USUARIO,
         "senha-atual-123",
-        "senha-nova-123",
-        "senha-nova-123",
+        "Senha-Nova-123",
+        "Senha-Nova-123",
         CABECALHOS,
       );
 
@@ -228,8 +228,8 @@ describe("troca autenticada persistente", () => {
     const resultado = await trocarSenha(
       USUARIO,
       "senha-atual-123",
-      "senha-nova-123",
-      "outra-senha-123",
+      "Senha-Nova-123",
+      "Outra-Senha-123",
       CABECALHOS,
     );
 

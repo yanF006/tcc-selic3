@@ -11,7 +11,7 @@ import { expect, test } from "./suporte/cep";
 const SUFIXO = Date.now().toString(36);
 /** Só dígitos: a matrícula tem onze dígitos. */
 const DIGITOS = Date.now().toString().slice(-7);
-const SENHA = "selic123";
+const SENHA = "Selic@123";
 
 async function entrar(page: import("@playwright/test").Page, email: string): Promise<void> {
   await page.context().clearCookies();

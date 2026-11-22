@@ -31,6 +31,7 @@ import {
   esquemaRg,
   esquemaTelefone,
   esquemaCelular,
+  REGRA_SENHA,
 } from "@/lib/domain/schemas";
 import { mensagemDeErro } from "@/lib/domain/validar-campo";
 import { useConsultaEndereco } from "@/hooks/use-consulta-endereco";
@@ -276,7 +277,7 @@ export function FormularioCadastro({
               descricao="Os 11 dígitos da matrícula do SIGAA."
               inputMode="numeric"
               maxLength={11}
-              placeholder="20241006904"
+              placeholder="20230000123"
               valor={matricula}
               aoMudar={setMatricula}
               erro={erroDoCampo("matricula")}
@@ -299,7 +300,7 @@ export function FormularioCadastro({
               rotulo="Senha"
               obrigatorio
               autoComplete="new-password"
-              descricao="Mínimo de 8 caracteres."
+              descricao={REGRA_SENHA}
               conferirMinimo
               valor={senha}
               aoMudar={setSenha}

@@ -68,7 +68,11 @@ export interface CadastroUsuario {
 export interface LinhaImportacao {
   matricula: string;
   nome: string;
-  curso: string;
+  /**
+   * Legado: o curso do aluno vem do cadastro dele, não da matrícula. Mantido
+   * opcional para não exigir migração da coluna `matriculas.curso`.
+   */
+  curso?: string;
 }
 
 /** Ordena por nome normalizado, para listas previsíveis entre busca e paginação. */
@@ -175,7 +179,7 @@ function validarCadastroAdministrativo(cadastro: CadastroUsuario): CadastroValid
     throw new ErroDeRegra("Informe um e-mail válido.", "informe_um_e_mail_valido");
   if (!esquemaPapel.safeParse(cadastro.papel).success || "papeis" in cadastro) {
     throw new ErroDeRegra(
-      "Escolha o papel antes de concluir o cadastro.",
+      "Escolha o cargo antes de concluir o cadastro.",
       "escolha_o_papel_antes_de_concluir_o_cadastro",
     );
   }
@@ -471,7 +475,7 @@ export async function editarUsuario(
 ): Promise<Usuario> {
   if (Object.hasOwn(alteracoes, "papel") || "papeis" in alteracoes) {
     if (!esquemaPapel.safeParse(alteracoes.papel).success || "papeis" in alteracoes) {
-      throw new ErroDeRegra("Escolha um único papel válido.", "papel_invalido");
+      throw new ErroDeRegra("Escolha um único cargo válido.", "papel_invalido");
     }
   }
   if (bancoConfigurado()) return editarUsuarioPersistente(id, alteracoes);
@@ -1052,15 +1056,15 @@ export async function importarMatriculas(
   for (const linha of linhas) {
     const matricula = linha.matricula.trim();
     const nome = linha.nome.trim();
-    const curso = linha.curso.trim();
+    const curso = linha.curso?.trim() ?? "";
 
-    if (!matricula || !nome || !curso) {
+    if (!matricula || !nome) {
       resultado.rejeitadas += 1;
       resultado.itens.push({
         matricula: matricula || "(vazia)",
         nome: nome || "(vazio)",
         resultado: "rejeitada",
-        motivo: "Matrícula, nome e curso são obrigatórios.",
+        motivo: "Matrícula e nome são obrigatórios.",
       });
       continue;
     }
@@ -1122,7 +1126,7 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   const estado = obterEstado();
   const matricula = linha.matricula.trim();
   const nome = linha.nome.trim();
-  const curso = linha.curso.trim();
+  const curso = linha.curso?.trim() ?? "";
 
   if (!MATRICULA_SIGAA.test(matricula)) {
     throw new ErroDeRegra(
@@ -1132,7 +1136,6 @@ export async function registrarMatricula(linha: LinhaImportacao): Promise<Matric
   }
 
   if (!nome) throw new ErroDeRegra("Informe o nome do aluno.", "informe_o_nome_do_aluno");
-  if (!curso) throw new ErroDeRegra("Informe o curso do aluno.", "informe_o_curso_do_aluno");
 
   if (await matriculaRegistrada(matricula)) {
     throw new ErroDeRegra(

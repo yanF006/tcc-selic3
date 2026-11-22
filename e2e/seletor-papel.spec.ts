@@ -17,7 +17,7 @@ test("troca a sessão entre as quatro áreas", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 
   await page.getByLabel("E-mail", { exact: true }).fill("maria.souza@aluno.ifrj.edu.br");
-  await page.getByLabel("Senha", { exact: true }).fill("selic123");
+  await page.getByLabel("Senha", { exact: true }).fill("Selic@123");
   await page.getByRole("button", { name: "Entrar" }).click();
 
   // O servidor de desenvolvimento compila a rota sob demanda na primeira visita.

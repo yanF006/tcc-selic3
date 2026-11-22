@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { CampoTexto, LegendaObrigatorios, RotuloCampo } from "@/components/formularios/campo";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +83,7 @@ interface Props {
 }
 
 const PAPEIS_FILTRO: { valor: string; rotulo: string }[] = [
-  { valor: "todos", rotulo: "Todos os papéis" },
+  { valor: "todos", rotulo: "Todos os cargos" },
   { valor: "aluno", rotulo: "Aluno" },
   { valor: "coordenador_estagio", rotulo: "Coordenador de Estágio" },
   { valor: "coordenador_curso", rotulo: "Coordenador de Curso" },
@@ -167,8 +168,11 @@ export function TabelaUsuarios({
 
   return (
     <div className="flex flex-col gap-4">
-      <form className="flex flex-wrap items-end gap-3" onSubmit={buscar}>
-        <div className="flex min-w-64 flex-1 flex-col gap-2">
+      <form
+        className="grid grid-cols-1 items-end gap-3 sm:grid-cols-3 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]"
+        onSubmit={buscar}
+      >
+        <div className="flex flex-col gap-2 sm:col-span-3 lg:col-span-1">
           <Label htmlFor="busca">Buscar por nome, e-mail ou matrícula</Label>
           <Input
             id="busca"
@@ -179,12 +183,12 @@ export function TabelaUsuarios({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-papel">Papel</Label>
+          <Label htmlFor="filtro-papel">Cargo</Label>
           <Select
             value={filtros.papel}
             onValueChange={(valor) => navegar({ papel: valor, pagina: 1 })}
           >
-            <SelectTrigger id="filtro-papel" className="w-56">
+            <SelectTrigger id="filtro-papel" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -203,7 +207,7 @@ export function TabelaUsuarios({
             value={filtros.situacao}
             onValueChange={(valor) => navegar({ situacao: valor, pagina: 1 })}
           >
-            <SelectTrigger id="filtro-situacao" className="w-48">
+            <SelectTrigger id="filtro-situacao" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -222,7 +226,7 @@ export function TabelaUsuarios({
             value={filtros.curso}
             onValueChange={(valor) => navegar({ curso: valor, pagina: 1 })}
           >
-            <SelectTrigger id="filtro-curso" className="w-48">
+            <SelectTrigger id="filtro-curso" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -236,16 +240,18 @@ export function TabelaUsuarios({
           </Select>
         </div>
 
-        <Button type="submit" variant="secondary">
-          Filtrar
-        </Button>
-        <Button type="button" variant="ghost" onClick={limpar}>
-          Limpar
-        </Button>
+        <div className="flex gap-3 sm:col-span-2 lg:col-span-1">
+          <Button type="submit" variant="secondary" className="flex-1">
+            Filtrar
+          </Button>
+          <Button type="button" variant="ghost" className="flex-1" onClick={limpar}>
+            Limpar
+          </Button>
+        </div>
 
         <Button
           type="button"
-          className="ml-auto"
+          className="w-full lg:col-start-5"
           onClick={() => {
             ultimoGatilho.current = document.activeElement as HTMLElement;
             setEditando(null);
@@ -288,7 +294,7 @@ export function TabelaUsuarios({
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>E-mail</TableHead>
-              <TableHead>Papéis</TableHead>
+              <TableHead>Cargo</TableHead>
               <TableHead>Situação</TableHead>
               <TableHead>Curso</TableHead>
               <TableHead className="w-12">
@@ -301,13 +307,28 @@ export function TabelaUsuarios({
               <TableRow key={usuario.id} data-usuario-id={usuario.id}>
                 <TableCell className="font-medium">{usuario.nome}</TableCell>
                 <TableCell>{usuario.email}</TableCell>
-                <TableCell className="flex flex-wrap gap-1">
+                <TableCell>
                   <Badge variant="outline">{rotuloPapel(usuario.papel)}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={varianteSituacaoUsuario(usuario.situacao)}>
-                    {metadadoUsuario(usuario.situacao).rotulo}
-                  </Badge>
+                  {usuario.situacao === "pendente" ? (
+                    <Link
+                      href="/solicitacoes"
+                      className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
+                      title="Abrir cadastros pendentes"
+                    >
+                      <Badge
+                        variant={varianteSituacaoUsuario(usuario.situacao)}
+                        className="cursor-pointer underline-offset-2 hover:underline"
+                      >
+                        {metadadoUsuario(usuario.situacao).rotulo}
+                      </Badge>
+                    </Link>
+                  ) : (
+                    <Badge variant={varianteSituacaoUsuario(usuario.situacao)}>
+                      {metadadoUsuario(usuario.situacao).rotulo}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {cursos.find((item) => item.id === cursoDoUsuario(usuario))?.nome ?? "—"}
@@ -473,7 +494,7 @@ function FormularioUsuario({
     if (!papel) {
       envioEmAndamento.current = false;
       setEnviando(false);
-      setErro("Escolha o papel antes de concluir o cadastro.");
+      setErro("Escolha o cargo antes de concluir o cadastro.");
 
       return;
     }
@@ -518,8 +539,8 @@ function FormularioUsuario({
           <DialogTitle>{editando ? "Editar usuário" : "Novo usuário"}</DialogTitle>
           <DialogDescription>
             {editando
-              ? "Altere nome, e-mail, papel e curso. A matrícula do aluno é imutável."
-              : "O campus é fixo em Pinheiral e o papel define o que a pessoa enxerga."}
+              ? "Altere nome, e-mail, cargo e curso. A matrícula do aluno é imutável."
+              : "O campus é fixo em Pinheiral e o cargo define o que a pessoa enxerga."}
           </DialogDescription>
         </DialogHeader>
 
@@ -547,7 +568,7 @@ function FormularioUsuario({
 
           <div className="flex flex-col gap-2">
             <RotuloCampo htmlFor="usuario-papel" obrigatorio>
-              Papel
+              Cargo
             </RotuloCampo>
             {/*
               Sem `required` no Radix Select: dentro de `<form>` ele renderiza um
@@ -556,7 +577,7 @@ function FormularioUsuario({
             */}
             <Select value={papel} onValueChange={(valor) => setPapel(valor as Papel)}>
               <SelectTrigger id="usuario-papel" aria-required="true">
-                <SelectValue placeholder="Selecione o papel" />
+                <SelectValue placeholder="Selecione o cargo" />
               </SelectTrigger>
               <SelectContent>
                 {PAPEIS_FILTRO.slice(1).map((opcao) => (

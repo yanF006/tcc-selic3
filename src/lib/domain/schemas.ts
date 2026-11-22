@@ -125,10 +125,20 @@ export const esquemaData = z
     return iso;
   });
 
+/** Regra exibida nos formulários que criam ou trocam senha. */
+export const REGRA_SENHA =
+  "Mínimo de 8 caracteres, com letra maiúscula, letra minúscula, número e símbolo.";
+
+/** Senhas fracas: curtas, sem variedade de caracteres ou muito previsíveis. */
 export const esquemaSenha = z
   .string()
   .min(8, "A senha deve ter ao menos 8 caracteres.")
-  .max(72, "A senha deve ter no máximo 72 caracteres.");
+  .max(72, "A senha deve ter no máximo 72 caracteres.")
+  .regex(/[a-z]/, "A senha deve ter ao menos uma letra minúscula.")
+  .regex(/[A-Z]/, "A senha deve ter ao menos uma letra maiúscula.")
+  .regex(/[0-9]/, "A senha deve ter ao menos um número.")
+  .regex(/[^A-Za-z0-9]/, "A senha deve ter ao menos um símbolo (ex.: ! @ # $).")
+  .refine((senha) => !/(.)\1{3,}/.test(senha), "A senha não pode repetir o mesmo caractere 4 vezes seguidas.");
 
 /* ------------------------------------------------------------------ */
 /* Endereço e seleção de curso                                        */
