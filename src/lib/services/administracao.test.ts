@@ -364,6 +364,22 @@ describe("solicitações de acesso", () => {
     });
   });
 
+  it("reativar cadastro recusado registra a matrícula informada pelo aluno", async () => {
+    const administrador = await entrarComoAdministrador();
+
+    await decidirSolicitacao("sol-pendente-1", "recusado", administrador.id, "Documentação incompleta.");
+    const aluno = (await listarUsuarios({ busca: "rafaela.nogueira@aluno.ifrj.edu.br" })).itens[0];
+    expect((await listarMatriculas({ busca: aluno.matricula! })).total).toBe(0);
+
+    await reativarUsuario(aluno.id);
+
+    expect((await listarMatriculas({ busca: aluno.matricula! })).itens[0]).toMatchObject({
+      matricula: aluno.matricula,
+      nome: aluno.nome,
+      origem: "cadastro_administrador",
+    });
+  });
+
   it("recusa deferir solicitação inexistente", async () => {
     const administrador = await entrarComoAdministrador();
 

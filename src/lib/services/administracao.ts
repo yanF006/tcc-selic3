@@ -591,6 +591,22 @@ async function atualizarSituacaoPersistente(
       const atualizado: Usuario = { ...usuario, situacao };
       await repositorio.atualizar(atualizado);
 
+      // Reativar um aluno (por exemplo, depois de um cadastro recusado) valida a
+      // matrícula informada por ele, como faz a autorização da solicitação.
+      if (situacao === "ativo" && usuario.papel === "aluno" && usuario.matricula) {
+        await tx.matriculaImportada.upsert({
+          where: { matricula: usuario.matricula },
+          create: {
+            id: novoId("mat"),
+            matricula: usuario.matricula,
+            nome: usuario.nome,
+            curso: "",
+            origem: "cadastro_administrador",
+          },
+          update: {},
+        });
+      }
+
       if (situacao !== "ativo") {
         await tx.authSession.deleteMany({ where: { userId: id } });
       }
@@ -639,6 +655,21 @@ export async function reativarUsuario(id: string): Promise<Usuario> {
   usuario.situacao = "ativo";
 
   try {
+    const estado = obterEstado();
+    if (
+      usuario.papel === "aluno" &&
+      usuario.matricula &&
+      !estado.matriculas.some((registro) => registro.matricula === usuario.matricula)
+    ) {
+      estado.matriculas.push({
+        id: novoId("mat"),
+        matricula: usuario.matricula,
+        nome: usuario.nome,
+        curso: "",
+        origem: "cadastro_administrador",
+        importadaEm: agora(),
+      });
+    }
   } catch (erro) {
     usuario.situacao = situacaoAnterior;
     throw erro;
