@@ -18,12 +18,21 @@ async function autenticar() {
   vi.mocked(usuarioDaRequisicao).mockResolvedValue({ id: "gestor", nome: "Gestor", email: "gestor@teste.local", papel: "administrador", situacao: "ativo", campus: "Pinheiral", criadoEm: "2026-11-10" });
 }
 
-it("exige sessão e recusa referência desconhecida ou preenchível", async () => {
+it("exige sessão e recusa referência desconhecida", async () => {
   vi.mocked(usuarioDaRequisicao).mockResolvedValue(null);
   expect((await baixar("tpl-lei-estagio")).status).toBe(401);
   await autenticar();
   expect((await baixar("inexistente")).status).toBe(404);
-  expect((await baixar("tpl-termo-compromisso")).status).toBe(409);
+});
+
+it("entrega o modelo em branco do documento preenchível", async () => {
+  await autenticar();
+  const resposta = await baixar("tpl-termo-compromisso");
+  expect(resposta.status).toBe(200);
+  expect(resposta.headers.get("content-type")).toBe(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  );
+  expect(Buffer.from(await resposta.arrayBuffer()).subarray(0, 2).toString()).toBe("PK");
 });
 
 it("entrega o PDF oficial validado e informa indisponibilidade sem corpo de arquivo fictício", async () => {

@@ -168,6 +168,9 @@ export default async function Page({
             <AlertTitle>Nenhum estágio cadastrado</AlertTitle>
             <AlertDescription>
               Cadastre um estágio antes de preencher este documento.
+              <Button asChild variant="link" className="px-1">
+                <a href={`/documentos/${templateId}/baixar`}>Baixar modelo em branco (.docx)</a>
+              </Button>
             </AlertDescription>
           </Alert>
         </PaginaArea>

@@ -111,7 +111,7 @@ test.describe("download dos documentos fixos", () => {
     await expect(page.locator("form")).toHaveCount(0);
   });
 
-  test("recusa baixar documento preenchível pelo catálogo", async ({ request, context, page }) => {
+  test("baixa o modelo em branco de documento preenchível sem estágio", async ({ request, context, page }) => {
     await entrar(page, "maria.souza@aluno.ifrj.edu.br");
 
     const cookies = await context.cookies();
@@ -120,6 +120,7 @@ test.describe("download dos documentos fixos", () => {
       headers: { cookie: cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ") },
     });
 
-    expect(resposta.status()).toBe(409);
+    expect(resposta.status()).toBe(200);
+    expect(decodeURIComponent(resposta.headers()["content-disposition"])).toContain(".docx");
   });
 });
