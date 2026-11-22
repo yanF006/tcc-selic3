@@ -1,9 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Guarda de sessão e de papel (4.1, 4.6, 4.7). As verificações rodam contra o
- * servidor de desenvolvimento com a flag do seletor de papel desligada; o
- * teste do seletor sobe o servidor com a flag ligada.
+ * Guarda de sessão e de papel (4.1, 4.6, 4.7). A entrega não oferece troca de
+ * papel: cada conta vê apenas a navegação da sua área.
  */
 
 const SENHA = "selic123";
@@ -125,7 +124,7 @@ test.describe("login e logout", () => {
     await expect(page.getByRole("heading", { name: "Documentos" })).toBeVisible();
   });
 
-  test("não mostra o seletor de papel com a flag desligada", async ({ page }) => {
+  test("não oferece troca de papel na navegação", async ({ page }) => {
     await entrar(page, "maria.souza@aluno.ifrj.edu.br");
 
     await expect(page.getByRole("button", { name: /Ver como/ })).toHaveCount(0);

@@ -4,6 +4,7 @@ import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
 import { criarRascunho, registrarParecer, salvarRascunho, validarValores } from "./documentos";
 import { alterarTemplate, descritorDaVersao, registrarVersaoTemplate } from "./templates";
 import { obterEstado, reiniciarEstado } from "./store";
+import PizZip from "pizzip";
 import { arquivoDoDocumento } from "@/lib/documentos/baixar-documento";
 import { criarEstagio } from "./estagios";
 import { reabrirParaCorrecao, solicitarEncaminhamento } from "./fluxo-estagio";
@@ -39,11 +40,13 @@ describe("Kit fixo sem publicação administrativa", () => {
     const documento = await criarRascunho(usuario("usr-maria"), "tpl-termo-aditivo", "est-maria-tecnoweb", { novoTermino: "2027-08-30", termoCompromissoData: "2099-12-31" });
     expect(documento.valores.termoCompromissoData).toBeUndefined();
     expect(validarValores(documento.templateId, documento.valores, documento.versaoTemplate)).toEqual([]);
-    const arquivo = arquivoDoDocumento(documento, documento.templateId, "pdf");
+    expect(arquivoDoDocumento(documento, documento.templateId, "pdf")).toMatchObject({ ok: false, erro: "Download disponível apenas em DOCX." });
+    const arquivo = arquivoDoDocumento(documento, documento.templateId, "docx");
     expect(arquivo.ok).toBe(true);
-    const conteudo = Buffer.from(arquivo.bytes!).toString("utf8");
-    expect(conteudo).toContain("____/____/________");
-    expect(conteudo).not.toContain("2099-12-31");
+    const conteudo = new PizZip(arquivo.bytes!).file("word/document.xml")!.asText();
+    expect(conteudo).toContain("celebrado em _____/_____/____");
+    expect(conteudo).toContain("30/08/2027");
+    expect(conteudo).not.toContain("2099");
   });
 
   it("não aceita que a correção do aluno forje campos reservados ao parecer", async () => {

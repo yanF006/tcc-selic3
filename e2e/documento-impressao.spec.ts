@@ -21,9 +21,9 @@ async function entrar(page: Page, email: string) {
   ]);
 }
 
-async function fundoDe(page: Page, seletor: string) {
+async function fundoDe(page: Page, localizador: string) {
   return page
-    .locator(seletor)
+    .locator(localizador)
     .first()
     .evaluate((el) => getComputedStyle(el).backgroundColor);
 }

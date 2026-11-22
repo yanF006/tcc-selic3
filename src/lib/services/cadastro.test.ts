@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { concluirCadastro, validarEtapaUm } from "./cadastro";
 import { listarSolicitacoes, usuarioPorId } from "./administracao";
+import { credencialDe } from "./credenciais";
 import { obterEstado, reiniciarEstado } from "./store";
 
 /**
@@ -215,9 +216,9 @@ describe("cadastro público", () => {
     });
 
     expect(cpfInvalido.ok).toBe(false);
-    expect(obterEstado().usuarios.some((usuario) => usuario.email === "direto@aluno.ifrj.edu.br")).toBe(
-      false,
-    );
+    expect(
+      obterEstado().usuarios.some((usuario) => usuario.email === "direto@aluno.ifrj.edu.br"),
+    ).toBe(false);
 
     const matriculaOcupada = await concluirCadastro({
       ...etapaUm,
@@ -244,8 +245,58 @@ describe("cadastro público", () => {
     expect(
       obterEstado().usuarios.filter((usuario) => usuario.email === "repetida@aluno.ifrj.edu.br"),
     ).toHaveLength(1);
-    expect(obterEstado().solicitacoes.filter((item) => item.email === "repetida@aluno.ifrj.edu.br")).toHaveLength(
-      1,
-    );
+    expect(
+      obterEstado().solicitacoes.filter((item) => item.email === "repetida@aluno.ifrj.edu.br"),
+    ).toHaveLength(1);
+  });
+
+  it.each(["ativo", "pendente", "inativo"] as const)(
+    "recusa matrícula vinculada a conta %s com outro e-mail sem criar registros",
+    async (situacao) => {
+      const matricula = "20231000788";
+      const dona = obterEstado().usuarios.find((usuario) => usuario.matricula === matricula);
+      if (!dona) throw new Error("fixture sem a matrícula de teste");
+      dona.situacao = situacao;
+
+      const email = `outra.${situacao}@aluno.ifrj.edu.br`;
+      const antes = {
+        usuarios: obterEstado().usuarios.length,
+        solicitacoes: obterEstado().solicitacoes.length,
+      };
+
+      const consulta = await validarEtapaUm({ ...etapaUm, matricula, email });
+      const conclusao = await concluirCadastro({ ...etapaUm, matricula, email, ...etapaDois });
+
+      expect(consulta).toMatchObject({ ok: false, campo: "matricula" });
+      expect(conclusao.ok).toBe(false);
+      expect(obterEstado().usuarios).toHaveLength(antes.usuarios);
+      expect(obterEstado().solicitacoes).toHaveLength(antes.solicitacoes);
+      expect(
+        obterEstado().usuarios.filter((usuario) => usuario.matricula === matricula),
+      ).toHaveLength(1);
+      expect(await credencialDe(email)).toBeUndefined();
+    },
+  );
+
+  it("recusa a conclusão quando a matrícula é ocupada entre a primeira etapa e o fim", async () => {
+    const matricula = "20260777001";
+    const primeiro = { ...etapaUm, matricula, email: "primeiro@aluno.ifrj.edu.br" };
+    const segundo = { ...etapaUm, matricula, email: "segundo@aluno.ifrj.edu.br" };
+
+    expect((await validarEtapaUm(primeiro)).ok).toBe(true);
+    expect((await validarEtapaUm(segundo)).ok).toBe(true);
+
+    const vencedor = await concluirCadastro({ ...segundo, ...etapaDois });
+    const solicitacoesAntes = obterEstado().solicitacoes.length;
+    const atrasado = await concluirCadastro({ ...primeiro, ...etapaDois });
+
+    expect(vencedor.ok).toBe(true);
+    expect(atrasado.ok).toBe(false);
+    expect(
+      obterEstado().usuarios.filter((usuario) => usuario.matricula === matricula),
+    ).toHaveLength(1);
+    expect(obterEstado().usuarios.some((usuario) => usuario.email === primeiro.email)).toBe(false);
+    expect(obterEstado().solicitacoes).toHaveLength(solicitacoesAntes);
+    expect(await credencialDe(primeiro.email)).toBeUndefined();
   });
 });

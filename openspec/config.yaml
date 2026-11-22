@@ -1,32 +1,54 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Contexto do projeto, enviado à IA ao criar artefatos.
+context: |
+  SELic — Sistema de Estágios das Licenciaturas do IFRJ Campus Pinheiral.
+  Trabalho de conclusão de curso técnico em Informática, com prazo curto.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Stack: Next.js 16 (App Router, Server Components e Server Actions), React 19,
+  TypeScript estrito, Tailwind CSS 4, shadcn/ui, React Hook Form e Zod.
+  Persistência: Prisma 7 com MySQL no Aiven (adapter mariadb). Autenticação:
+  Better Auth. E-mail: Nodemailer com SMTP do Brevo. Deploy: Vercel.
+  Testes: Vitest (unitários e integração com MySQL isolado) e Playwright (E2E).
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Domínio: alunos solicitam estágios e preenchem os documentos do Kit de
+  Estágio (`Contexto/kit-estagio`); coordenadores de curso emitem parecer;
+  coordenadores de estágio conferem assinaturas e liberam o estágio;
+  administradores gerenciam contas, matrículas e templates. Assinaturas são
+  sempre externas ao sistema. Documentação de apoio em `Contexto/`.
+
+  Production não contém dados reais de usuários; migração e preservação de
+  dados legados não são requisitos.
+
+  Idioma: todos os artefatos, mensagens de commit e textos da interface em
+  português do Brasil. Palavras-chave normativas (SHALL, MUST) em inglês.
+
+  Mudanças no Aiven ou na Vercel só podem ser feitas pelo responsável: as
+  tarefas devem indicar quando uma configuração externa é necessária.
+
+# Regras por artefato.
+rules:
+  proposal:
+    - Manter a proposta curta (até cerca de 400 palavras)
+    - Incluir uma seção "Fora de escopo"
+    - Propor a solução mais simples que atenda ao requisito e sugerir reduções de escopo quando possível
+  specs:
+    - Antes de criar uma capacidade nova, verificar se já existe uma em `openspec/specs/` e usar MODIFIED em vez de duplicar o assunto
+    - Cenários concretos e verificáveis, sem detalhes de implementação
+  design:
+    - Registrar apenas decisões com alternativa real; evitar repetir a proposta
+  tasks:
+    - Uma change deve caber em poucos dias de trabalho; se passar de 15 tarefas, dividir em changes menores
+    - Cada tarefa deve ter uma verificação objetiva (comando, teste ou evidência)
+    - Não incluir ensaios de migração, backup ou corte de produção sem pedido explícito
+
+# Orientação para aplicar e arquivar.
+operations:
+  apply:
+    guidance:
+      - Ao concluir uma tarefa com o site funcional, fazer commit e push
+      - Registrar evidências de verificação de forma breve
+  archive:
+    guidance:
+      - Arquivar a change assim que todas as tarefas estiverem concluídas, antes de começar a próxima
+      - Tarefas que não serão feitas devem ser transferidas explicitamente para outra change, não deixadas abertas

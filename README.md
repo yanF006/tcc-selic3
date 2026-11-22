@@ -27,7 +27,6 @@ npm run typecheck       # tipos das rotas e TypeScript
 npm run lint
 npm run test:unit
 npm run test:e2e
-npm run test:e2e:seletor # fluxo com seletor de papel habilitado
 npm run build
 npm run start           # serve o build de produção
 ```
@@ -45,8 +44,7 @@ nunca contra o Preview da Vercel, cujo estado é compartilhado entre execuções
 
 Para validar o build compilado, execute `npm run build` e depois
 `PLAYWRIGHT_SERVER_COMMAND="npm run start" npm run test:e2e`. Isso evita a
-compilação de rotas durante os testes. O fluxo do seletor de papel usa o servidor
-de desenvolvimento com sua flag específica.
+compilação de rotas durante os testes.
 
 ## Variáveis na Vercel
 
@@ -118,8 +116,8 @@ A senha das contas de desenvolvimento do simulador é `selic123`.
 | Administrador               | felipe.andrade@ifrj.edu.br      |
 | Aluna com cadastro pendente | paula.batista@aluno.ifrj.edu.br |
 
-O campus é fixo em **Pinheiral**. O seletor de papel é uma ferramenta de
-demonstração, habilitada por `NEXT_PUBLIC_SELIC_SELADOR_PAPEL=true`.
+O campus é fixo em **Pinheiral**. Não há troca de papel na interface: cada
+conta acessa apenas a área do seu papel.
 
 ## Arquitetura
 
@@ -132,6 +130,8 @@ src/lib/domain/          tipos, autorização de domínio, situações e valida�
 src/lib/services/        leitura e mutações do simulador
 src/lib/fixtures/        dados fictícios de desenvolvimento
 src/lib/templates/       descritores dos 12 documentos do Kit de Estágio
+src/lib/documentos/      geração do DOCX oficial (docxtemplater) e modelos marcados
+scripts/modelos-docx/    gera os modelos marcados a partir dos DOCX do Kit
 src/lib/auth/            cookie de sessão e guardas das áreas
 src/lib/db/              cliente Prisma, hidratação e escrita contínua
 src/lib/mask/            máscaras controladas
@@ -171,8 +171,12 @@ registro ao aluno, curso ou campus.
   de horas e avaliações, associado ao estágio como documento consultável.
 - Página de impressão do documento preenchido, com a folha isolada em fundo
   claro nos dois temas e sem a interface ao redor.
-- Downloads fixos do Kit e geração de arquivos **demonstrativos** em DOCX/PDF.
-  O download usa o último preenchimento salvo ou submetido.
+- Downloads fixos do Kit e geração do **DOCX oficial preenchido** para os 9
+  documentos preenchíveis no sistema (todos, exceto a Ficha de Frequência, que é
+  registrada já assinada). O arquivo segue o layout do Kit, com os valores do
+  último preenchimento salvo ou submetido; assinaturas e datas da assinatura
+  ficam em branco. Não há PDF gerado pelo sistema: para obtê-lo, abra o DOCX no
+  Word ou no LibreOffice e exporte.
 - Exclusão de usuários remove dados pessoais do cadastro e mantém referências
   necessárias aos documentos, estágios e pareceres históricos.
 
@@ -187,8 +191,6 @@ registro ao aluno, curso ou campus.
   verificação de escrita entre instâncias é feita no ambiente de ensaio.
 - **Matrícula:** a consulta oficial ao SIGAA não existe; a matrícula é conferida
   contra as matrículas importadas ou lançadas pelo administrador.
-- **Documentos:** DOCX/PDF gerados são demonstrativos e não reproduzem o layout
-  oficial. A geração final é uma entrega própria.
 - **Cadastro:** o formulário não guarda prévia no banco. Recarregar a página
   descarta o que foi preenchido e não grava senha no navegador.
 
@@ -196,8 +198,13 @@ registro ao aluno, curso ou campus.
 
 - Notificações gerais (central e sino) e trilha genérica de alterações.
 - Editor e versionamento de templates: o Kit de Estágio é fixo e identificado.
-- Geração final de DOCX/PDF oficiais, com entrega documental própria.
 - Integração oficial com o SIGAA.
+
+Os modelos marcados (`src/lib/documentos/modelos/*.docx`) são cópias dos DOCX
+do Kit em que as linhas `____` viraram marcadores `{campo}`. Eles são gerados
+por `node scripts/modelos-docx/marcar-modelos.mjs`; o mapeamento de cada linha
+fica nesse script e `src/lib/documentos/modelos.test.ts` confere que todo campo
+do descritor tem lugar no modelo, salvo as exceções listadas no teste.
 
 Os arquivos legados do Convênio e do Termo de Compromisso já foram convertidos
 para DOCX; os originais permanecem no histórico. A marca oficial do SELic já está
@@ -205,11 +212,17 @@ incorporada.
 
 ## Fluxo OpenSpec
 
+As especificações vigentes ficam em `openspec/specs/`, uma pasta por
+capacidade. Cada mudança nova é uma change pequena em `openspec/changes/`,
+arquivada assim que suas tarefas terminam. O contexto do projeto e as regras
+para os artefatos ficam em `openspec/config.yaml`. A change ativa no momento é
+`entrega-final`, que reúne as pendências de fechamento.
+
 ```bash
 openspec list --json
-openspec status --change frontend-website --json
-openspec instructions apply --change frontend-website --json
-openspec validate frontend-website --type change
+openspec status --change entrega-final --json
+openspec instructions apply --change entrega-final --json
+openspec validate entrega-final --type change
 ```
 
 Uma tarefa só deve ser marcada como concluída depois de atender seu cenário e

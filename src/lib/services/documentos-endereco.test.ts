@@ -9,6 +9,7 @@ import {
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
 import { DocumentoImpressao } from "@/components/documentos/documento-impressao";
 import { createElement } from "react";
+import PizZip from "pizzip";
 import { renderToStaticMarkup } from "react-dom/server";
 import { descritorPorTemplate } from "@/lib/templates/descriptors";
 import { dadosSolicitacaoTeste } from "@/lib/fixtures/solicitacao-teste";
@@ -138,9 +139,12 @@ describe("endereços persistidos nos documentos", () => {
     const doc = await criarRascunho(usuario(), "tpl-formulario-liberacao", "est-maria-tecnoweb");
     expect((await salvarDocumentoAction(doc.id, manual)).ok).toBe(true);
     usuario().dadosPessoais!.endereco.logradouro = "Não imprimir";
-    const arquivo = await baixarDocumentoAction(doc.id, doc.templateId, "pdf");
+    expect(await baixarDocumentoAction(doc.id, doc.templateId, "pdf")).toMatchObject({ ok: false });
+    const arquivo = await baixarDocumentoAction(doc.id, doc.templateId, "docx");
     expect(arquivo.ok).toBe(true);
-    expect(Buffer.from(arquivo.base64!, "base64").toString()).toContain("Rua corrigida");
+    const xml = new PizZip(Buffer.from(arquivo.base64!, "base64")).file("word/document.xml")!.asText();
+    expect(xml).toContain("Rua corrigida");
+    expect(xml).not.toContain("Não imprimir");
     const html = renderToStaticMarkup(
       createElement(DocumentoImpressao, {
         descriptor: descritorPorTemplate(doc.templateId)!,

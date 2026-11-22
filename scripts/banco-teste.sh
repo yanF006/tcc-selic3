@@ -86,7 +86,7 @@ preparar_tls() {
 }
 
 senha_atual() {
-  sed -n "s#^TEST_DATABASE_URL=mysql://[^:]*:\([^@]*\)@.*#\1#p" "$CREDENCIAIS" 2>/dev/null
+  sed -n "s#^TEST_DATABASE_URL=mysql://[^:]*:\([^@]*\)@.*#\1#p" "$CREDENCIAIS" 2>/dev/null || true
 }
 
 provisionar() {

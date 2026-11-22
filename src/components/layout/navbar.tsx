@@ -59,12 +59,10 @@ export interface GrupoNavbar {
 export function Navbar({
   usuario,
   grupos,
-  seletorDePapel,
   pendenciasParecer = 0,
 }: {
   usuario: Usuario;
   grupos: GrupoNavbar[];
-  seletorDePapel?: React.ReactNode;
   pendenciasParecer?: number;
 }) {
   const pathname = usePathname();
@@ -158,8 +156,6 @@ export function Navbar({
         </nav>
 
         <div className="ml-auto flex items-center gap-1 md:ml-0">
-          {seletorDePapel}
-
           <Button
             type="button"
             variant="ghost"

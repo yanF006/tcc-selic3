@@ -37,5 +37,9 @@
 ## 6. Verificação operacional e final
 
 - [x] 6.1 Confirmar o acesso do egress da Vercel ao Aiven (allowlist/IP estático) e registrar a estratégia adotada — verificação: uma leitura real a partir de Production conecta sem `ER_GET_CONNECTION_TIMEOUT`; evidência de Production aceita pelo responsável em substituição à repetição no Preview
-- [ ] 6.2 Validar no Preview que a lista mostra contas reais, que a falha exibe erro recuperável, que a nova tentativa funciona sem reinício e que uma conta criada em outra instância aparece dentro do limite definido — verificação: roteiro registrado com evidências das quatro situações
+- [x] 6.2 Validar no Preview que a lista mostra contas reais, que a falha exibe erro recuperável, que a nova tentativa funciona sem reinício e que uma conta criada em outra instância aparece dentro do limite definido — verificação: roteiro registrado com evidências das quatro situações — **Transferida em 2026-11-17 para `entrega-final` (4.2).**
 - [x] 6.3 Executar `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run test:e2e`, `npm run build` e `openspec validate corrigir-hidratacao-e-carregamento-banco --strict` — verificação: todos os comandos passam
+
+## Reconciliação (2026-11-17)
+
+`integrar-banco-backend-completo` foi arquivada antes desta change e reescreveu os quatro requisitos do delta `persistencia-aiven` (leitura sem snapshot global, recuperação sem fallback, paginação estável). Por isso, apenas a capacidade nova `dados-remotos-confiaveis` foi sincronizada no arquivamento; o delta de `persistencia-aiven` foi mantido só como histórico, pois aplicá-lo reverteria o texto mais recente. A validação em Preview (6.2) segue em `entrega-final`.

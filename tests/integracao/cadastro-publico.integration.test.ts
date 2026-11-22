@@ -11,7 +11,8 @@ import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
 import { criarExecutorDdl } from "./ddl";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
-const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
+const base =
+  process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
 const ca = readFileSync(join(base, "tls/ca.pem"), "utf8");
 
 const prisma = new PrismaClient({
@@ -233,5 +234,55 @@ describe("cadastro público persistente", () => {
     expect(
       await prisma.solicitacaoAcesso.count({ where: { usuario: { email: dados.email } } }),
     ).toBe(1);
+  });
+
+  it.each([
+    ["ativo", "20261234005"],
+    ["pendente", "20261234006"],
+    ["inativo", "20261234007"],
+  ])(
+    "recusa matrícula vinculada a conta %s com outro e-mail sem criar registros",
+    async (situacao, matricula) => {
+      const { validarEtapaUm, concluirCadastro } = await import("@/lib/services/cadastro");
+      await prisma.usuario.create({
+        data: {
+          id: `${prefixo}-dona-${situacao}`,
+          nome: "Dona da Matrícula",
+          email: emailNovo(`dona-${situacao}`),
+          situacao,
+          matricula,
+        },
+      });
+      const dados = dadosCompletos(`outro-${situacao}`, matricula);
+
+      const consulta = await validarEtapaUm(dados);
+      const conclusao = await concluirCadastro(dados);
+
+      expect(consulta).toMatchObject({ ok: false, campo: "matricula" });
+      expect(conclusao.ok).toBe(false);
+      expect(await prisma.usuario.count({ where: { matricula } })).toBe(1);
+      expect(await prisma.usuario.count({ where: { email: dados.email } })).toBe(0);
+      expect(await prisma.authAccount.count({ where: { user: { email: dados.email } } })).toBe(0);
+      expect(await prisma.solicitacaoAcesso.count({ where: { usuario: { matricula } } })).toBe(0);
+    },
+  );
+
+  it("recusa a conclusão quando a matrícula é ocupada entre a primeira etapa e o fim", async () => {
+    const { validarEtapaUm, concluirCadastro } = await import("@/lib/services/cadastro");
+    const matricula = "20261234008";
+    const atrasado = dadosCompletos("atrasado", matricula);
+    const vencedor = dadosCompletos("vencedor", matricula);
+
+    expect((await validarEtapaUm(atrasado)).ok).toBe(true);
+    expect((await validarEtapaUm(vencedor)).ok).toBe(true);
+    expect((await concluirCadastro(vencedor)).ok).toBe(true);
+
+    const conclusao = await concluirCadastro(atrasado);
+
+    expect(conclusao).toMatchObject({ ok: false, campo: "matricula" });
+    expect(await prisma.usuario.count({ where: { matricula } })).toBe(1);
+    expect(await prisma.usuario.count({ where: { email: atrasado.email } })).toBe(0);
+    expect(await prisma.authAccount.count({ where: { user: { email: atrasado.email } } })).toBe(0);
+    expect(await prisma.solicitacaoAcesso.count({ where: { usuario: { matricula } } })).toBe(1);
   });
 });

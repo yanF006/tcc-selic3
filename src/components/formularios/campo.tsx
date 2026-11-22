@@ -36,7 +36,7 @@ interface RotuloCampoProps {
 
 /**
  * Rótulo com marcador de obrigatoriedade. O `*` fica **fora** do `<Label>` para
- * não alterar o texto do rótulo lido por leitores de tela e por seletores de
+ * não alterar o texto do rótulo lido por leitores de tela e por localizadores de
  * teste; a obrigatoriedade é anunciada por `aria-required` no controle.
  */
 export function RotuloCampo({ htmlFor, children, obrigatorio = false }: RotuloCampoProps) {

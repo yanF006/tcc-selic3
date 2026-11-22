@@ -1,0 +1,249 @@
+# Gestão pelas coordenações
+
+## Purpose
+
+Reúne as telas das coordenações para gerir cadastros de apoio, conferir assinaturas e liberar estágios, controlar sua situação, gerir os estágios do curso e atender as filas de parecer, com registros duráveis entre instâncias.
+
+## Requirements
+
+### Requirement: Permissões do Coordenador de Estágio
+
+O sistema SHALL conceder ao Coordenador de Estágio o cadastro e a gestão de convênios, cursos, turmas, períodos, orientadores e supervisores, além do acesso a todos os documentos preenchidos e às estatísticas extraídas desses documentos, à conferência das assinaturas iniciais e à liberação dos estágios do campus.
+
+#### Scenario: Acesso do Coordenador de Estágio
+
+- **WHEN** um Coordenador de Estágio entra no sistema
+- **THEN** o sistema SHALL exibir a navegação com cadastros, documentos preenchidos, estágios, solicitações de acesso e estatísticas, sem editor de templates
+
+#### Scenario: Acesso a documento preenchido
+
+- **WHEN** o Coordenador de Estágio abre um documento preenchido de qualquer aluno
+- **THEN** o sistema SHALL exibir o documento, os dados do aluno, do estágio e a situação do documento
+
+### Requirement: Confirmação das assinaturas e liberação inicial
+
+O sistema SHALL permitir apenas ao Coordenador de Estágio confirmar no site que o Termo de Compromisso, o Formulário de Liberação e o Plano de Atividades foram assinados fora do sistema. A liberação SHALL exigir, no estado persistido atual, parecer favorável no Formulário de Liberação e confirmação das assinaturas dos três documentos; a conferência, com responsável e data, e a situação em andamento SHALL ser gravadas conjuntamente. Registro de envio SHALL NOT comprovar assinatura nem liberar o estágio.
+
+#### Scenario: Conferência completa
+
+- **WHEN** o Coordenador de Estágio confirma as assinaturas dos três documentos iniciais de um estágio cujo Formulário de Liberação possui parecer favorável
+- **THEN** o sistema SHALL registrar a conferência, colocar o estágio em andamento, liberar seus demais documentos e apresentar a liberação nos detalhes do estágio consultados pelo aluno
+
+#### Scenario: Parecer favorável ausente
+
+- **WHEN** o Coordenador de Estágio tenta liberar o estágio sem parecer favorável no Formulário de Liberação
+- **THEN** o sistema SHALL recusar a liberação e identificar a pendência
+
+#### Scenario: Assinatura pendente
+
+- **WHEN** a conferência ainda não confirma as assinaturas de um dos três documentos iniciais
+- **THEN** o sistema SHALL manter o estágio em preparação e os demais documentos bloqueados, identificando o documento pendente
+
+#### Scenario: Tentativa por outro perfil
+
+- **WHEN** um usuário sem papel de Coordenador de Estágio tenta confirmar as assinaturas ou liberar inicialmente o estágio, inclusive por requisição direta
+- **THEN** o sistema SHALL recusar a operação sem alterar a situação do estágio
+
+#### Scenario: Requisição baseada em estado desatualizado
+
+- **WHEN** uma requisição tenta liberar o estágio sem que o estado persistido atual satisfaça os requisitos de parecer e assinaturas
+- **THEN** o sistema SHALL recusar a liberação mesmo que a tela de origem apresente dados anteriores favoráveis
+
+### Requirement: Controle da situação pela coordenação
+
+O sistema SHALL reservar aos coordenadores com acesso ao estágio as alterações entre em andamento e concluído, respeitando as validações do período. A edição genérica dos dados não SHALL permitir contornar os requisitos de liberação inicial pelo Coordenador de Estágio.
+
+#### Scenario: Conclusão pela coordenação
+
+- **WHEN** um coordenador com acesso ao estágio registra a conclusão de um estágio em andamento com período válido
+- **THEN** o sistema SHALL persistir a situação concluído e registrar autor e data da alteração
+
+#### Scenario: Edição não substitui liberação inicial
+
+- **WHEN** um coordenador ou o aluno tenta colocar um estágio em preparação diretamente em andamento ou concluído pela edição dos dados
+- **THEN** o sistema SHALL recusar a mudança, preservar as pendências e a situação anterior e exigir o fluxo de liberação inicial
+
+### Requirement: Permissões do Coordenador de Curso
+
+O sistema SHALL conceder ao Coordenador de Curso o acesso aos documentos preenchidos por alunos de seu curso, o acesso às estatísticas desses alunos, o CRUD dos estágios desses alunos e a emissão de parecer sobre os documentos que exigem sua avaliação.
+
+#### Scenario: Restrição ao próprio curso
+
+- **WHEN** um Coordenador de Curso consulta documentos preenchidos
+- **THEN** o sistema SHALL listar apenas documentos de alunos do seu curso e não SHALL exibir documentos de alunos de outros cursos
+
+#### Scenario: Tentativa de acesso cruzado
+
+- **WHEN** um Coordenador de Curso tenta abrir um documento preenchido de aluno de outro curso
+- **THEN** o sistema SHALL recusar o acesso sem exibir o conteúdo do documento
+
+### Requirement: Cadastro de convênios
+
+O sistema SHALL permitir ao Coordenador de Estágio cadastrar os convênios do livro físico, informando a instituição, os dados do convênio e a classificação entre ativo e expirado.
+
+#### Scenario: Cadastro de convênio ativo
+
+- **WHEN** o Coordenador de Estágio cadastra uma instituição, seus responsáveis e um convênio classificado como ativo
+- **THEN** o sistema SHALL gravar o convênio e os vínculos, mantê-los consultáveis após reinício e disponibilizar a instituição para escolha em novos estágios
+
+#### Scenario: Convênio expirado
+
+- **WHEN** o Coordenador de Estágio classifica um convênio como expirado
+- **THEN** o sistema SHALL mantê-lo disponível para consulta, removê-lo da lista de escolha de novos estágios e preservar os estágios já vinculados
+
+#### Scenario: Listagem e busca de convênios
+
+- **WHEN** o Coordenador de Estágio abre a lista de convênios
+- **THEN** o sistema SHALL exibir nome, classificação e quantidade de estágios vinculados, e permitir filtrar por classificação e buscar por nome
+
+#### Scenario: Convênio vinculado ao Campus Pinheiral
+
+- **WHEN** o Coordenador de Estágio cadastra um convênio
+- **THEN** o sistema SHALL vinculá-lo ao Campus Pinheiral sem oferecer escolha de campus, pois o sistema atende exclusivamente a esse campus
+
+### Requirement: Vigência e classificação do convênio
+
+O sistema SHALL registrar a data de assinatura e a vigência do convênio, que é de 5 anos conforme o template oficial, e SHALL apresentar a classificação entre ativo e expirado.
+
+#### Scenario: Convênio dentro da vigência
+
+- **WHEN** o Coordenador de Estágio cadastra um convênio cuja data de assinatura está dentro do período de vigência
+- **THEN** o sistema SHALL classificá-lo como ativo e informar a data de término da vigência
+
+#### Scenario: Convênio fora da vigência
+
+- **WHEN** a data atual ultrapassa a data de término da vigência do convênio
+- **THEN** o sistema SHALL classificá-lo como expirado, removê-lo da lista de escolha de novos estágios e preservar os estágios já vinculados
+
+#### Scenario: Contagem por classificação
+
+- **WHEN** o Coordenador de Estágio consulta a lista de convênios
+- **THEN** o sistema SHALL exibir as quantidades de convênios ativos e de convênios expirados
+
+### Requirement: Cadastro de cursos, turmas e períodos
+
+O sistema SHALL permitir ao Coordenador de Estágio cadastrar cursos e as turmas com seus períodos, e SHALL oferecer esses registros como opções no cadastro do aluno em qualquer instância. Os vínculos SHALL identificar registros existentes e compatíveis: a turma SHALL pertencer a um curso e seus períodos SHALL estar registrados.
+
+#### Scenario: Cadastro de turma com período
+
+- **WHEN** o Coordenador de Estágio cadastra uma turma com um ou mais períodos
+- **THEN** o sistema SHALL gravar a turma e seus períodos e disponibilizá-los como opções de seleção
+
+#### Scenario: Vínculo de turma a curso
+
+- **WHEN** o Coordenador de Estágio cadastra uma turma
+- **THEN** o sistema SHALL exigir a associação dela a um curso e só disponibilizará a turma para o curso vinculado
+
+#### Scenario: Turma criada em outra instância
+
+- **WHEN** a gestão cadastra uma turma válida e um aluno abre o cadastro em outra instância
+- **THEN** o sistema SHALL oferecer a turma para o curso correspondente com os períodos associados
+
+#### Scenario: Vínculo inexistente ou incompatível
+
+- **WHEN** uma requisição tenta cadastrar um aluno com turma de outro curso ou referência inexistente
+- **THEN** o sistema SHALL recusar a operação sem criar um cadastro parcialmente relacionado
+
+### Requirement: Cadastro de orientadores e supervisores
+
+O sistema SHALL permitir ao Coordenador de Estágio cadastrar, editar e excluir orientadores e supervisores, e os registros SHALL ser oferecidos como opções no cadastro de estágios.
+
+#### Scenario: Cadastro de orientador
+
+- **WHEN** o Coordenador de Estágio cadastra um orientador
+- **THEN** o sistema SHALL gravar o registro e disponibilizá-lo na seleção de orientador do estágio
+
+#### Scenario: Exclusão de supervisor
+
+- **WHEN** o Coordenador de Estágio exclui um supervisor
+- **THEN** o sistema SHALL removê-lo das seleções de novos estágios e remover seus dados pessoais, preservando a referência em estágios e documentos já registrados
+
+### Requirement: Regras de integridade na gestão de cadastros
+
+O sistema SHALL impedir a exclusão física de curso, turma, período ou convênio que possua dependências e, nesses casos, SHALL permitir sua inativação, retirando-o das seleções de novos vínculos sem romper consultas históricas. O sistema SHALL permitir a exclusão de aluno, orientador, supervisor, coordenador e administrador com remoção dos dados pessoais e bloqueio do acesso, preservando as referências históricas necessárias sem reintroduzir os dados removidos.
+
+#### Scenario: Exclusão de curso com vínculos
+
+- **WHEN** o Coordenador de Estágio tenta excluir um curso que possui alunos, turmas, estágios ou documentos vinculados
+- **THEN** o sistema SHALL recusar a exclusão e oferecer a inativação do curso
+
+#### Scenario: Convênio com estágios vinculados
+
+- **WHEN** o Coordenador de Estágio tenta excluir um convênio que possui estágios vinculados
+- **THEN** o sistema SHALL recusar a exclusão e oferecer a classificação do convênio como expirado
+
+#### Scenario: Inativação com histórico preservado
+
+- **WHEN** um registro com vínculos é inativado
+- **THEN** o sistema SHALL mantê-lo disponível para consulta dos registros que dependem dele e sinalizar a inatividade
+
+#### Scenario: Exclusão de aluno
+
+- **WHEN** o responsável exclui um aluno
+- **THEN** o sistema SHALL permitir a remoção dos dados pessoais do aluno e informar que os documentos existentes permanecem para consulta da coordenação
+
+#### Scenario: Remoção de dados pessoais com histórico
+
+- **WHEN** a exclusão autorizada de uma pessoa ou conta remove seus dados pessoais
+- **THEN** consultas em outra instância e após reinício SHALL preservar os vínculos históricos permitidos sem restaurar os dados removidos
+
+### Requirement: Gestão de estágios dos alunos do curso
+
+O sistema SHALL permitir ao Coordenador de Curso consultar, editar e excluir os estágios dos alunos de seu curso. A exclusão SHALL ser executada diretamente, sem decisão de cargo superior, registrando responsável e data na solicitação de exclusão com situação `autorizado`; ao executá-la, o sistema SHALL retirar o estágio dos processos ativos, inativar os documentos vinculados e aplicar a remoção de dados pessoais prevista, preservando o histórico permitido e o perfil do aluno.
+
+#### Scenario: Listagem por curso com filtros
+
+- **WHEN** o Coordenador de Curso abre a gestão de estágios
+- **THEN** o sistema SHALL listar apenas os estágios dos alunos de seu curso, permitir filtrar por aluno, instituição, situação e período e exibir o total de resultados
+
+#### Scenario: Edição de estágio de aluno do curso
+
+- **WHEN** o Coordenador de Curso edita os dados de um estágio de um aluno de seu curso
+- **THEN** o sistema SHALL persistir a alteração e registrar que a edição foi feita pelo coordenador, e não pelo aluno
+
+#### Scenario: Exclusão executada pelo coordenador de curso
+
+- **WHEN** o Coordenador de Curso exclui um estágio de aluno do seu curso
+- **THEN** o sistema SHALL executar a exclusão, registrar responsável e data, e qualquer instância SHALL apresentar o estágio fora dos processos ativos com os documentos inativados
+
+#### Scenario: Exclusão por coordenador de outro curso
+
+- **WHEN** um Coordenador de Curso tenta excluir estágio de aluno de outro curso
+- **THEN** o sistema SHALL recusar a operação sem alterar o estágio
+
+### Requirement: Fila de pareceres do coordenador
+
+O sistema SHALL disponibilizar ao Coordenador de Curso os documentos de alunos de seu curso que aguardam parecer, e SHALL permitir registrar a decisão diretamente a partir dessa fila.
+
+#### Scenario: Fila restrita ao curso
+
+- **WHEN** o Coordenador de Curso abre a fila de pareceres
+- **THEN** o sistema SHALL listar apenas os documentos de alunos do seu curso que aguardam sua avaliação
+
+#### Scenario: Parecer registrado pela fila
+
+- **WHEN** o Coordenador de Curso registra a decisão a partir da fila
+- **THEN** o sistema SHALL registrar o parecer, atualizar a situação do documento e removê-lo da fila de pendências
+
+### Requirement: Fila de pareceres da Comissão de Estágio
+
+O sistema SHALL disponibilizar ao Coordenador de Estágio, na condição de membro da Comissão de Estágio, os Requerimentos para Aproveitamento de Horas que aguardam parecer.
+
+#### Scenario: Fila da Comissão de Estágio
+
+- **WHEN** o Coordenador de Estágio abre a fila da Comissão de Estágio
+- **THEN** o sistema SHALL listar os requerimentos aguardando parecer e o total de horas solicitado em cada um
+
+### Requirement: Busca de documentos preenchidos
+
+O sistema SHALL permitir que os coordenadores pesquisem documentos preenchidos por aluno, orientador, supervisor e instituição, exibindo o total de resultados de cada pesquisa.
+
+#### Scenario: Pesquisa por aluno
+
+- **WHEN** o Coordenador de Estágio pesquisa por nome de aluno
+- **THEN** o sistema SHALL exibir os documentos preenchidos desse aluno com o tipo de documento, a situação e o estágio associado
+
+#### Scenario: Pesquisa sem resultado
+
+- **WHEN** a pesquisa não encontra documentos
+- **THEN** o sistema SHALL informar que não há resultados para o filtro informado
