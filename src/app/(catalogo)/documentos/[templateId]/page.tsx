@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { podeAcessarAlgum } from "@/lib/auth/permissions";
 import { usuarioDaRequisicao } from "@/lib/auth/sessao-servidor";
 import { rotuloPapel } from "@/lib/domain/status";
+import { TEMPLATE_CONVENIO } from "@/lib/templates/concedente";
+import { convenioDoDocumentoPreenchido } from "@/lib/services/catalogo";
 import {
   criarRascunho,
   documentoDoTemplate,
@@ -79,7 +81,9 @@ export default async function Page({
     notFound();
   const estagioParam =
     documentoEscolhido?.estagioId ?? (typeof estagioBruto === "string" ? estagioBruto : undefined);
-  const descriptor = documentoEscolhido ? descritorDoDocumento(documentoEscolhido) : descritorDaVersao(templateId);
+  const descriptor = documentoEscolhido
+    ? descritorDoDocumento(documentoEscolhido)
+    : descritorDaVersao(templateId);
   const template = await templatePorId(templateId);
 
   if (!descriptor || !template) notFound();
@@ -106,7 +110,7 @@ export default async function Page({
   const estagioSelecionado = estagioParam ? await estagioPorId(estagioParam) : null;
   const documentoExistente =
     documentoEscolhido ??
-    (estagioSelecionado && await podeConsultarEstagio(usuario, estagioSelecionado)
+    (estagioSelecionado && (await podeConsultarEstagio(usuario, estagioSelecionado))
       ? (await documentosDoEstagio(estagioSelecionado.id)).find(
           (doc) => doc.templateId === templateId && doc.situacao !== "inativo",
         )
@@ -276,6 +280,10 @@ export default async function Page({
           situacao: item.situacao,
         }))}
         estagioId={documento.estagioId}
+        convenioVinculado={
+          templateId === TEMPLATE_CONVENIO &&
+          Boolean(await convenioDoDocumentoPreenchido(documento.id))
+        }
         consultaApenas={
           template.situacao !== "ativo" ||
           documento.situacao === "inativo" ||
@@ -294,14 +302,24 @@ export default async function Page({
           )
         }
       />
-      {arquivos && <AnexosDocumento
-        documentoId={documento.id}
-        arquivosIniciais={arquivos}
-        comprovantesPermitidos={documento.situacao === "rascunho"}
-        podeAnexar={documento.situacao !== "inativo" && titular?.situacao === "ativo" &&
-          !estagioSelecionado?.canceladoEm && !estagioSelecionado?.excluidoEm &&
-          (usuario.papel === "administrador" || (descritorDoDocumento(documento)?.metadados?.papeisPreenchimento.includes(usuario.papel) ?? false))}
-      />}
+      {arquivos && (
+        <AnexosDocumento
+          documentoId={documento.id}
+          arquivosIniciais={arquivos}
+          comprovantesPermitidos={documento.situacao === "rascunho"}
+          podeAnexar={
+            documento.situacao !== "inativo" &&
+            titular?.situacao === "ativo" &&
+            !estagioSelecionado?.canceladoEm &&
+            !estagioSelecionado?.excluidoEm &&
+            (usuario.papel === "administrador" ||
+              (descritorDoDocumento(documento)?.metadados?.papeisPreenchimento.includes(
+                usuario.papel,
+              ) ??
+                false))
+          }
+        />
+      )}
       {documento.estagioId ? (
         <div>
           <Badge variant="outline">Estágio #{documento.estagioId.slice(-6)}</Badge>

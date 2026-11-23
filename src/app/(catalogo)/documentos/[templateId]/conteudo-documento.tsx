@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CheckCircle2Icon,
   DownloadIcon,
+  HandshakeIcon,
   ListChecksIcon,
   PrinterIcon,
   SaveIcon,
@@ -14,7 +15,9 @@ import {
   salvarDocumentoAction,
   baixarDocumentoAction,
   submeterDocumentoAction,
+  cadastrarConvenioDoDocumentoAction,
 } from "@/app/(catalogo)/documentos/acoes";
+import { TEMPLATE_CONVENIO } from "@/lib/templates/concedente";
 import { FormularioDocumento } from "@/components/documentos/formulario-documento";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +41,15 @@ export function ConteudoDocumento({
   preenchidos,
   estagioId,
   consultaApenas = false,
+  convenioVinculado = false,
 }: {
   descriptor: DescriptorDocumento;
   documento: DocumentoPreenchido;
   preenchidos: DocumentoResumo[];
   estagioId?: string;
   consultaApenas?: boolean;
+  /** Convênio de Estágio: o documento já cadastrou um convênio. */
+  convenioVinculado?: boolean;
 }) {
   const [valores, setValores] = React.useState<Record<string, unknown>>(documento.valores);
   const [erros, setErros] = React.useState<Record<string, string>>({});
@@ -54,6 +60,7 @@ export function ConteudoDocumento({
   const [salvando, iniciar] = React.useTransition();
   const [situacao, setSituacao] = React.useState(documento.situacao);
   const [revisaoEndereco, setRevisaoEndereco] = React.useState(0);
+  const [vinculado, setVinculado] = React.useState(convenioVinculado);
   const editavel = situacao === "rascunho" && !consultaApenas;
 
   function aoMudar(campoId: string, valor: unknown) {
@@ -139,6 +146,36 @@ export function ConteudoDocumento({
     URL.revokeObjectURL(endereco);
   }
 
+  /** O Convênio de Estágio preenchido cadastra (ou atualiza) o convênio. */
+  function cadastrarConvenio() {
+    setMensagem(null);
+    setErros({});
+    iniciar(async () => {
+      const resultado = await cadastrarConvenioDoDocumentoAction(documento.id, valores);
+      if (!resultado.ok) {
+        setErros(
+          Object.fromEntries(
+            (resultado.problemas ?? []).map((problema) => [problema.campo, problema.mensagem]),
+          ),
+        );
+        setMensagem({
+          tipo: "erro",
+          texto: resultado.erro ?? "Não foi possível cadastrar o convênio.",
+        });
+        return;
+      }
+      setRevisaoEndereco((r) => r + 1);
+      if (resultado.valores) setValores(resultado.valores);
+      setVinculado(true);
+      setMensagem({
+        tipo: "sucesso",
+        texto: resultado.novo
+          ? "Convênio cadastrado. Ele já pode ser escolhido nos estágios."
+          : "Convênio atualizado com os dados do documento.",
+      });
+    });
+  }
+
   function enviarParecer() {
     setMensagem(null);
     setErros({});
@@ -220,6 +257,12 @@ export function ConteudoDocumento({
         descriptor.metadados?.papeisPreenchimento.includes("aluno") ? (
           <Button type="button" onClick={enviarParecer} disabled={!editavel || salvando}>
             Submeter a parecer
+          </Button>
+        ) : null}
+        {descriptor.templateId === TEMPLATE_CONVENIO ? (
+          <Button type="button" onClick={cadastrarConvenio} disabled={!editavel || salvando}>
+            <HandshakeIcon aria-hidden="true" className="size-4" />
+            {vinculado ? "Atualizar convênio" : "Cadastrar convênio"}
           </Button>
         ) : null}
         <Button type="button" onClick={salvar} disabled={!editavel || salvando}>

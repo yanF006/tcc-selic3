@@ -316,6 +316,23 @@ export async function convenioPorId(id: string): Promise<Convenio | null> {
   return obterEstado().convenios.find((convenio) => convenio.id === id) ?? null;
 }
 
+/** Convênio cadastrado a partir de um documento "Convênio de Estágio". */
+export async function convenioDoDocumentoPreenchido(documentoId: string): Promise<Convenio | null> {
+  if (bancoConfigurado()) {
+    const { prisma } = await carregarCliente();
+    const linha = await prisma.convenio.findFirst({
+      where: { dadosDocumento: { path: "$.documentoId", equals: documentoId } },
+      include: incluirInstituicao,
+      orderBy: [{ criadoEm: "asc" }, { id: "asc" }],
+    });
+    return linha ? paraConvenio(linha) : null;
+  }
+  return (
+    obterEstado().convenios.find((convenio) => convenio.dadosDocumento?.documentoId === documentoId) ??
+    null
+  );
+}
+
 async function instituicaoAtiva(
   tx: Prisma.TransactionClient,
   dados: { instituicao: string; cnpj: string },

@@ -40,10 +40,21 @@ async function convenioDoDocumento(dados: Record<string, unknown>) {
     valores[grupo.composto] = estruturaSuficiente(endereco) ? formatarEndereco(endereco) : "";
   }
   const problemas = validarValores(TEMPLATE_CONVENIO, valores, undefined, descritor);
-  if (problemas.length) throw new ErroDeRegra(problemas[0].mensagem, "documento_convenio_invalido");
+  if (problemas.length) {
+    // Leva os problemas por campo para a página do documento destacar cada um.
+    const { ErroValidacaoDocumento } = await import("./documentos-persistentes");
+    throw new ErroValidacaoDocumento(problemas);
+  }
   const inicioVigencia = esquemaData.parse(valores.inicioVigencia);
   const razaoSocial = String(valores.razaoSocial);
   const nomeFantasia = String(valores.nomeFantasia ?? "");
+  // Documento "Convênio de Estágio" que originou o cadastro, quando houver.
+  const documentoId =
+    typeof dados.documentoId === "string"
+      ? dados.documentoId
+      : typeof entrada.documentoId === "string"
+        ? entrada.documentoId
+        : undefined;
   return {
     nome: nomeFantasia || razaoSocial,
     instituicao: razaoSocial,
@@ -55,6 +66,7 @@ async function convenioDoDocumento(dados: Record<string, unknown>) {
       ...valores,
       inicioVigencia: isoParaBr(inicioVigencia),
       fimVigencia: isoParaBr(somarAnos(inicioVigencia, 5)),
+      ...(documentoId ? { documentoId } : {}),
     },
   };
 }

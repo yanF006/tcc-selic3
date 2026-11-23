@@ -86,6 +86,11 @@ O sistema SHALL permitir ao Coordenador de Estágio cadastrar os convênios do l
 - **WHEN** o Coordenador de Estágio preenche o documento Convênio de Estágio no cadastro
 - **THEN** o sistema SHALL obter instituição, CNPJ e vigência desse documento e SHALL gravar os valores preenchidos junto ao convênio
 
+#### Scenario: Cadastro a partir da página do documento
+
+- **WHEN** o Coordenador de Estágio preenche o documento Convênio de Estágio na página de documentos e pede para cadastrar o convênio
+- **THEN** o sistema SHALL criar o convênio com os valores do documento e, nos envios seguintes do mesmo documento, SHALL atualizar esse convênio em vez de criar outro
+
 #### Scenario: Dados da concedente nos demais documentos
 
 - **WHEN** o aluno escolhe o convênio de um estágio ou preenche um documento de estágio vinculado a ele

@@ -190,3 +190,33 @@ test("dados do convênio preenchem a concedente nos documentos do estágio", asy
   await expect(concedente.getByLabel("Logradouro", { exact: true })).toHaveValue("Rua das Escolas");
   await expect(concedente.getByLabel("Número", { exact: true })).toHaveValue("45");
 });
+
+test("preencher o documento Convênio de Estágio cadastra e depois atualiza o convênio", async ({
+  page,
+}) => {
+  await entrar(page);
+  await page.goto("/documentos/tpl-convenio-estagio");
+  await page.getByLabel("Razão social", { exact: true }).fill("Colégio do Documento Ltda.");
+  await page.getByLabel("Nome fantasia", { exact: true }).fill("Colégio do Documento");
+  await page.getByLabel("CNPJ", { exact: true }).fill("22.333.444/0001-05");
+  const endereco = page.getByRole("group", { name: "Endereço da concedente", exact: true });
+  await endereco.getByRole("button", { name: "Alterar endereço" }).click();
+  await endereco.getByLabel("Logradouro", { exact: true }).fill("Rua do Documento");
+  await endereco.getByLabel("Número", { exact: true }).fill("7");
+  await page.getByLabel("Responsável legal", { exact: true }).fill("Bruno Gestor");
+  await page.getByLabel("Início da vigência", { exact: true }).fill("01022026");
+  await page.getByRole("button", { name: "Cadastrar convênio", exact: true }).click();
+  await expect(page.getByText(/Convênio cadastrado/)).toBeVisible();
+  await expect(page.getByLabel("Fim da vigência", { exact: true })).toHaveValue("01/02/2031");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Atualizar convênio", exact: true })).toBeVisible();
+  await page.getByLabel("Responsável legal", { exact: true }).fill("Bruna Gestora");
+  await page.getByRole("button", { name: "Atualizar convênio", exact: true }).click();
+  await expect(page.getByText(/Convênio atualizado/)).toBeVisible();
+
+  await page.goto("/coordenacao/cadastros");
+  await page.getByLabel("Buscar cadastros").fill("Colégio do Documento");
+  await expect(page.getByText("Total de resultados: 1", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-testid^="cadastro-"]')).toContainText("2031-02-01");
+});
