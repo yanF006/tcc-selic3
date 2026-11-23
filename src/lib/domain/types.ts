@@ -107,6 +107,8 @@ export interface Convenio {
   /** Data da última renovação registrada pelo histórico de convênios. */
   renovacoes: number;
   responsaveis?: ContatoInstituicao[];
+  /** Valores do documento "Convênio de Estágio" preenchido no cadastro. */
+  dadosDocumento?: Record<string, unknown>;
 }
 
 /** Convênio dentro da vigência é ativo; vencido, expirado. */

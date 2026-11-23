@@ -12,6 +12,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FormularioDocumento } from "@/components/documentos/formulario-documento";
+import { descritorCadastroConvenio } from "@/lib/templates/concedente";
+
+const descritorConvenio = descritorCadastroConvenio();
+
+/** Convênios anteriores ao documento só têm instituição, CNPJ e vigência. */
+function documentoDoConvenio(convenio: {
+  instituicao: string;
+  cnpj: string;
+  inicioVigencia: string;
+  dadosDocumento?: Record<string, unknown>;
+}) {
+  // A vigência do cadastro já considera renovações registradas depois do documento.
+  return {
+    razaoSocial: convenio.instituicao,
+    cnpj: convenio.cnpj,
+    ...convenio.dadosDocumento,
+    inicioVigencia: convenio.inicioVigencia.split("-").reverse().join("/"),
+  };
+}
 
 const rotulos: Record<TipoCadastro, string> = {
   convenio: "Convênios",
@@ -39,13 +59,25 @@ export function Cadastros({
   const [pendente, iniciar] = useTransition();
   const texto = (chave: string) => String(campos[chave] ?? "");
   const contatos = (campos.responsaveis ?? []) as ContatoInstituicao[];
+  const documento = (campos.dadosDocumento ?? {}) as Record<string, unknown>;
   function mudarContato(indice: number, chave: keyof ContatoInstituicao, valor: string) {
-    mudar("responsaveis", contatos.map((contato, posicao) =>
-      posicao === indice ? { ...contato, [chave]: valor } : contato,
-    ));
+    mudar(
+      "responsaveis",
+      contatos.map((contato, posicao) =>
+        posicao === indice ? { ...contato, [chave]: valor } : contato,
+      ),
+    );
   }
   const mudar = (chave: string, valor: unknown) =>
     setCampos((atual) => ({ ...atual, [chave]: valor }));
+  const mudarDocumento = (alteracoes: Record<string, unknown>) =>
+    setCampos((atual) => ({
+      ...atual,
+      dadosDocumento: {
+        ...((atual.dadosDocumento ?? {}) as Record<string, unknown>),
+        ...alteracoes,
+      },
+    }));
   const registros: {
     id: string;
     nome: string;
@@ -59,7 +91,7 @@ export function Cadastros({
           nome: convenio.nome,
           situacao: convenio.classificacao,
           descricao: `${convenio.instituicao} · ${convenio.totalEstagios} estágios vinculados · Vigência: ${convenio.inicioVigencia} a ${convenio.fimVigencia}`,
-          dados: { ...convenio },
+          dados: { ...convenio, dadosDocumento: documentoDoConvenio(convenio) },
         }))
       : tipo === "curso"
         ? dados.cursos.map((curso) => ({
@@ -190,18 +222,8 @@ export function Cadastros({
             }}
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              {tipo !== "periodo" && campo("nome", "Nome do cadastro")}
+              {tipo !== "periodo" && tipo !== "convenio" && campo("nome", "Nome do cadastro")}
               {tipo === "curso" && campo("codigo", "Código do curso")}
-              {tipo === "convenio" && (
-                <>
-                  {campo("instituicao", "Instituição")}
-                  {campo("cnpj", "CNPJ")}
-                  {campo("inicioVigencia", "Data de assinatura", "date")}
-                  <p className="text-muted-foreground text-sm">
-                    Campus Pinheiral. Vigência de cinco anos a partir da assinatura.
-                  </p>
-                </>
-              )}
               {tipo === "periodo" && (
                 <>
                   {campo("ano", "Ano", "number")}
@@ -279,22 +301,44 @@ export function Cadastros({
               )}
             </div>
             {tipo === "convenio" && (
-              <fieldset disabled={pendente} className="flex min-w-0 flex-col gap-4 rounded border p-4">
+              <div className="flex flex-col gap-2">
+                <p className="text-muted-foreground text-sm">
+                  Preencha o documento Convênio de Estágio (Campus Pinheiral). Estes dados completam
+                  automaticamente os campos da concedente no Termo de Compromisso e nos demais
+                  documentos dos estágios vinculados.
+                </p>
+                <FormularioDocumento
+                  key={id ?? "novo"}
+                  descriptor={descritorConvenio}
+                  valores={documento}
+                  desabilitado={pendente}
+                  aoMudar={(campoId, valor) => mudarDocumento({ [campoId]: valor })}
+                  aoMudarGrupo={mudarDocumento}
+                />
+              </div>
+            )}
+            {tipo === "convenio" && (
+              <fieldset
+                disabled={pendente}
+                className="flex min-w-0 flex-col gap-4 rounded border p-4"
+              >
                 <legend className="px-1 font-medium">Contatos da instituição</legend>
                 <p className="text-muted-foreground text-sm">
-                  Estes contatos são compartilhados pelos convênios do mesmo CNPJ.
-                  Remover um contato o inativa na instituição. Contatos não possuem acesso ao sistema.
+                  Estes contatos são compartilhados pelos convênios do mesmo CNPJ. Remover um
+                  contato o inativa na instituição. Contatos não possuem acesso ao sistema.
                 </p>
                 {contatos.map((contato, indice) => (
                   <fieldset key={indice} className="min-w-0 rounded border p-3">
                     <legend className="px-1 text-sm font-medium">Contato {indice + 1}</legend>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {([
-                        ["nome", "Nome", "text"],
-                        ["email", "E-mail", "email"],
-                        ["telefone", "Telefone", "tel"],
-                        ["cargo", "Cargo (opcional)", "text"],
-                      ] as const).map(([chave, rotulo, tipoInput]) => (
+                      {(
+                        [
+                          ["nome", "Nome", "text"],
+                          ["email", "E-mail", "email"],
+                          ["telefone", "Telefone", "tel"],
+                          ["cargo", "Cargo (opcional)", "text"],
+                        ] as const
+                      ).map(([chave, rotulo, tipoInput]) => (
                         <div key={chave} className="flex min-w-0 flex-col gap-2">
                           <Label htmlFor={`contato-${indice}-${chave}`}>{rotulo}</Label>
                           <Input
@@ -313,8 +357,15 @@ export function Cadastros({
                       variant="ghost"
                       className="mt-3"
                       aria-label={`Remover contato ${indice + 1}`}
-                      onClick={() => mudar("responsaveis", contatos.filter((_, posicao) => posicao !== indice))}
-                    >Remover contato</Button>
+                      onClick={() =>
+                        mudar(
+                          "responsaveis",
+                          contatos.filter((_, posicao) => posicao !== indice),
+                        )
+                      }
+                    >
+                      Remover contato
+                    </Button>
                   </fieldset>
                 ))}
                 <Button
@@ -322,8 +373,15 @@ export function Cadastros({
                   variant="outline"
                   className="self-start"
                   disabled={contatos.length >= 20}
-                  onClick={() => mudar("responsaveis", [...contatos, { nome: "", email: "", telefone: "", cargo: "" }])}
-                >Adicionar contato</Button>
+                  onClick={() =>
+                    mudar("responsaveis", [
+                      ...contatos,
+                      { nome: "", email: "", telefone: "", cargo: "" },
+                    ])
+                  }
+                >
+                  Adicionar contato
+                </Button>
               </fieldset>
             )}
             <div className="flex flex-wrap gap-2">

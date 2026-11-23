@@ -186,6 +186,7 @@ type LinhaConvenio = {
   campus: string;
   situacao: string;
   renovacoes: number;
+  dadosDocumento?: unknown;
   instituicao: { nome: string; cnpj: string; responsaveis?: { nome: string; email: string; telefone: string; cargo: string | null; situacao: string }[] };
 };
 
@@ -202,6 +203,7 @@ export function paraConvenio(linha: LinhaConvenio): Convenio {
     renovacoes: linha.renovacoes,
     responsaveis: linha.instituicao.responsaveis?.filter((contato) => contato.situacao === "ativo")
       .map(({ nome, email, telefone, cargo }) => ({ nome, email, telefone, cargo: cargo ?? "" })),
+    dadosDocumento: linha.dadosDocumento ? (linha.dadosDocumento as Record<string, unknown>) : undefined,
   };
 }
 
@@ -347,6 +349,12 @@ async function instituicaoAtiva(
   });
 }
 
+function dadosDocumentoParaBanco(dados: Convenio["dadosDocumento"]) {
+  return dados === undefined
+    ? {}
+    : { dadosDocumento: JSON.parse(JSON.stringify(dados)) as Prisma.InputJsonValue };
+}
+
 async function cadastrarConvenioPersistente(
   dados: Omit<Convenio, "id" | "campus" | "situacao" | "renovacoes" | "fimVigencia">,
 ): Promise<Convenio> {
@@ -363,6 +371,7 @@ async function cadastrarConvenioPersistente(
           nome: dados.nome,
           inicioVigencia: dataIsoParaBanco(dados.inicioVigencia),
           fimVigencia: dataIsoParaBanco(somarAnos(dados.inicioVigencia, 5)),
+          ...dadosDocumentoParaBanco(dados.dadosDocumento),
         },
         include: incluirInstituicao,
       });
@@ -426,6 +435,7 @@ export async function editarConvenio(
           nome: dados.nome,
           inicioVigencia: dataIsoParaBanco(dados.inicioVigencia),
           fimVigencia: dataIsoParaBanco(somarAnos(dados.inicioVigencia, 5)),
+          ...dadosDocumentoParaBanco(dados.dadosDocumento),
         },
         include: incluirInstituicao,
       });

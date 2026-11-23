@@ -3,6 +3,8 @@ import { esquemaData, esquemaEmail, esquemaTelefone } from "@/lib/domain/schemas
 import type { Curso, Periodo, Pessoa, Turma, Usuario } from "@/lib/domain/types";
 import { cadastrarConvenio, classificacaoConvenio, editarConvenio, esquemaResponsaveisInstituicao, somarAnos } from "./catalogo";
 import { cursoDoUsuario } from "@/lib/domain/usuario";
+import { descritorCadastroConvenio, TEMPLATE_CONVENIO } from "@/lib/templates/concedente";
+import { enderecoDoGrupo, estruturaSuficiente, formatarEndereco } from "@/lib/templates/grupos-endereco";
 import { ErroDeRegra } from "./erros";
 import { novoId, obterEstado } from "./store";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
@@ -15,6 +17,47 @@ const esquemaPessoaExterna = z.object({
   email: esquemaEmail.optional().or(z.literal("")).default(""),
   telefone: esquemaTelefone.optional().or(z.literal("")).default(""),
 });
+
+/**
+ * O cadastro do convênio é o preenchimento do documento "Convênio de Estágio":
+ * instituição, CNPJ e vigência saem dos valores do documento, que ficam
+ * gravados para completar os dados da concedente nos demais documentos.
+ */
+const isoParaBr = (iso: string) => iso.split("-").reverse().join("/");
+
+async function convenioDoDocumento(dados: Record<string, unknown>) {
+  const { validarValores } = await import("./documentos");
+  const descritor = descritorCadastroConvenio();
+  const ids = new Set(descritor.secoes.flatMap((secao) => secao.campos.map((campo) => campo.id)));
+  const entrada = z.record(z.string(), z.unknown()).parse(dados.dadosDocumento ?? {});
+  const valores: Record<string, unknown> = Object.fromEntries(
+    Object.entries(entrada)
+      .filter(([chave]) => ids.has(chave))
+      .map(([chave, valor]) => [chave, typeof valor === "string" ? valor.trim() : valor]),
+  );
+  for (const grupo of descritor.gruposEndereco ?? []) {
+    const endereco = enderecoDoGrupo(grupo, valores);
+    valores[grupo.composto] = estruturaSuficiente(endereco) ? formatarEndereco(endereco) : "";
+  }
+  const problemas = validarValores(TEMPLATE_CONVENIO, valores, undefined, descritor);
+  if (problemas.length) throw new ErroDeRegra(problemas[0].mensagem, "documento_convenio_invalido");
+  const inicioVigencia = esquemaData.parse(valores.inicioVigencia);
+  const razaoSocial = String(valores.razaoSocial);
+  const nomeFantasia = String(valores.nomeFantasia ?? "");
+  return {
+    nome: nomeFantasia || razaoSocial,
+    instituicao: razaoSocial,
+    cnpj: String(valores.cnpj),
+    inicioVigencia,
+    responsaveis: esquemaResponsaveisInstituicao.optional().parse(dados.responsaveis),
+    // O documento guarda as datas como o formulário as exibe (dd/mm/aaaa).
+    dadosDocumento: {
+      ...valores,
+      inicioVigencia: isoParaBr(inicioVigencia),
+      fimVigencia: isoParaBr(somarAnos(inicioVigencia, 5)),
+    },
+  };
+}
 
 async function salvarPessoaPersistente(
   papel: Pessoa["papel"], dados: Record<string, unknown>, id?: string,
@@ -369,6 +412,7 @@ export async function consultarCadastros(autor: Usuario) {
           situacao: linha.situacao as "ativo" | "inativo",
           renovacoes: linha.renovacoes,
           responsaveis: linha.instituicao.responsaveis.map(({ nome, email, telefone, cargo }) => ({ nome, email, telefone, cargo: cargo ?? "" })),
+          dadosDocumento: linha.dadosDocumento ? (linha.dadosDocumento as Record<string, unknown>) : undefined,
         };
 
         return {
@@ -407,16 +451,7 @@ export async function salvarCadastro(
       return salvarPessoaPersistente(tipo, dados, id);
     }
     if (tipo === "convenio") {
-      const validado = z
-        .object({
-          nome: z.string().trim().min(1, "Informe o nome do convênio."),
-          instituicao: z.string().trim().min(1, "Informe a instituição."),
-          cnpj: z.string().trim().min(1, "Informe o CNPJ."),
-          inicioVigencia: esquemaData,
-          responsaveis: esquemaResponsaveisInstituicao.optional(),
-        })
-        .parse(dados);
-
+      const validado = await convenioDoDocumento(dados);
       return id ? editarConvenio(id, validado) : cadastrarConvenio(validado);
     }
 
@@ -457,15 +492,7 @@ export async function salvarCadastro(
 
   const estado = obterEstado();
   if (tipo === "convenio") {
-    const validado = z
-      .object({
-        nome: z.string().trim().min(1, "Informe o nome do convênio."),
-        instituicao: z.string().trim().min(1, "Informe a instituição."),
-        cnpj: z.string().trim().min(1, "Informe o CNPJ."),
-        inicioVigencia: esquemaData,
-        responsaveis: esquemaResponsaveisInstituicao.optional(),
-      })
-      .parse(dados);
+    const validado = await convenioDoDocumento(dados);
     if (!id) return cadastrarConvenio(validado);
     const convenio = estado.convenios.find((registro) => registro.id === id);
     if (!convenio) throw new ErroDeRegra("Convênio não encontrado.", "nao_encontrado");

@@ -56,7 +56,7 @@ async function contextoDoBanco(tx: Prisma.TransactionClient, alunoId: string, es
   const contexto: ContextoPreenchimento = {
     descritor, estagio: linha ? paraDominioEstagio(linha) : null,
     curso: dados?.curso ?? null, turma: dados?.turma ?? null, periodo: dados?.periodo ?? null,
-    convenio: linha ? { instituicao: linha.convenio.instituicao.nome } : null,
+    convenio: linha ? { instituicao: linha.convenio.instituicao.nome, dadosDocumento: (linha.convenio.dadosDocumento ?? undefined) as Record<string, unknown> | undefined } : null,
     supervisor: linha?.supervisor ?? null, orientador: linha?.orientador ?? null,
   };
   return { titular, contexto };
