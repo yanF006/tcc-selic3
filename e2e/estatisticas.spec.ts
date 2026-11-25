@@ -164,3 +164,27 @@ test("restringe o coordenador de curso ao próprio curso e sinaliza o recorte (1
   await expect(page.getByTestId("total-estatisticas")).toHaveText("Total de resultados: 4");
   await expect(page.getByRole("cell", { name: "João Pedro Lima" })).toHaveCount(0);
 });
+
+test("gera o relatório da coordenação em PDF com os filtros aplicados", async ({ page }) => {
+  await entrar(page, "ana.correia@ifrj.edu.br");
+  await page.goto("/coordenacao/estatisticas?situacao=concluido");
+
+  const link = page.getByRole("link", { name: "Salvar relatório em PDF", exact: true });
+  await expect(link).toHaveAttribute(
+    "href",
+    "/coordenacao/estatisticas/relatorio?situacao=concluido",
+  );
+
+  await page.goto("/coordenacao/estatisticas/relatorio?situacao=concluido");
+  await expect(
+    page.getByRole("heading", { name: "Relatório de Estatísticas de Estágio", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "Situação:" })).toHaveText(
+    "Situação: Concluído",
+  );
+  await expect(page.getByRole("row", { name: /Estágios no recorte 2/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Salvar em PDF", exact: true })).toBeVisible();
+
+  const pdf = await page.pdf({ format: "A4" });
+  expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+});

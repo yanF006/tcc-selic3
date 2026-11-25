@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FileDownIcon } from "lucide-react";
 
 import { PaginaArea } from "@/components/layout/pagina-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,13 +15,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  filtrosDosParametros,
+  queryString,
+  umParam,
+  type ParametrosBusca,
+} from "@/features/estatisticas/filtros";
 import { usuarioDaRequisicaoObrigatorio } from "@/lib/auth/sessao-servidor";
 import { rotuloSituacaoEstagio, varianteSituacaoEstagio } from "@/lib/domain/status";
 import {
   documentosDoIndicador,
   pesquisarEstatisticas,
-  type FiltrosEstatisticas,
-  type FiltroSituacaoEstatistica,
   type GrupoHoras,
   type OpcaoFiltro,
 } from "@/lib/services/estatisticas";
@@ -29,32 +34,6 @@ export const metadata: Metadata = {
   title: "Estatísticas",
   description: "Pesquisar estágios e indicadores por curso, período e instituição.",
 };
-
-type Parametros = Record<string, string | string[] | undefined>;
-
-function umParam(valor: string | string[] | undefined): string | undefined {
-  return typeof valor === "string" && valor.trim() ? valor.trim() : undefined;
-}
-
-function situacaoValida(valor: string | undefined): FiltroSituacaoEstatistica {
-  return valor === "em_preparacao" || valor === "em_andamento" || valor === "concluido"
-    ? valor
-    : "todas";
-}
-
-function queryString(filtros: FiltrosEstatisticas, extras: Record<string, string> = {}): string {
-  const parametros = new URLSearchParams();
-
-  for (const [chave, valor] of Object.entries(filtros)) {
-    if (valor === undefined || valor === "" || valor === "todas") continue;
-    parametros.set(chave, String(valor));
-  }
-  for (const [chave, valor] of Object.entries(extras)) parametros.set(chave, valor);
-
-  const texto = parametros.toString();
-
-  return texto ? `?${texto}` : "";
-}
 
 function Opcoes({
   id,
@@ -129,22 +108,8 @@ function TabelaHoras({ titulo, grupos }: { titulo: string; grupos: GrupoHoras[] 
 
 export default async function Page({ searchParams }: PageProps<"/coordenacao/estatisticas">) {
   const usuario = await usuarioDaRequisicaoObrigatorio();
-  const parametros = (await searchParams) as Parametros;
-  const situacao = situacaoValida(umParam(parametros.situacao));
-  const ano = Number(umParam(parametros.ano)) || undefined;
-  const semestreBruto = Number(umParam(parametros.semestre));
-  const semestre = semestreBruto === 1 || semestreBruto === 2 ? semestreBruto : undefined;
-  const filtros: FiltrosEstatisticas = {
-    aluno: umParam(parametros.aluno),
-    orientador: umParam(parametros.orientador),
-    supervisor: umParam(parametros.supervisor),
-    instituicao: umParam(parametros.instituicao),
-    cursoId: umParam(parametros.cursoId),
-    turmaId: umParam(parametros.turmaId),
-    situacao,
-    ano,
-    semestre,
-  };
+  const parametros = (await searchParams) as ParametrosBusca;
+  const filtros = filtrosDosParametros(parametros);
   const pesquisa = await pesquisarEstatisticas(usuario, filtros);
   const { recorte, opcoes, itens, indicadores, totaisHoras } = pesquisa;
   const documentoSelecionado = umParam(parametros.documentoTemplate);
@@ -274,6 +239,16 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
               <Button type="submit">Aplicar filtros</Button>
               <Button asChild variant="ghost">
                 <Link href="/coordenacao/estatisticas">Limpar filtros</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link
+                  href={`/coordenacao/estatisticas/relatorio${queryString(filtros)}`}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <FileDownIcon aria-hidden="true" className="size-4" />
+                  Salvar relatório em PDF
+                </Link>
               </Button>
             </div>
           </form>
