@@ -15,6 +15,7 @@ import { listarOrientadores, listarSupervisores, pessoaPorId } from "@/lib/servi
 import { criarEstagio } from "@/lib/services/estagios";
 import * as store from "@/lib/services/store";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
+import { documentoConvenio } from "../support/documento-convenio";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
 const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
@@ -89,9 +90,7 @@ describe("pessoas externas persistentes", () => {
     await expect(removerCadastro(autor, "supervisor", orientador.id, true)).rejects.toMatchObject({ codigo: "nao_encontrado" });
     await expect(ativarCadastro(autor, "supervisor", orientador.id)).rejects.toMatchObject({ codigo: "nao_encontrado" });
     expect(await pessoaPorId(orientador.id)).toMatchObject({ nome: `${prefixo}-papel`, papel: "orientador", situacao: "ativo" });
-    const convenio = await salvarCadastro(autor, "convenio", {
-      nome: prefixo, instituicao: prefixo, cnpj, inicioVigencia: "2026-01-01",
-    });
+    const convenio = await salvarCadastro(autor, "convenio", documentoConvenio(prefixo, cnpj, "2026-01-01"));
     const aluno: Usuario = { ...autor, papel: "aluno" };
     await prisma.usuario.create({ data: { id: aluno.id, nome: aluno.nome, email: aluno.email, papel: "aluno", situacao: "ativo" } });
     const dados = { convenioId: convenio.id, supervisorId: orientador.id, orientadorId: orientador.id,

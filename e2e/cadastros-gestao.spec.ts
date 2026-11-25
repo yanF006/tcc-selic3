@@ -14,10 +14,16 @@ async function entrar(page: Page, email = "ana.correia@ifrj.edu.br") {
 test("convênio calcula vigência, filtra e preserva os estágios ao expirar", async ({ page }) => {
   await entrar(page);
   await page.goto("/coordenacao/cadastros");
-  await page.getByLabel("Nome do cadastro").fill("Convênio para revisão");
-  await page.getByLabel("Instituição", { exact: true }).fill("Instituto de revisão");
+  await page.getByLabel("Razão social", { exact: true }).fill("Instituto de revisão");
+  await page.getByLabel("Nome fantasia", { exact: true }).fill("Convênio para revisão");
   await page.getByLabel("CNPJ", { exact: true }).fill("11222333000181");
-  await page.getByLabel("Data de assinatura").fill("2024-02-29");
+  const endereco = page.getByRole("group", { name: "Endereço da concedente", exact: true });
+  await endereco.getByRole("button", { name: "Alterar endereço" }).click();
+  await endereco.getByLabel("Logradouro", { exact: true }).fill("Rua da Revisão");
+  await endereco.getByLabel("Número", { exact: true }).fill("20");
+  await endereco.getByLabel("Cidade", { exact: true }).fill("Pinheiral");
+  await page.getByLabel("Responsável legal", { exact: true }).fill("Rita Revisora");
+  await page.getByLabel("Início da vigência", { exact: true }).fill("29022024");
   await page.getByRole("button", { name: "Salvar cadastro", exact: true }).click();
   await expect(page.getByText("Cadastro salvo.", { exact: true })).toBeVisible();
   await page.getByLabel("Buscar cadastros").fill("Instituto de revisão");
@@ -149,4 +155,68 @@ test("responsável cadastrado pode ser editado e excluído sem deixar contato pe
   await page.goto("/coordenacao/estagios?estagio=est-joao-lab");
   await expect(page.getByText("Detalhes do Estágio", { exact: true })).toBeVisible();
   await expect(page.getByText("Cadastro excluído", { exact: true }).first()).toBeVisible();
+});
+
+test("dados do convênio preenchem a concedente nos documentos do estágio", async ({ page }) => {
+  await entrar(page);
+  await page.goto("/coordenacao/cadastros");
+  await page.getByLabel("Razão social", { exact: true }).fill("Escola Concedente Ltda.");
+  await page.getByLabel("Nome fantasia", { exact: true }).fill("Escola Concedente");
+  await page.getByLabel("CNPJ", { exact: true }).fill("11.444.777/0001-61");
+  const endereco = page.getByRole("group", { name: "Endereço da concedente", exact: true });
+  await endereco.getByRole("button", { name: "Alterar endereço" }).click();
+  await endereco.getByLabel("Logradouro", { exact: true }).fill("Rua das Escolas");
+  await endereco.getByLabel("Número", { exact: true }).fill("45");
+  await endereco.getByLabel("Cidade", { exact: true }).fill("Pinheiral");
+  await page.getByLabel("Telefone", { exact: true }).fill("2433335555");
+  await page.getByLabel("Responsável legal", { exact: true }).fill("Helena Diretora");
+  await page
+    .getByLabel("Início da vigência", { exact: true })
+    .fill(new Date().toLocaleDateString("pt-BR"));
+  await page.getByRole("button", { name: "Salvar cadastro", exact: true }).click();
+  await expect(page.getByText("Cadastro salvo.", { exact: true })).toBeVisible();
+
+  await entrar(page, "maria.souza@aluno.ifrj.edu.br");
+  await page.goto("/estagio");
+  await page.getByRole("button", { name: "Solicitar estágio", exact: true }).click();
+  await page.getByLabel("Convênio", { exact: true }).click();
+  await page.getByRole("option", { name: /Escola Concedente/ }).click();
+  await page.getByLabel("Dados dos documentos iniciais").selectOption("tpl-termo-compromisso");
+  await expect(page.getByLabel("CNPJ da instituição", { exact: true })).toHaveValue(
+    "11.444.777/0001-61",
+  );
+  await expect(page.getByLabel("Representada por", { exact: true })).toHaveValue("Helena Diretora");
+  const concedente = page.getByRole("group", { name: "Endereço da concedente", exact: true });
+  await expect(concedente.getByLabel("Logradouro", { exact: true })).toHaveValue("Rua das Escolas");
+  await expect(concedente.getByLabel("Número", { exact: true })).toHaveValue("45");
+});
+
+test("preencher o documento Convênio de Estágio cadastra e depois atualiza o convênio", async ({
+  page,
+}) => {
+  await entrar(page);
+  await page.goto("/documentos/tpl-convenio-estagio");
+  await page.getByLabel("Razão social", { exact: true }).fill("Colégio do Documento Ltda.");
+  await page.getByLabel("Nome fantasia", { exact: true }).fill("Colégio do Documento");
+  await page.getByLabel("CNPJ", { exact: true }).fill("22.333.444/0001-05");
+  const endereco = page.getByRole("group", { name: "Endereço da concedente", exact: true });
+  await endereco.getByRole("button", { name: "Alterar endereço" }).click();
+  await endereco.getByLabel("Logradouro", { exact: true }).fill("Rua do Documento");
+  await endereco.getByLabel("Número", { exact: true }).fill("7");
+  await page.getByLabel("Responsável legal", { exact: true }).fill("Bruno Gestor");
+  await page.getByLabel("Início da vigência", { exact: true }).fill("01022026");
+  await page.getByRole("button", { name: "Cadastrar convênio", exact: true }).click();
+  await expect(page.getByText(/Convênio cadastrado/)).toBeVisible();
+  await expect(page.getByLabel("Fim da vigência", { exact: true })).toHaveValue("01/02/2031");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Atualizar convênio", exact: true })).toBeVisible();
+  await page.getByLabel("Responsável legal", { exact: true }).fill("Bruna Gestora");
+  await page.getByRole("button", { name: "Atualizar convênio", exact: true }).click();
+  await expect(page.getByText(/Convênio atualizado/)).toBeVisible();
+
+  await page.goto("/coordenacao/cadastros");
+  await page.getByLabel("Buscar cadastros").fill("Colégio do Documento");
+  await expect(page.getByText("Total de resultados: 1", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-testid^="cadastro-"]')).toContainText("2031-02-01");
 });

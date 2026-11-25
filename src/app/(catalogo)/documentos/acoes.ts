@@ -20,6 +20,10 @@ import { usuarioPorId } from "@/lib/services/administracao";
 import { solicitarEncaminhamento } from "@/lib/services/fluxo-estagio";
 import { bancoConfigurado } from "@/lib/db/prisma";
 import { ErroValidacaoDocumento } from "@/lib/services/documentos-persistentes";
+import { salvarCadastro } from "@/lib/services/cadastros";
+import { convenioDoDocumentoPreenchido } from "@/lib/services/catalogo";
+import { TEMPLATE_CONVENIO } from "@/lib/templates/concedente";
+import { ZodError } from "zod";
 
 export interface ResultadoDocumento {
   ok: boolean;
@@ -163,7 +167,9 @@ export async function baixarDocumentoAction(
 
     const aluno = await usuarioPorId(documento.alunoId);
     const valores =
-      !documento.definicaoSnapshot && documento.situacao === "rascunho" && aluno?.situacao === "ativo"
+      !documento.definicaoSnapshot &&
+      documento.situacao === "rascunho" &&
+      aluno?.situacao === "ativo"
         ? await valoresDoPreenchimento(
             templateId,
             aluno,
@@ -190,5 +196,60 @@ export async function baixarDocumentoAction(
     }
 
     return { ok: false, erro: "Não foi possível gerar o documento." };
+  }
+}
+
+export interface ResultadoConvenioDocumento extends ResultadoDocumento {
+  convenioId?: string;
+  novo?: boolean;
+}
+
+/**
+ * Preencher o documento "Convênio de Estágio" cadastra o convênio: os valores
+ * do documento passam pela mesma regra do cadastro da coordenação. O convênio
+ * guarda o ID do documento de origem, e os envios seguintes atualizam esse
+ * mesmo convênio em vez de criar outro.
+ */
+export async function cadastrarConvenioDoDocumentoAction(
+  documentoId: string,
+  valores: Record<string, unknown>,
+): Promise<ResultadoConvenioDocumento> {
+  try {
+    const usuario = await usuarioDaRequisicaoObrigatorio();
+    const documento = await documentoPorId(documentoId);
+    if (
+      !documento ||
+      documento.templateId !== TEMPLATE_CONVENIO ||
+      !(await podeConsultarDocumento(usuario, documento))
+    )
+      return { ok: false, erro: "Documento de convênio não encontrado." };
+    if (documento.situacao !== "rascunho")
+      return { ok: false, erro: "Somente rascunhos podem ser editados." };
+
+    const existente = await convenioDoDocumentoPreenchido(documentoId);
+    const convenio = await salvarCadastro(
+      usuario,
+      "convenio",
+      { dadosDocumento: valores, documentoId },
+      existente?.id,
+    );
+    if (!("dadosDocumento" in convenio))
+      return { ok: false, erro: "Não foi possível cadastrar o convênio." };
+
+    // O rascunho do documento fica com os mesmos valores do convênio (datas
+    // normalizadas e fim da vigência calculado).
+    const valoresDoConvenio = { ...convenio.dadosDocumento };
+    delete valoresDoConvenio.documentoId;
+    const salvo = await salvarRascunho(documentoId, { ...valores, ...valoresDoConvenio }, usuario);
+    for (const rota of ["/coordenacao/cadastros", "/admin/convenios", "/estagio"])
+      revalidatePath(rota);
+    revalidatePath(`/documentos/${TEMPLATE_CONVENIO}`);
+    return { ok: true, valores: salvo.valores, convenioId: convenio.id, novo: !existente };
+  } catch (erro) {
+    if (erro instanceof ZodError) return { ok: false, erro: erro.issues[0].message };
+    if (erro instanceof ErroValidacaoDocumento)
+      return { ok: false, erro: erro.message, problemas: erro.problemas };
+    if (erro instanceof Error) return { ok: false, erro: erro.message };
+    return { ok: false, erro: "Não foi possível cadastrar o convênio." };
   }
 }

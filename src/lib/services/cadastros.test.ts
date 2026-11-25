@@ -4,6 +4,8 @@ import { classificacaoConvenio, opcoesSelecao } from "./catalogo";
 import { obterEstado, reiniciarEstado } from "./store";
 import { esquemaDadosPessoais } from "@/lib/domain/schemas";
 import { atualizarDadosPessoais } from "./aluno";
+import { valoresDoPreenchimento } from "./documentos";
+import { documentoConvenio } from "../../../tests/support/documento-convenio";
 
 const usuario = (id = "usr-ana") => obterEstado().usuarios.find((registro) => registro.id === id)!;
 beforeEach(() => reiniciarEstado());
@@ -20,13 +22,21 @@ describe("cadastros da coordenação", () => {
   });
 
   it("cadastra convênio com cinco anos e preserva vínculos na inativação", async () => {
-    const criado = await salvarCadastro(usuario(), "convenio", {
+    await expect(
+      salvarCadastro(usuario(), "convenio", documentoConvenio("", "11222333000181", "2024-02-29")),
+    ).rejects.toThrow(/Razão social/);
+    const criado = await salvarCadastro(
+      usuario(),
+      "convenio",
+      documentoConvenio("Instituto Novo", "11222333000181", "2024-02-29", { nomeFantasia: "Convênio novo" }),
+    );
+    expect(criado).toMatchObject({
       nome: "Convênio novo",
       instituicao: "Instituto Novo",
-      cnpj: "11222333000181",
-      inicioVigencia: "2024-02-29",
+      fimVigencia: "2029-02-28",
+      campus: "Pinheiral",
+      dadosDocumento: expect.objectContaining({ responsavel: "Representante Legal", fimVigencia: "28/02/2029" }),
     });
-    expect(criado).toMatchObject({ fimVigencia: "2029-02-28", campus: "Pinheiral" });
     const convenio = obterEstado().convenios.find(
       (registro) => registro.id === "conv-ti-pinheiral",
     )!;
@@ -40,6 +50,27 @@ describe("cadastros da coordenação", () => {
     expect(estagio.convenioId).toBe(convenio.id);
     await ativarCadastro(usuario(), "convenio", convenio.id);
     expect(classificacaoConvenio(convenio)).toBe("ativo");
+  });
+
+  it("preenche a concedente do Termo de Compromisso com o documento do convênio", async () => {
+    const convenio = await salvarCadastro(
+      usuario(),
+      "convenio",
+      documentoConvenio("Escola Concedente", "11222333000181", "2026-01-01", { telefone: "(24) 3333-4444" }),
+    );
+    const estagio = obterEstado().estagios[0];
+    estagio.convenioId = convenio.id;
+    const aluno = obterEstado().usuarios.find((registro) => registro.id === estagio.alunoId)!;
+    const valores = await valoresDoPreenchimento("tpl-termo-compromisso", aluno, estagio.id, {
+      responsavel: "Digitado pelo aluno",
+    });
+    expect(valores).toMatchObject({
+      cnpj: "11222333000181",
+      responsavel: "Digitado pelo aluno",
+      telefone: "(24) 3333-4444",
+      logradouro: "Rua do Convênio",
+      endereco: "Rua do Convênio, 10, Centro",
+    });
   });
 
   it("liga turmas a curso e períodos, validando também a seleção do aluno", async () => {

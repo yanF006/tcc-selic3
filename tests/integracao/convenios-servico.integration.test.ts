@@ -11,6 +11,7 @@ import { descartarCliente } from "@/lib/db/prisma";
 import { salvarCadastro, removerCadastro, consultarCadastros } from "@/lib/services/cadastros";
 import { convenioPorId, listarConvenios, renovarConvenio } from "@/lib/services/catalogo";
 import { carregarUrlAppTeste, validarUrlTeste } from "./configuracao";
+import { documentoConvenio } from "../support/documento-convenio";
 
 const configuracao = validarUrlTeste(carregarUrlAppTeste(), process.env, "selic_teste_app");
 const base = process.env.SELIC_MYSQL_TESTE_BASE || join(homedir(), ".local/share/selic-mysql-teste");
@@ -59,12 +60,7 @@ afterAll(async () => {
 });
 
 async function criar(nome: string, inicioVigencia: string) {
-  return salvarCadastro(autor, "convenio", {
-    nome: `${prefixo}-${nome}`,
-    instituicao: `${prefixo}-instituicao`,
-    cnpj,
-    inicioVigencia,
-  });
+  return salvarCadastro(autor, "convenio", documentoConvenio(`${prefixo}-instituicao`, cnpj, inicioVigencia, { nomeFantasia: `${prefixo}-${nome}` }));
 }
 
 describe("serviços de convênios persistentes", () => {
@@ -73,8 +69,7 @@ describe("serviços de convênios persistentes", () => {
     const primeiro = await criar("contatos", "2026-01-01");
     const segundo = await criar("contatos-outro", "2026-01-01");
     const dados = {
-      nome: `${prefixo}-contatos`, instituicao: `${prefixo}-instituicao`, cnpj,
-      inicioVigencia: "2026-01-01",
+      ...documentoConvenio(`${prefixo}-instituicao`, cnpj, "2026-01-01", { nomeFantasia: `${prefixo}-contatos` }),
       responsaveis: [{ nome: "Contato A", email: `${prefixo}-A@teste.local`, telefone: "2433334444", cargo: "Diretora" }],
     };
     await salvarCadastro(autor, "convenio", dados, primeiro.id);
@@ -85,9 +80,9 @@ describe("serviços de convênios persistentes", () => {
     expect((await consultarCadastros(autor)).convenios.find((item) => item.id === primeiro.id)?.responsaveis).toHaveLength(1);
 
     await expect(salvarCadastro(autor, "convenio", {
-      ...dados, nome: "Não deve gravar", responsaveis: [dados.responsaveis[0], dados.responsaveis[0]],
+      ...dados, ...documentoConvenio("Não deve gravar", cnpj, "2026-01-01"), responsaveis: [dados.responsaveis[0], dados.responsaveis[0]],
     }, primeiro.id)).rejects.toThrow();
-    expect((await convenioPorId(primeiro.id))?.nome).toBe(dados.nome);
+    expect((await convenioPorId(primeiro.id))?.nome).toBe(`${prefixo}-contatos`);
 
     await salvarCadastro(autor, "convenio", {
       ...dados, responsaveis: [{ ...dados.responsaveis[0], nome: "Contato atualizado" }],
@@ -105,12 +100,7 @@ describe("serviços de convênios persistentes", () => {
     const linhas = await prisma.convenio.findMany({ where: { id: { in: [primeiro.id, segundo.id] } } });
     expect(new Set(linhas.map((linha) => linha.instituicaoId)).size).toBe(1);
 
-    await salvarCadastro(autor, "convenio", {
-      nome: `${prefixo}-editado`,
-      instituicao: `${prefixo}-instituicao`,
-      cnpj,
-      inicioVigencia: "2026-02-01",
-    }, primeiro.id);
+    await salvarCadastro(autor, "convenio", documentoConvenio(`${prefixo}-instituicao`, cnpj, "2026-02-01", { nomeFantasia: `${prefixo}-editado` }), primeiro.id);
 
     descartarCliente();
     expect(await convenioPorId(primeiro.id)).toMatchObject({
@@ -118,6 +108,7 @@ describe("serviços de convênios persistentes", () => {
       inicioVigencia: "2026-02-01",
       fimVigencia: "2031-02-01",
       cnpj,
+      dadosDocumento: expect.objectContaining({ responsavel: "Representante Legal", cidade: "Pinheiral", fimVigencia: "01/02/2031" }),
     });
     const pagina = await listarConvenios({ busca: prefixo, situacao: "ativo", tamanho: 1, pagina: 2 });
     expect(pagina).toMatchObject({ total: 2, pagina: 2, tamanhoPagina: 1 });

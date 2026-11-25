@@ -30,6 +30,7 @@ import {
 } from "@/lib/templates/descriptors";
 
 import { PAPEL_COM_TODAS_AS_PERMISSOES } from "@/lib/auth/permissions";
+import { completarComConvenio } from "@/lib/templates/concedente";
 import {
   enderecoDoGrupo,
   estruturaSuficiente,
@@ -477,7 +478,7 @@ export interface ContextoPreenchimento {
   curso: { nome: string } | null;
   turma: { nome: string } | null;
   periodo: { ano: number; semestre: number; rotulo: string } | null;
-  convenio: { instituicao: string } | null;
+  convenio: { instituicao: string; dadosDocumento?: Record<string, unknown> } | null;
   supervisor: { nome: string } | null;
   orientador: { nome: string } | null;
 }
@@ -613,6 +614,11 @@ export async function valoresDoPreenchimento(
     }
     const endereco = enderecoDoGrupo(grupo, resultado);
     if (estruturaSuficiente(endereco)) resultado[grupo.composto] = formatarEndereco(endereco);
+  }
+  const estagio = contexto ? contexto.estagio : estagioId ? await estagioPorId(estagioId) : null;
+  if (estagio && !estagio.excluidoEm) {
+    const convenio = contexto ? contexto.convenio : await convenioPorId(estagio.convenioId);
+    Object.assign(resultado, completarComConvenio(templateId, resultado, convenio?.dadosDocumento));
   }
   if (templateId === "tpl-ficha-frequencia") {
     const notas = camposDoTemplate(templateId, descriptor)

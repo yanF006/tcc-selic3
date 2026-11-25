@@ -335,6 +335,8 @@ model Convenio {
   campus         String   @default("Pinheiral") @db.VarChar(50)
   situacao       String   @default("ativo") @db.VarChar(20)
   renovacoes     Int      @default(0)
+  /// Valores do documento "Convênio de Estágio" preenchido no cadastro.
+  dadosDocumento Json?
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
 

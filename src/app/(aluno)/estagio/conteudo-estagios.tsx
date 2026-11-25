@@ -52,6 +52,7 @@ import {
   estagioLiberado,
 } from "@/lib/domain/fluxo-estagio";
 import { PainelFluxo, type DadosPainelFluxo } from "@/components/estagios/painel-fluxo";
+import { completarComConvenio } from "@/lib/templates/concedente";
 import { FormularioDocumento } from "@/components/documentos/formulario-documento";
 import { descritorPorTemplate, type DescriptorDocumento } from "@/lib/templates/descriptors";
 import { pendenciasDoDocumento } from "@/lib/templates/pendencias";
@@ -113,6 +114,20 @@ export function ConteudoEstagios({
   // Formulário de novo estágio
   const conveniosAtivos = convenios.filter((c) => c.situacao === "ativo");
   const [convenioId, setConvenioId] = React.useState("");
+  /** Os dados da concedente do convênio completam os campos ainda vazios. */
+  function escolherConvenio(id: string) {
+    setConvenioId(id);
+    const dados = convenios.find((convenio) => convenio.id === id)?.dadosDocumento;
+    if (!dados) return;
+    setValoresDocumentos((atual) =>
+      Object.fromEntries(
+        Object.entries(atual).map(([templateId, valores]) => [
+          templateId,
+          completarComConvenio(templateId, valores, dados),
+        ]),
+      ),
+    );
+  }
   const [supervisorId, setSupervisorId] = React.useState("");
   const [orientadorId, setOrientadorId] = React.useState("");
   const [dataInicio, setDataInicio] = React.useState("");
@@ -962,7 +977,7 @@ export function ConteudoEstagios({
             <form onSubmit={lidarComCriacao} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="convênio">Convênio</Label>
-                <Select value={convenioId} onValueChange={setConvenioId} required>
+                <Select value={convenioId} onValueChange={escolherConvenio} required>
                   <SelectTrigger id="convênio">
                     <SelectValue placeholder="Selecione o convênio ativo" />
                   </SelectTrigger>

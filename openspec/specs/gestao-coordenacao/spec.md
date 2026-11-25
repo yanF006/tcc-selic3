@@ -79,7 +79,22 @@ O sistema SHALL conceder ao Coordenador de Curso o acesso aos documentos preench
 
 ### Requirement: Cadastro de convênios
 
-O sistema SHALL permitir ao Coordenador de Estágio cadastrar os convênios do livro físico, informando a instituição, os dados do convênio e a classificação entre ativo e expirado.
+O sistema SHALL permitir ao Coordenador de Estágio cadastrar os convênios do livro físico preenchendo o documento "Convênio de Estágio" (dados da instituição concedente, endereço, responsável legal e início da vigência), e classificá-los entre ativo e expirado.
+
+#### Scenario: Cadastro pelo documento do convênio
+
+- **WHEN** o Coordenador de Estágio preenche o documento Convênio de Estágio no cadastro
+- **THEN** o sistema SHALL obter instituição, CNPJ e vigência desse documento e SHALL gravar os valores preenchidos junto ao convênio
+
+#### Scenario: Cadastro a partir da página do documento
+
+- **WHEN** o Coordenador de Estágio preenche o documento Convênio de Estágio na página de documentos e pede para cadastrar o convênio
+- **THEN** o sistema SHALL criar o convênio com os valores do documento e, nos envios seguintes do mesmo documento, SHALL atualizar esse convênio em vez de criar outro
+
+#### Scenario: Dados da concedente nos demais documentos
+
+- **WHEN** o aluno escolhe o convênio de um estágio ou preenche um documento de estágio vinculado a ele
+- **THEN** o sistema SHALL completar os campos vazios da concedente (CNPJ, responsável, contatos e endereço) com os dados do convênio, mantendo-os editáveis e preservando o que já foi digitado
 
 #### Scenario: Cadastro de convênio ativo
 
