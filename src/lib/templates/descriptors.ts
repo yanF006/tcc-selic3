@@ -986,16 +986,6 @@ export const DESCRITORES: DescriptorDocumento[] = comGruposEndereco([
             obrigatorio: true,
             largura: "meia",
           },
-          {
-            id: "renovacoes",
-            rotulo: "Renovações",
-            tipo: "numero",
-            origem: "digitado",
-            validacao: ["numero"],
-            min: 0,
-            max: 10,
-            largura: "meia",
-          },
         ],
       },
       {

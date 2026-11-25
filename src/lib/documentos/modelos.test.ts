@@ -61,7 +61,6 @@ const EXCECOES: Record<string, string[]> = {
     "numero",
     "complemento",
     "inicioVigencia",
-    "renovacoes",
   ],
   "tpl-termo-aditivo": ["justificativa"],
   "tpl-ficha-acompanhamento": [],
