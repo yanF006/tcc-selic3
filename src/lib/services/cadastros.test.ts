@@ -33,9 +33,14 @@ describe("cadastros da coordenação", () => {
     expect(criado).toMatchObject({
       nome: "Convênio novo",
       instituicao: "Instituto Novo",
+      cnpj: "11.222.333/0001-81",
       fimVigencia: "2029-02-28",
       campus: "Pinheiral",
-      dadosDocumento: expect.objectContaining({ responsavel: "Representante Legal", fimVigencia: "28/02/2029" }),
+      dadosDocumento: expect.objectContaining({
+        cnpj: "11.222.333/0001-81",
+        responsavel: "Representante Legal",
+        fimVigencia: "28/02/2029",
+      }),
     });
     const convenio = obterEstado().convenios.find(
       (registro) => registro.id === "conv-ti-pinheiral",
@@ -65,7 +70,7 @@ describe("cadastros da coordenação", () => {
       responsavel: "Digitado pelo aluno",
     });
     expect(valores).toMatchObject({
-      cnpj: "11222333000181",
+      cnpj: "11.222.333/0001-81",
       responsavel: "Digitado pelo aluno",
       telefone: "(24) 3333-4444",
       logradouro: "Rua do Convênio",

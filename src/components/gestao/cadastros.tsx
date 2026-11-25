@@ -25,11 +25,12 @@ function documentoDoConvenio(convenio: {
   inicioVigencia: string;
   dadosDocumento?: Record<string, unknown>;
 }) {
+  const dados = { razaoSocial: convenio.instituicao, cnpj: convenio.cnpj, ...convenio.dadosDocumento };
   // A vigência do cadastro já considera renovações registradas depois do documento.
   return {
-    razaoSocial: convenio.instituicao,
-    cnpj: convenio.cnpj,
-    ...convenio.dadosDocumento,
+    ...dados,
+    // Cadastros antigos podem ter o CNPJ só com dígitos.
+    cnpj: MASCARAS.cnpj(String(dados.cnpj ?? "")),
     inicioVigencia: convenio.inicioVigencia.split("-").reverse().join("/"),
   };
 }
