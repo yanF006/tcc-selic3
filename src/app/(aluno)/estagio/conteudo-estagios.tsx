@@ -72,6 +72,7 @@ export function ConteudoEstagios({
   gestao = false,
   nomesUsuarios = {},
   exclusoesPendentes = [],
+  podeExcluir = false,
   dadosFluxo,
   valoresIniciaisDocumentos = {},
   descritoresIniciais = {},
@@ -88,6 +89,8 @@ export function ConteudoEstagios({
   gestao?: boolean;
   nomesUsuarios?: Record<string, string>;
   exclusoesPendentes?: string[];
+  /** Na gestão, cargos que excluem diretamente (sem solicitar autorização). */
+  podeExcluir?: boolean;
   dadosFluxo: DadosPainelFluxo;
   valoresIniciaisDocumentos?: Record<string, Record<string, unknown>>;
   descritoresIniciais?: Record<string, DescriptorDocumento | undefined>;
@@ -379,12 +382,12 @@ export function ConteudoEstagios({
               Editar estágio
             </Button>
           ) : null}
-          {!gestao && !estagioEncerrado(estagioAtual) && (
+          {(!gestao || podeExcluir) && !estagioEncerrado(estagioAtual) && (
             <Button
               variant="destructive"
               disabled={pendente}
               onClick={() => {
-                const cancelar = estagioAtual.situacao === "em_preparacao";
+                const cancelar = !gestao && estagioAtual.situacao === "em_preparacao";
                 if (
                   !window.confirm(
                     cancelar
@@ -400,12 +403,12 @@ export function ConteudoEstagios({
                 });
               }}
             >
-              {estagioAtual.situacao === "em_preparacao"
+              {!gestao && estagioAtual.situacao === "em_preparacao"
                 ? "Cancelar solicitação"
                 : "Excluir estágio"}
             </Button>
           )}
-          {gestao ? (
+          {gestao && !podeExcluir && !estagioEncerrado(estagioAtual) ? (
             <Button
               variant="destructive"
               onClick={pedirExclusao}

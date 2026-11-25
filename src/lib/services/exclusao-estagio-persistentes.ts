@@ -31,7 +31,8 @@ async function ponteiroDoEstagio(estagioId: string): Promise<{ alunoId: string }
 
 /**
  * Cancelamento pelo aluno (antes da liberação) ou exclusão de estágio.
- * Exclusão feita pelo coordenador de curso do aluno ocorre diretamente e fica
+ * Exclusão feita pelo coordenador de curso do aluno ou pelo administrador do
+ * campus ocorre diretamente e fica
  * registrada com responsável e data na solicitação de exclusão de situação
  * `autorizado`. Efeitos: estágio fora dos processos ativos, documentos
  * inativados, dados pessoais removidos do contexto e envios sem e-mail.
@@ -56,7 +57,8 @@ export async function encerrarEstagioPersistente(estagioId: string, autor: Usuar
         throw new ErroDeRegra("Somente solicitações aguardando liberação podem ser canceladas.", "cancelamento_indisponivel");
     } else if (!titular) {
       const coordenadorDoCurso = autor.papel === "coordenador_curso" && !!autor.cursoId && autor.cursoId === aluno.dadosPessoaisAluno?.cursoId;
-      if (!coordenadorDoCurso) throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
+      // O acesso do administrador ao estágio (mesmo campus) já foi conferido acima.
+      if (!coordenadorDoCurso && autor.papel !== "administrador") throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
     }
 
     if (linha.excluidoEm) return estagio;

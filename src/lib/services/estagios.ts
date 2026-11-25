@@ -569,10 +569,12 @@ export async function excluirEstagio(estagioId: string, aluno: Usuario) {
     const { encerrarEstagioPersistente } = await import("./exclusao-estagio-persistentes");
     return encerrarEstagioPersistente(estagioId, aluno, "excluir");
   }
-  const estagio = await exigirAcessoEstagio(aluno, estagioId);
-  if (aluno.id !== estagio.alunoId)
-    throw new ErroDeRegra("A exclusão cabe ao aluno titular.", "acesso_negado");
+  const autor = aluno;
+  const estagio = await exigirAcessoEstagio(autor, estagioId);
+  if (autor.id !== estagio.alunoId && autor.papel !== "administrador" && autor.papel !== "coordenador_curso")
+    throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
   if (estagio.excluidoEm) return estagio;
+  aluno = obterEstado().usuarios.find((usuario) => usuario.id === estagio.alunoId) ?? autor;
   estagio.nomeAlunoHistorico = aluno.nome;
   estagio.cursoIdHistorico = cursoDoUsuario(aluno);
   estagio.excluidoEm = agora();
