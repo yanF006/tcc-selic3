@@ -5,9 +5,9 @@ import type { Estagio, SolicitacaoExclusaoEstagio, Usuario } from "@/lib/domain/
 import { estagioLiberado } from "@/lib/domain/fluxo-estagio";
 import { carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
-import { buscarEstagio, paraDominioEstagio, podeConsultarEstagioNoBanco } from "@/lib/db/repositorios/estagios";
+import { paraDominioEstagio, podeConsultarEstagioNoBanco } from "@/lib/db/repositorios/estagios";
 import { ErroDeRegra } from "./erros";
-import { aplicarRemocaoDoEstagio, registrarRemocao } from "./remocao-dados-pessoais-persistentes";
+import { registrarRemocao } from "./remocao-dados-pessoais-persistentes";
 import { novoId } from "./store";
 
 type Transacao = Prisma.TransactionClient;
@@ -33,9 +33,8 @@ async function ponteiroDoEstagio(estagioId: string): Promise<{ alunoId: string }
  * Cancelamento pelo aluno (antes da liberação) ou exclusão de estágio.
  * Exclusão feita pelo coordenador de curso do aluno, pelo coordenador de
  * estágio ou pelo administrador do campus ocorre diretamente e fica
- * registrada com responsável e data na solicitação de exclusão de situação
- * `autorizado`. Efeitos: estágio fora dos processos ativos, documentos
- * inativados, dados pessoais removidos do contexto e envios sem e-mail.
+ * registrada apenas no log de remoções. A exclusão é definitiva: o estágio e
+ * tudo que depende dele são apagados, liberando convênio e responsáveis.
  */
 export async function encerrarEstagioPersistente(estagioId: string, autor: Usuario, modo: "cancelar" | "excluir"): Promise<Estagio> {
   const { alunoId } = await ponteiroDoEstagio(estagioId);
@@ -61,41 +60,16 @@ export async function encerrarEstagioPersistente(estagioId: string, autor: Usuar
       if (!coordenadorDoCurso && autor.papel !== "administrador" && autor.papel !== "coordenador_estagio") throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
     }
 
-    if (linha.excluidoEm) return estagio;
-
     const momento = new Date();
-    const efeitos = await tx.estagio.updateMany({
-      where: { id: estagioId, excluidoEm: null },
-      data: {
-        excluidoEm: momento,
-        ...(modo === "cancelar" ? { canceladoEm: momento } : {}),
-        nomeAlunoHistorico: aluno.nome,
-        cursoIdHistorico: aluno.dadosPessoaisAluno?.cursoId ?? null,
-      },
-    });
-    if (efeitos.count === 0) return (await buscarEstagio(tx, estagioId)) ?? estagio;
-
-    await aplicarRemocaoDoEstagio(tx, estagioId, modo === "cancelar" ? "estagio_cancelado" : "estagio_excluido", momento);
+    await apagarEstagioDefinitivo(tx, estagioId);
     await registrarRemocao(tx, modo === "cancelar" ? "estagio_cancelado" : "estagio_excluido", estagioId, momento);
 
-    if (modo === "excluir") {
-      await tx.solicitacaoExclusaoEstagio.updateMany({
-        where: { estagioId, situacao: "pendente" },
-        data: { situacao: "autorizado", decididoPorId: autor.id, decididoEm: momento },
-      });
-      await tx.solicitacaoExclusaoEstagio.create({
-        data: {
-          id: novoId("exc"),
-          estagioId,
-          solicitanteId: autor.id,
-          situacao: "autorizado",
-          decididoPorId: autor.id,
-          decididoEm: momento,
-        },
-      });
-    }
-
-    return (await buscarEstagio(tx, estagioId)) ?? estagio;
+    return {
+      ...estagio,
+      excluidoEm: momento.toISOString(),
+      ...(modo === "cancelar" ? { canceladoEm: momento.toISOString() } : {}),
+      nomeAlunoHistorico: aluno.nome,
+    };
   }, { cliente: prisma });
 }
 
@@ -131,6 +105,32 @@ export async function solicitarExclusaoPersistente(estagioId: string, solicitant
 export async function exclusaoPendentePersistente(estagioId: string): Promise<boolean> {
   const { prisma } = await carregarCliente();
   return (await prisma.solicitacaoExclusaoEstagio.count({ where: { estagioId, situacao: "pendente" } })) > 0;
+}
+
+/**
+ * Apaga fisicamente o estágio e os registros dependentes, na ordem exigida
+ * pelas chaves estrangeiras (filhos antes dos pais).
+ */
+export async function apagarEstagioDefinitivo(tx: Transacao, estagioId: string) {
+  const documentos = await tx.documentoPreenchido.findMany({ where: { estagioId }, select: { id: true } });
+  const ids = documentos.map((documento) => documento.id);
+  if (ids.length > 0) {
+    const doc = { documentoId: { in: ids } };
+    await tx.envioExterno.deleteMany({ where: doc });
+    await tx.pedidoEnvioDocumento.deleteMany({ where: doc });
+    await tx.parecer.deleteMany({ where: doc });
+    await tx.observacaoDocumento.deleteMany({ where: doc });
+    await tx.arquivo.deleteMany({ where: doc });
+  }
+  await tx.submissaoDocumento.deleteMany({
+    where: { OR: [{ estagioId }, ...(ids.length > 0 ? [{ documentoId: { in: ids } }] : [])] },
+  });
+  if (ids.length > 0) await tx.documentoPreenchido.deleteMany({ where: { id: { in: ids } } });
+  // Correções apontam para o lançamento original: desfaz o vínculo antes de apagar.
+  await tx.lancamentoHoras.updateMany({ where: { estagioId, corrigeId: { not: null } }, data: { corrigeId: null } });
+  await tx.lancamentoHoras.deleteMany({ where: { estagioId } });
+  await tx.solicitacaoExclusaoEstagio.deleteMany({ where: { estagioId } });
+  await tx.estagio.deleteMany({ where: { id: estagioId } });
 }
 
 export interface PedidoExclusaoPendente {

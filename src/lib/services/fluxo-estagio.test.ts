@@ -16,7 +16,6 @@ import {
   registrarParecer,
   salvarRascunho,
   sincronizarDadosDoPerfil,
-  valoresAutomaticos,
 } from "./documentos";
 import {
   confirmarAssinaturas,
@@ -332,32 +331,26 @@ describe("solicitação e liberação de estágio", () => {
     expect(obterEstado().pareceres).toHaveLength(quantidadePareceres);
   });
 
-  it("cancelamento mantém histórico, remove dados pessoais e impede reidratação e continuidade", async () => {
+  it("cancelamento apaga o estágio e os documentos, sem excluir o perfil", async () => {
     const { aluno, estagio, formulario } = await solicitar();
     await cancelarSolicitacao(estagio.id, aluno);
-    expect(estagio.nomeAlunoHistorico).toBe(aluno.nome);
-    expect(formulario.valores.nomeCompleto).toBe(aluno.nome);
-    expect(formulario.valores.emailAluno).toBeUndefined();
-    expect(formulario.valores.cepAluno).toBeUndefined();
-    expect(
-      (await valoresAutomaticos(formulario.templateId, aluno, estagio.id)).cpf,
-    ).toBeUndefined();
+    expect(obterEstado().estagios.some((registro) => registro.id === estagio.id)).toBe(false);
+    expect(obterEstado().documentos.some((doc) => doc.id === formulario.id)).toBe(false);
     await expect(solicitarEncaminhamento(estagio.id, aluno)).rejects.toThrow();
     await expect(criarRascunho(aluno, formulario.templateId, estagio.id)).rejects.toThrow();
     expect(aluno.dadosPessoais!.cpf).toBeTruthy();
     expect((await criarEstagio(aluno, dadosSolicitacao())).id).not.toBe(estagio.id);
   });
 
-  it("exclusão de estágio liberado preserva instituição e nome, sem excluir o perfil", async () => {
+  it("exclusão de estágio liberado apaga o estágio, sem excluir o perfil", async () => {
     const aluno = usuario("usr-maria");
     const excluido = await excluirEstagio("est-maria-tecnoweb", aluno);
     expect(excluido.excluidoEm).toBeTruthy();
-    expect(excluido.convenioId).toBe("conv-ti-pinheiral");
-    expect(excluido.nomeAlunoHistorico).toBe(aluno.nome);
+    expect(obterEstado().estagios.some((registro) => registro.id === "est-maria-tecnoweb")).toBe(false);
     expect(usuario(aluno.id).dadosPessoais).toBeDefined();
   });
 
-  it("exclusão remove também e-mails antigos do aluno no histórico de envios", async () => {
+  it("exclusão apaga também o histórico de envios do estágio", async () => {
     const { aluno, estagio, formulario } = await solicitar();
     await solicitarEncaminhamento(estagio.id, aluno);
     await registrarParecer(formulario.id, "aprovado", usuario("usr-carla"));
@@ -367,7 +360,8 @@ describe("solicitação e liberação de estágio", () => {
     expect(enviosDoAluno.length).toBeGreaterThan(0);
     aluno.email = "novo.email@exemplo.com";
     await excluirEstagio(estagio.id, aluno);
-    expect(enviosDoAluno.every((envio) => envio.destinatarioEmail === "")).toBe(true);
+    const restantes = new Set(obterEstado().envios);
+    expect(enviosDoAluno.some((envio) => restantes.has(envio))).toBe(false);
   });
 });
 

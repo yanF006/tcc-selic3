@@ -28,7 +28,7 @@ export function ListaExclusoes({ pedidos }: { pedidos: PedidoExclusaoPendente[] 
 
   function decidir(pedido: PedidoExclusaoPendente, autorizar: boolean) {
     const pergunta = autorizar
-      ? `Excluir o estágio de ${pedido.nomeAluno}? O histórico será preservado e os dados pessoais vinculados serão removidos.`
+      ? `Excluir o estágio de ${pedido.nomeAluno}? O estágio, seus documentos, anexos e horas serão apagados definitivamente.`
       : `Recusar o pedido de exclusão do estágio de ${pedido.nomeAluno}? O estágio será mantido.`;
     if (!window.confirm(pergunta)) return;
     iniciar(async () => {

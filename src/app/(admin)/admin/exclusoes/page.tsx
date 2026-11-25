@@ -17,7 +17,7 @@ export default async function PaginaExclusoes() {
   return (
     <PaginaArea
       titulo="Pedidos de exclusão"
-      descricao="Autorize para excluir o estágio (o histórico é preservado e os dados pessoais vinculados são removidos) ou recuse para mantê-lo."
+      descricao="Autorize para apagar o estágio definitivamente (com documentos, anexos e horas) ou recuse para mantê-lo."
     >
       <ListaExclusoes pedidos={pedidos} />
     </PaginaArea>

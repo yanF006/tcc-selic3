@@ -759,10 +759,10 @@ describe("documentos", () => {
     await decidirExclusaoEstagio(pedidoA.id, admin, true);
     await decidirExclusaoEstagio(pedidoB.id, admin, false);
 
-    expect(obterEstado().estagios.find((e) => e.id === primeiro.id)?.excluidoEm).toBeTruthy();
-    expect(obterEstado().estagios.find((e) => e.id === primeiro.id)?.nomeAlunoHistorico).toBe(aluno.nome);
+    expect(obterEstado().estagios.some((e) => e.id === primeiro.id)).toBe(false);
+    expect(obterEstado().documentos.some((d) => d.estagioId === primeiro.id)).toBe(false);
     expect(obterEstado().estagios.find((e) => e.id === segundo.id)?.excluidoEm).toBeFalsy();
-    expect(pedidoA.situacao).toBe("autorizado");
+    expect(obterEstado().exclusoes.some((p) => p.id === pedidoA.id)).toBe(false);
     expect(pedidoB.situacao).toBe("recusado");
     expect(await listarExclusoesPendentes(admin)).toHaveLength(0);
     await expect(decidirExclusaoEstagio(pedidoB.id, admin, true)).rejects.toThrow();

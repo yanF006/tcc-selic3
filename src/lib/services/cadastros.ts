@@ -615,7 +615,7 @@ async function removerConvenioPersistente(id: string, inativar: boolean) {
         return;
       }
 
-      const estagios = await tx.estagio.count({ where: { convenioId: id } });
+      const estagios = await tx.estagio.count({ where: { convenioId: id, excluidoEm: null } });
 
       if (estagios > 0) {
         throw new ErroDeRegra(
@@ -624,6 +624,10 @@ async function removerConvenioPersistente(id: string, inativar: boolean) {
         );
       }
 
+      // Estágios excluídos antes da exclusão definitiva ainda seguram o convênio.
+      const { apagarEstagioDefinitivo } = await import("./exclusao-estagio-persistentes");
+      for (const { id: estagioId } of await tx.estagio.findMany({ where: { convenioId: id }, select: { id: true } }))
+        await apagarEstagioDefinitivo(tx, estagioId);
       await tx.renovacaoConvenio.deleteMany({ where: { convenioId: id } });
       await tx.convenio.delete({ where: { id } });
     },
@@ -693,7 +697,7 @@ export async function removerCadastro(
         : tipo === "periodo"
           ? estado.usuarios.some((usuario) => usuario.dadosPessoais?.periodoId === id) ||
             estado.turmas.some((turma) => turma.periodoIds?.includes(id))
-          : estado.estagios.some((estagio) => estagio.convenioId === id);
+          : estado.estagios.some((estagio) => estagio.convenioId === id && !estagio.excluidoEm);
   if (vinculado)
     throw new ErroDeRegra(
       tipo === "convenio"
@@ -705,7 +709,10 @@ export async function removerCadastro(
   else if (tipo === "turma") estado.turmas = estado.turmas.filter((turma) => turma.id !== id);
   else if (tipo === "periodo")
     estado.periodos = estado.periodos.filter((periodo) => periodo.id !== id);
-  else estado.convenios = estado.convenios.filter((convenio) => convenio.id !== id);
+  else {
+    estado.estagios = estado.estagios.filter((estagio) => estagio.convenioId !== id);
+    estado.convenios = estado.convenios.filter((convenio) => convenio.id !== id);
+  }
 }
 
 export async function ativarCadastro(autor: Usuario, tipo: TipoCadastro, id: string) {

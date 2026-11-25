@@ -391,8 +391,8 @@ export function ConteudoEstagios({
                 if (
                   !window.confirm(
                     cancelar
-                      ? "Cancelar esta solicitação? O histórico será preservado."
-                      : "Excluir este estágio? O nome e o histórico serão preservados e os dados pessoais vinculados serão removidos.",
+                      ? "Cancelar esta solicitação? O estágio e seus documentos serão apagados definitivamente."
+                      : "Excluir este estágio definitivamente? O estágio, seus documentos, anexos e horas serão apagados e não poderão ser recuperados.",
                   )
                 )
                   return;

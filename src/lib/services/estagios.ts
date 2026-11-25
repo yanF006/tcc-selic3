@@ -7,7 +7,6 @@ import {
   estagioEncerrado,
   estagioLiberado,
 } from "@/lib/domain/fluxo-estagio";
-import { valoresSemDadosDoAluno } from "./dados-pessoais-estagio";
 import { ZodError } from "zod";
 import type {
   Convenio,
@@ -573,37 +572,21 @@ export async function excluirEstagio(estagioId: string, aluno: Usuario) {
   const estagio = await exigirAcessoEstagio(autor, estagioId);
   if (autor.id !== estagio.alunoId && autor.papel === "aluno")
     throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
-  if (estagio.excluidoEm) return estagio;
   aluno = obterEstado().usuarios.find((usuario) => usuario.id === estagio.alunoId) ?? autor;
-  estagio.nomeAlunoHistorico = aluno.nome;
-  estagio.cursoIdHistorico = cursoDoUsuario(aluno);
-  estagio.excluidoEm = agora();
-  for (const documento of obterEstado().documentos.filter((doc) => doc.estagioId === estagioId)) {
-    documento.valores = valoresSemDadosDoAluno(documento.templateId, documento.versaoTemplate, documento.valores);
-    documento.situacao = "inativo";
-    documento.inativadoEm = estagio.excluidoEm;
-    documento.atualizadoEm = estagio.excluidoEm;
-  }
+  // Exclusão definitiva: o estágio e tudo que depende dele deixam de existir.
+  const estado = obterEstado();
   const idsDocumentos = new Set(
-    obterEstado()
-      .documentos.filter((doc) => doc.estagioId === estagioId)
-      .map((doc) => doc.id),
+    estado.documentos.filter((doc) => doc.estagioId === estagioId).map((doc) => doc.id),
   );
-  for (const envio of obterEstado().envios) {
-    if (
-      idsDocumentos.has(envio.documentoId) &&
-      (envio.destinatarioPapel === "aluno" || envio.destinatarioEmail === aluno.email)
-    )
-      envio.destinatarioEmail = "";
-  }
-  if (autor.id !== estagio.alunoId) {
-    for (const pedido of obterEstado().exclusoes.filter(
-      (item) => item.estagioId === estagioId && item.situacao === "pendente",
-    )) {
-      pedido.situacao = "autorizado";
-      pedido.decididoEm = estagio.excluidoEm;
-    }
-  }
+  estado.envios = estado.envios.filter((envio) => !idsDocumentos.has(envio.documentoId));
+  estado.pareceres = estado.pareceres.filter((parecer) => !idsDocumentos.has(parecer.documentoId));
+  estado.observacoes = estado.observacoes.filter((obs) => !idsDocumentos.has(obs.documentoId));
+  estado.documentos = estado.documentos.filter((doc) => !idsDocumentos.has(doc.id));
+  estado.lancamentos = estado.lancamentos.filter((lancamento) => lancamento.estagioId !== estagioId);
+  estado.exclusoes = estado.exclusoes.filter((pedido) => pedido.estagioId !== estagioId);
+  estado.estagios = estado.estagios.filter((registro) => registro.id !== estagioId);
+  estagio.nomeAlunoHistorico = aluno.nome;
+  estagio.excluidoEm = agora();
   return estagio;
 }
 
