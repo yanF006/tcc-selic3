@@ -106,6 +106,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
         }))}
         dadosFluxo={dadosFluxo}
         exclusoesPendentes={exclusoesPendentes}
+        podeExcluir={usuario.papel !== "aluno"}
       />
     </PaginaArea>
   );

@@ -31,7 +31,8 @@ async function ponteiroDoEstagio(estagioId: string): Promise<{ alunoId: string }
 
 /**
  * Cancelamento pelo aluno (antes da liberação) ou exclusão de estágio.
- * Exclusão feita pelo coordenador de curso do aluno ocorre diretamente e fica
+ * Exclusão feita pelo coordenador de curso do aluno, pelo coordenador de
+ * estágio ou pelo administrador do campus ocorre diretamente e fica
  * registrada com responsável e data na solicitação de exclusão de situação
  * `autorizado`. Efeitos: estágio fora dos processos ativos, documentos
  * inativados, dados pessoais removidos do contexto e envios sem e-mail.
@@ -56,7 +57,8 @@ export async function encerrarEstagioPersistente(estagioId: string, autor: Usuar
         throw new ErroDeRegra("Somente solicitações aguardando liberação podem ser canceladas.", "cancelamento_indisponivel");
     } else if (!titular) {
       const coordenadorDoCurso = autor.papel === "coordenador_curso" && !!autor.cursoId && autor.cursoId === aluno.dadosPessoaisAluno?.cursoId;
-      if (!coordenadorDoCurso) throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
+      // O acesso de administrador e coordenador de estágio (mesmo campus) já foi conferido acima.
+      if (!coordenadorDoCurso && autor.papel !== "administrador" && autor.papel !== "coordenador_estagio") throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
     }
 
     if (linha.excluidoEm) return estagio;
@@ -129,4 +131,49 @@ export async function solicitarExclusaoPersistente(estagioId: string, solicitant
 export async function exclusaoPendentePersistente(estagioId: string): Promise<boolean> {
   const { prisma } = await carregarCliente();
   return (await prisma.solicitacaoExclusaoEstagio.count({ where: { estagioId, situacao: "pendente" } })) > 0;
+}
+
+export interface PedidoExclusaoPendente {
+  id: string;
+  estagioId: string;
+  nomeAluno: string;
+  nomeSolicitante: string;
+  motivo?: string;
+  criadoEm: string;
+}
+
+/** Pedidos pendentes de estágios que o usuário pode consultar (recorte por campus/curso). */
+export async function listarExclusoesPendentesPersistente(usuario: Usuario): Promise<PedidoExclusaoPendente[]> {
+  const { prisma } = await carregarCliente();
+  const linhas = await prisma.solicitacaoExclusaoEstagio.findMany({
+    where: { situacao: "pendente" },
+    orderBy: { criadoEm: "asc" },
+    include: { solicitante: { select: { nome: true } }, estagio: { select: { nomeAlunoHistorico: true, aluno: { select: { nome: true } } } } },
+  });
+  const pedidos: PedidoExclusaoPendente[] = [];
+  for (const linha of linhas) {
+    if (!(await podeConsultarEstagioNoBanco(prisma, usuario.id, linha.estagioId))) continue;
+    pedidos.push({
+      id: linha.id,
+      estagioId: linha.estagioId,
+      nomeAluno: linha.estagio.nomeAlunoHistorico ?? linha.estagio.aluno.nome,
+      nomeSolicitante: linha.solicitante.nome,
+      motivo: linha.motivo ?? undefined,
+      criadoEm: linha.criadoEm.toISOString(),
+    });
+  }
+  return pedidos;
+}
+
+/** Recusa um pedido pendente, registrando responsável e data; o estágio é preservado. */
+export async function recusarExclusaoPersistente(solicitacaoId: string, autor: Usuario): Promise<void> {
+  const { prisma } = await carregarCliente();
+  const pedido = await prisma.solicitacaoExclusaoEstagio.findUnique({ where: { id: solicitacaoId } });
+  if (!pedido || !(await podeConsultarEstagioNoBanco(prisma, autor.id, pedido.estagioId)))
+    throw new ErroDeRegra("Solicitação não encontrada.", "acesso_negado");
+  const efeitos = await prisma.solicitacaoExclusaoEstagio.updateMany({
+    where: { id: solicitacaoId, situacao: "pendente" },
+    data: { situacao: "recusado", decididoPorId: autor.id, decididoEm: new Date() },
+  });
+  if (efeitos.count === 0) throw new ErroDeRegra("A solicitação já foi decidida.", "solicitacao_decidida");
 }

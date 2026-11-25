@@ -9,6 +9,7 @@ import {
   HandshakeIcon,
   InboxIcon,
   type LucideIcon,
+  Trash2Icon,
   UserRoundIcon,
   UsersRoundIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ export const CHAVES_ICONES = [
   "usuarios",
   "convenios",
   "matriculas",
+  "exclusoes",
   "estatisticas",
 ] as const;
 
@@ -48,6 +50,7 @@ const ICONES: Record<ChaveIcone, LucideIcon> = {
   usuarios: UsersRoundIcon,
   convenios: HandshakeIcon,
   matriculas: GraduationCapIcon,
+  exclusoes: Trash2Icon,
   estatisticas: BarChart3Icon,
 };
 

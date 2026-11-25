@@ -124,6 +124,15 @@ export const NAV: ItemNav[] = [
     ordem: 3,
   },
   {
+    href: "/admin/exclusoes",
+    icone: "exclusoes",
+    rotulo: "Pedidos de exclusão",
+    descricao: "Autorizar ou recusar pedidos de exclusão de estágio.",
+    requiredRoles: ["administrador"],
+    grupo: "administracao",
+    ordem: 4,
+  },
+  {
     href: "/coordenacao/estatisticas",
     icone: "estatisticas",
     rotulo: "Estatísticas",
