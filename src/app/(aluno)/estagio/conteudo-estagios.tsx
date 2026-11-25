@@ -54,6 +54,8 @@ import {
 import { PainelFluxo, type DadosPainelFluxo } from "@/components/estagios/painel-fluxo";
 import { FormularioDocumento } from "@/components/documentos/formulario-documento";
 import { descritorPorTemplate, type DescriptorDocumento } from "@/lib/templates/descriptors";
+import { pendenciasDoDocumento } from "@/lib/templates/pendencias";
+import { mascaraNumero } from "@/lib/mask";
 import { encerrarRegistroAction } from "./acoes";
 
 export function ConteudoEstagios({
@@ -147,6 +149,8 @@ export function ConteudoEstagios({
 
   function lidarComCriacao(e: React.FormEvent) {
     e.preventDefault();
+    // Enter num campo das etapas intermediárias não envia: o envio é no "Concluir".
+    if (!gestao && !ultimaEtapa) return;
     setErro(null);
     setErrosCadastro({});
 
@@ -287,6 +291,7 @@ export function ConteudoEstagios({
           .map((doc) => [doc.templateId, doc.valores]),
       ),
     );
+    setDocumentoAtivo(DOCUMENTOS_INICIAIS[0]);
     setCriando(true);
     setErro(null);
   }
@@ -838,6 +843,57 @@ export function ConteudoEstagios({
     );
   }
 
+  /** Descritor e valores de um documento inicial, já com os dados do formulário. */
+  function montarDocumentoInicial(templateId: string) {
+    const existente = editandoId
+      ? documentos.find(
+          (doc) =>
+            doc.estagioId === editandoId &&
+            doc.templateId === templateId &&
+            doc.situacao !== "inativo",
+        )
+      : undefined;
+    const original =
+      existente?.descritor ?? descritoresIniciais[templateId] ?? descritorPorTemplate(templateId)!;
+    const descriptor = {
+      ...original,
+      auto: original.auto?.filter(
+        (campo) => !["orientador", "supervisor", "dataInicio", "dataFim"].includes(campo.id),
+      ),
+      secoes: original.secoes
+        .filter((secao) => secao.id !== "parecer")
+        .map((secao) => ({
+          ...secao,
+          campos: secao.campos.filter(
+            (campo) =>
+              !["dataInicioPrevista", "dataFimPrevista", "cargaHorariaTotal"].includes(campo.id),
+          ),
+        })),
+    };
+    const contexto = {
+      ...valoresDocumentos[templateId],
+      instituicao: convenios.find((convenio) => convenio.id === convenioId)?.instituicao ?? "",
+      localEstagio: convenios.find((convenio) => convenio.id === convenioId)?.instituicao ?? "",
+      supervisor: supervisores.find((pessoa) => pessoa.id === supervisorId)?.nome ?? "",
+      orientador: orientadores.find((pessoa) => pessoa.id === orientadorId)?.nome ?? "",
+      dataInicio,
+      dataFim,
+    };
+    return { descriptor, contexto };
+  }
+
+  const indiceEtapa = Math.max(
+    0,
+    (DOCUMENTOS_INICIAIS as readonly string[]).indexOf(documentoAtivo),
+  );
+  const ultimaEtapa = indiceEtapa === DOCUMENTOS_INICIAIS.length - 1;
+  const documentoEtapa = montarDocumentoInicial(documentoAtivo);
+  const pendenciasEtapa = gestao
+    ? []
+    : pendenciasDoDocumento(documentoEtapa.descriptor, documentoEtapa.contexto);
+  const nomeDocumento = (id: string) =>
+    templates.find((template) => template.id === id)?.nome ?? id;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -859,6 +915,7 @@ export function ConteudoEstagios({
               setValoresDocumentos(valoresIniciaisDocumentos);
               setCargaHorariaPrevista("");
               setDocumentosSelecionados([]);
+              setDocumentoAtivo(DOCUMENTOS_INICIAIS[0]);
               setCriando(true);
             }}
           >
@@ -996,11 +1053,14 @@ export function ConteudoEstagios({
                 <Label htmlFor="cargaHorariaPrevista">Duração prevista em horas</Label>
                 <Input
                   id="cargaHorariaPrevista"
-                  type="number"
-                  min={1}
-                  max={4000}
+                  inputMode="numeric"
+                  maxLength={4}
                   value={cargaHorariaPrevista}
-                  onChange={(evento) => setCargaHorariaPrevista(evento.target.value)}
+                  onChange={(evento) =>
+                    setCargaHorariaPrevista(
+                      mascaraNumero(evento.target.value, { maximoDigitos: 4 }),
+                    )
+                  }
                   required
                 />
               </div>
@@ -1011,92 +1071,86 @@ export function ConteudoEstagios({
                     preenchidos automaticamente; complete as informações específicas antes de salvar
                     a solicitação.
                   </p>
-                  <Label htmlFor="documentoInicialAtivo">Dados dos documentos iniciais</Label>
-                  <select
-                    id="documentoInicialAtivo"
-                    className="bg-background max-w-full rounded border p-2"
-                    value={documentoAtivo}
-                    onChange={(evento) => setDocumentoAtivo(evento.target.value)}
+                  <ol
+                    className="flex flex-wrap gap-2 text-sm"
+                    aria-label="Etapas dos documentos iniciais"
                   >
-                    {DOCUMENTOS_INICIAIS.map((id) => (
-                      <option key={id} value={id}>
-                        {templates.find((template) => template.id === id)?.nome ?? id}
-                      </option>
+                    {DOCUMENTOS_INICIAIS.map((id, indice) => (
+                      <li
+                        key={id}
+                        aria-current={indice === indiceEtapa ? "step" : undefined}
+                        className={
+                          indice === indiceEtapa
+                            ? "bg-primary text-primary-foreground rounded px-2 py-1 font-medium"
+                            : indice < indiceEtapa
+                              ? "rounded border px-2 py-1"
+                              : "text-muted-foreground rounded border border-dashed px-2 py-1"
+                        }
+                      >
+                        {indice + 1}. {nomeDocumento(id)}
+                      </li>
                     ))}
-                  </select>
-                  {(() => {
-                    const existente = editandoId
-                      ? documentos.find(
-                          (doc) =>
-                            doc.estagioId === editandoId &&
-                            doc.templateId === documentoAtivo &&
-                            doc.situacao !== "inativo",
-                        )
-                      : undefined;
-                    const original =
-                      existente?.descritor ??
-                      descritoresIniciais[documentoAtivo] ??
-                      descritorPorTemplate(documentoAtivo)!;
-                    const descriptor = {
-                      ...original,
-                      auto: original.auto?.filter(
-                        (campo) =>
-                          !["orientador", "supervisor", "dataInicio", "dataFim"].includes(campo.id),
-                      ),
-                      secoes: original.secoes
-                        .filter((secao) => secao.id !== "parecer")
-                        .map((secao) => ({
-                          ...secao,
-                          campos: secao.campos.filter(
-                            (campo) =>
-                              ![
-                                "dataInicioPrevista",
-                                "dataFimPrevista",
-                                "cargaHorariaTotal",
-                              ].includes(campo.id),
-                          ),
-                        })),
-                    };
-                    const contexto = {
-                      ...valoresDocumentos[documentoAtivo],
-                      instituicao:
-                        convenios.find((convenio) => convenio.id === convenioId)?.instituicao ?? "",
-                      localEstagio:
-                        convenios.find((convenio) => convenio.id === convenioId)?.instituicao ?? "",
-                      supervisor:
-                        supervisores.find((pessoa) => pessoa.id === supervisorId)?.nome ?? "",
-                      orientador:
-                        orientadores.find((pessoa) => pessoa.id === orientadorId)?.nome ?? "",
-                      dataInicio,
-                      dataFim,
-                    };
-                    return (
-                      <FormularioDocumento
-                        key={documentoAtivo}
-                        descriptor={descriptor}
-                        valores={contexto}
-                        aoMudar={(id, valor) =>
-                          setValoresDocumentos((atual) => ({
-                            ...atual,
-                            [documentoAtivo]: { ...atual[documentoAtivo], [id]: valor },
-                          }))
-                        }
-                        aoMudarGrupo={(alteracoes) =>
-                          setValoresDocumentos((atual) => ({
-                            ...atual,
-                            [documentoAtivo]: { ...atual[documentoAtivo], ...alteracoes },
-                          }))
-                        }
-                      />
-                    );
-                  })()}
+                  </ol>
+                  <h3 className="text-base font-semibold">
+                    Documento {indiceEtapa + 1} de {DOCUMENTOS_INICIAIS.length}:{" "}
+                    {nomeDocumento(documentoAtivo)}
+                  </h3>
+                  <FormularioDocumento
+                    key={documentoAtivo}
+                    descriptor={documentoEtapa.descriptor}
+                    valores={documentoEtapa.contexto}
+                    aoMudar={(id, valor) =>
+                      setValoresDocumentos((atual) => ({
+                        ...atual,
+                        [documentoAtivo]: { ...atual[documentoAtivo], [id]: valor },
+                      }))
+                    }
+                    aoMudarGrupo={(alteracoes) =>
+                      setValoresDocumentos((atual) => ({
+                        ...atual,
+                        [documentoAtivo]: { ...atual[documentoAtivo], ...alteracoes },
+                      }))
+                    }
+                  />
+                  {pendenciasEtapa.length > 0 ? (
+                    <p className="text-muted-foreground text-xs" role="status">
+                      Para {ultimaEtapa ? "concluir" : "avançar"}, preencha corretamente:{" "}
+                      {pendenciasEtapa.join(", ")}.
+                    </p>
+                  ) : null}
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <Button type="submit" disabled={pendente}>
-                  Salvar Estágio
-                </Button>
+              <div className="flex flex-wrap gap-2">
+                {!gestao && indiceEtapa > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDocumentoAtivo(DOCUMENTOS_INICIAIS[indiceEtapa - 1])}
+                  >
+                    Anterior
+                  </Button>
+                ) : null}
+                {!gestao && !ultimaEtapa ? (
+                  // Chaves distintas: sem elas o React reaproveitaria o mesmo
+                  // <button> e o clique em "Próximo" viraria um envio.
+                  <Button
+                    key="proximo"
+                    type="button"
+                    disabled={pendenciasEtapa.length > 0}
+                    onClick={() => setDocumentoAtivo(DOCUMENTOS_INICIAIS[indiceEtapa + 1])}
+                  >
+                    Próximo
+                  </Button>
+                ) : (
+                  <Button
+                    key="concluir"
+                    type="submit"
+                    disabled={pendente || pendenciasEtapa.length > 0}
+                  >
+                    {gestao ? "Salvar Estágio" : "Concluir"}
+                  </Button>
+                )}
                 <Button type="button" variant="ghost" onClick={() => setCriando(false)}>
                   Cancelar
                 </Button>

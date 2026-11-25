@@ -85,7 +85,7 @@ export function CampoMascarado({
         <Input
           id={id}
           name={name ?? id}
-          value={mascara === "cep" ? aplicarMascara(valor) : valor}
+          value={aplicarMascara(valor)}
           onChange={(evento) => aoMudar(aplicarMascara(evento.target.value))}
           onBlur={aoSair}
           inputMode="numeric"

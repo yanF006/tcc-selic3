@@ -16,7 +16,7 @@ it("envia contatos no formulário existente e preserva o preenchimento quando a 
   }
   fireEvent.submit(tela.container.querySelector("form")!);
   await waitFor(() => expect(alterarCadastroAction).toHaveBeenCalledWith("convenio", expect.objectContaining({
-    responsaveis: [{ nome: "Ana", email: "ana@teste.local", telefone: "2433334444", cargo: "Diretora" }],
+    responsaveis: [{ nome: "Ana", email: "ana@teste.local", telefone: "(24) 3333-4444", cargo: "Diretora" }],
   }), undefined, "salvar"));
   expect(await screen.findByText("Tente novamente.")).toBeInTheDocument();
   expect(contato.getByLabelText("Nome")).toHaveValue("Ana");

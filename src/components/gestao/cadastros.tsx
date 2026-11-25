@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MASCARAS, type NomeMascara } from "@/lib/mask";
 
 const rotulos: Record<TipoCadastro, string> = {
   convenio: "Convênios",
@@ -130,16 +131,25 @@ export function Cadastros({
     });
   }
 
-  function campo(chave: string, rotulo: string, inputTipo = "text", obrigatorio = true) {
+  function campo(
+    chave: string,
+    rotulo: string,
+    inputTipo = "text",
+    obrigatorio = true,
+    mascara?: NomeMascara,
+  ) {
     return (
       <div className="flex flex-col gap-2">
         <Label htmlFor={`cadastro-${chave}`}>{rotulo}</Label>
         <Input
           id={`cadastro-${chave}`}
-          type={inputTipo}
+          type={mascara ? "text" : inputTipo}
+          inputMode={mascara ? "numeric" : undefined}
           value={texto(chave)}
           required={obrigatorio}
-          onChange={(evento) => mudar(chave, evento.target.value)}
+          onChange={(evento) =>
+            mudar(chave, mascara ? MASCARAS[mascara](evento.target.value) : evento.target.value)
+          }
         />
       </div>
     );
@@ -195,7 +205,7 @@ export function Cadastros({
               {tipo === "convenio" && (
                 <>
                   {campo("instituicao", "Instituição")}
-                  {campo("cnpj", "CNPJ")}
+                  {campo("cnpj", "CNPJ", "text", true, "cnpj")}
                   {campo("inicioVigencia", "Data de assinatura", "date")}
                   <p className="text-muted-foreground text-sm">
                     Campus Pinheiral. Vigência de cinco anos a partir da assinatura.
@@ -204,7 +214,7 @@ export function Cadastros({
               )}
               {tipo === "periodo" && (
                 <>
-                  {campo("ano", "Ano", "number")}
+                  {campo("ano", "Ano", "text", true, "ano")}
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="cadastro-semestre">Semestre</Label>
                     <select
@@ -274,7 +284,7 @@ export function Cadastros({
               {(tipo === "orientador" || tipo === "supervisor") && (
                 <>
                   {campo("email", "E-mail do responsável", "email", false)}
-                  {campo("telefone", "Telefone do responsável", "tel", false)}
+                  {campo("telefone", "Telefone do responsável", "tel", false, "telefone")}
                 </>
               )}
             </div>
@@ -303,7 +313,16 @@ export function Cadastros({
                             value={contato[chave] ?? ""}
                             required={chave !== "cargo"}
                             maxLength={chave === "cargo" ? 80 : chave === "telefone" ? 20 : 191}
-                            onChange={(evento) => mudarContato(indice, chave, evento.target.value)}
+                            inputMode={chave === "telefone" ? "numeric" : undefined}
+                            onChange={(evento) =>
+                              mudarContato(
+                                indice,
+                                chave,
+                                chave === "telefone"
+                                  ? MASCARAS.telefone(evento.target.value)
+                                  : evento.target.value,
+                              )
+                            }
                           />
                         </div>
                       ))}

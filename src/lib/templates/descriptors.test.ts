@@ -557,15 +557,16 @@ describe("alinhamento com os arquivos do Kit", () => {
     expect(ids).toEqual(expect.arrayContaining(["testemunha1", "testemunha2"]));
   });
 
-  it("traz carga horária, seguro e vias fixas no termo de compromisso", () => {
+  it("traz carga horária e seguro no termo de compromisso, sem campos para valores fixos", () => {
     const campos = camposDoTemplate("tpl-termo-compromisso");
     const carga = campos.find((campo) => campo.id === "cargaHorariaTotal");
+    const ids = campos.map((campo) => campo.id);
 
     expect(carga?.mascara).toBe("horas");
-    expect(campos.map((campo) => campo.id)).toEqual(
-      expect.arrayContaining(["seguradora", "numeroApolice", "duracaoMinimaDias", "vias"]),
-    );
-    expect(campos.find((campo) => campo.id === "vias")?.ajuda).toContain("3 (três) vias");
+    expect(ids).toEqual(expect.arrayContaining(["seguradora", "numeroApolice"]));
+    // Duração mínima (5 dias) e número de vias (3) já vêm impressos no modelo.
+    expect(ids).not.toContain("duracaoMinimaDias");
+    expect(ids).not.toContain("vias");
   });
 
   it("identifica o aluno no termo de compromisso por nome, nascimento, CPF e matrícula", () => {

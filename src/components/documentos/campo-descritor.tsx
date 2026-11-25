@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { calcularHorasDia } from "@/lib/domain/schemas";
 import { faixaDaNota, type FaixaAvaliacao } from "@/lib/domain/avaliacao";
-import { MASCARAS } from "@/lib/mask";
+import { MASCARAS, mascaraNumero, numeroDoTexto } from "@/lib/mask";
 import type {
   CampoDescriptor,
   ColunaGrade,
@@ -378,6 +378,15 @@ function CampoNumeroDescritor({
     nota >= (campo.min ?? 0) &&
     nota <= (campo.max ?? 10);
   const faixa = notaValida ? faixaDaNota(nota) : null;
+  // Máscara numérica (Problema007): o campo de texto descarta letras e
+  // símbolos, ao contrário do `type="number"`, que alguns navegadores aceitam.
+  const decimal = (campo.passo ?? 1) < 1 || campo.mascara === "horas";
+  const maximoDigitos = campo.max !== undefined ? String(Math.trunc(campo.max)).length : 6;
+  const [textoDigitado, setTextoDigitado] = React.useState(exibido.replace(".", ","));
+  // Valor alterado de fora (ex.: rascunho carregado): sincroniza durante o render.
+  if (numeroDoTexto(textoDigitado) !== (exibido === "" ? "" : Number(exibido))) {
+    setTextoDigitado(exibido.replace(".", ","));
+  }
 
   return (
     <LarguraCampo largura={campo.largura}>
@@ -389,18 +398,17 @@ function CampoNumeroDescritor({
 
       <Input
         id={campo.id}
-        type="number"
-        inputMode="decimal"
-        value={exibido}
-        min={campo.min}
-        max={campo.max}
-        step={campo.passo ?? 1}
+        type="text"
+        inputMode={decimal ? "decimal" : "numeric"}
+        value={textoDigitado}
         readOnly={automatico}
         disabled={desabilitado}
         onChange={(evento) => {
-          const bruto = evento.target.value;
+          const mascarado = mascaraNumero(evento.target.value, { decimal, maximoDigitos });
 
-          aoMudar(campo.id, bruto === "" ? "" : Number(bruto));
+          setTextoDigitado(mascarado);
+          // "12," ainda está sendo digitado: só publica o número quando fechar.
+          if (!mascarado.endsWith(",")) aoMudar(campo.id, numeroDoTexto(mascarado));
         }}
         required={campo.obrigatorio}
         aria-required={campo.obrigatorio || undefined}
@@ -686,16 +694,19 @@ function GradeDescritor({
                         aria-label={`${coluna.rotulo} — linha ${indice + 1}`}
                         value={texto(linha[coluna.chave])}
                         disabled={desabilitado}
-                        inputMode={coluna.tipo === "numero" ? "decimal" : undefined}
+                        inputMode={
+                          coluna.tipo === "numero"
+                            ? "decimal"
+                            : coluna.tipo === "texto"
+                              ? undefined
+                              : "numeric"
+                        }
                         className="h-8"
                         onChange={(evento) =>
                           alterarLinha(
                             indice,
                             coluna.chave,
-                            coluna.mascara
-                              ? (MASCARAS[coluna.mascara]?.(evento.target.value) ??
-                                  evento.target.value)
-                              : evento.target.value,
+                            mascaraDaColuna(coluna, evento.target.value),
                           )
                         }
                       />
@@ -766,4 +777,14 @@ function CampoAssinaturaDescritor({ campo }: { campo: CampoDescriptor }) {
 /** Agrupa os campos de identificação automática de um descritor. */
 export function camposAutomaticos(descriptor: DescriptorDocumento): CampoDescriptor[] {
   return descriptor.auto ?? [];
+}
+
+/** Máscara da coluna; sem máscara declarada, usa a do tipo (data, hora, número). */
+function mascaraDaColuna(coluna: ColunaGrade, valor: string): string {
+  if (coluna.mascara) return MASCARAS[coluna.mascara](valor);
+  if (coluna.tipo === "data") return MASCARAS.data(valor);
+  if (coluna.tipo === "hora") return MASCARAS.hora(valor);
+  if (coluna.tipo === "numero") return mascaraNumero(valor, { decimal: true });
+
+  return valor;
 }

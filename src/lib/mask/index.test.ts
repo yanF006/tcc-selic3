@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   MASCARAS,
+  mascaraCnpj,
+  mascaraNumero,
+  numeroDoTexto,
   mascaraCep,
   mascaraCelular,
   mascaraCpf,
@@ -102,16 +105,33 @@ describe("máscaraHora e máscaraHoras", () => {
   });
 });
 
+describe("máscaras numéricas", () => {
+  it("formata o CNPJ", () => {
+    expect(mascaraCnpj("25036364000109")).toBe("25.036.364/0001-09");
+  });
+
+  it("descarta letras do número e aceita uma vírgula decimal", () => {
+    expect(mascaraNumero("asd12a3")).toBe("123");
+    expect(mascaraNumero("12.5x", { decimal: true })).toBe("12,5");
+    expect(mascaraNumero("12345", { maximoDigitos: 4 })).toBe("1234");
+    expect(numeroDoTexto("12,5")).toBe(12.5);
+    expect(numeroDoTexto("")).toBe("");
+  });
+});
+
 describe("catálogo de máscaras", () => {
   it("exibe todas as máscaras aplicadas no catálogo", () => {
     expect(Object.keys(MASCARAS).sort()).toEqual(
       [
+        "ano",
         "celular",
         "cep",
+        "cnpj",
         "cpf",
         "data",
         "hora",
         "horas",
+        "numero",
         "rg",
         "telefone",
         "telefoneOuCelular",
