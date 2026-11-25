@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 
 import {
   CampoSenha,
@@ -230,6 +231,9 @@ export function FormularioCadastro({
                 : "Entre com o e-mail e a senha cadastrados para acessar os documentos."}
             </AlertDescription>
           </Alert>
+          <Button asChild className="mt-4 w-full">
+            <Link href="/login">Voltar para o login</Link>
+          </Button>
         </CardContent>
       </Card>
     );
