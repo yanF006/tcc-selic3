@@ -6,6 +6,7 @@ import { cursoDoUsuario } from "@/lib/domain/usuario";
 import { descritorCadastroConvenio, TEMPLATE_CONVENIO } from "@/lib/templates/concedente";
 import { enderecoDoGrupo, estruturaSuficiente, formatarEndereco } from "@/lib/templates/grupos-endereco";
 import { ErroDeRegra } from "./erros";
+import { mascaraCnpj } from "@/lib/mask";
 import { novoId, obterEstado } from "./store";
 import { bancoConfigurado, carregarCliente } from "@/lib/db/prisma";
 import { executarTransacao } from "@/lib/db/transacoes";
@@ -35,6 +36,8 @@ async function convenioDoDocumento(dados: Record<string, unknown>) {
       .filter(([chave]) => ids.has(chave))
       .map(([chave, valor]) => [chave, typeof valor === "string" ? valor.trim() : valor]),
   );
+  // Grava o CNPJ sempre no formato 00.000.000/0000-00, mesmo vindo só com dígitos.
+  if (typeof valores.cnpj === "string") valores.cnpj = mascaraCnpj(valores.cnpj);
   for (const grupo of descritor.gruposEndereco ?? []) {
     const endereco = enderecoDoGrupo(grupo, valores);
     valores[grupo.composto] = estruturaSuficiente(endereco) ? formatarEndereco(endereco) : "";
