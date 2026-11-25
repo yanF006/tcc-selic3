@@ -987,17 +987,6 @@ export const DESCRITORES: DescriptorDocumento[] = comGruposEndereco([
             largura: "meia",
           },
           {
-            id: "fimVigencia",
-            rotulo: "Fim da vigência",
-            tipo: "data",
-            origem: "digitado",
-            mascara: "data",
-            validacao: ["data", "intervalo_datas"],
-            obrigatorio: true,
-            largura: "meia",
-            ajuda: "Calculado como início + 5 anos.",
-          },
-          {
             id: "renovacoes",
             rotulo: "Renovações",
             tipo: "numero",

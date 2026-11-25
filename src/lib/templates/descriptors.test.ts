@@ -320,15 +320,13 @@ describe("máscara e validação dos campos", () => {
     }
   });
 
-  it("trata par de datas como intervalo", () => {
+  it("convênio pede só o início da vigência; o fim é calculado", () => {
     const campos = camposDoTemplate("tpl-convenio-estagio");
 
     expect(campos.find((campo) => campo.id === "inicioVigencia")?.validacao).toContain(
       "intervalo_datas",
     );
-    expect(campos.find((campo) => campo.id === "fimVigencia")?.validacao).toContain(
-      "intervalo_datas",
-    );
+    expect(campos.find((campo) => campo.id === "fimVigencia")).toBeUndefined();
   });
 
   it("mascara entrada e saída da grade de horas", () => {

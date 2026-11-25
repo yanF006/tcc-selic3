@@ -95,9 +95,7 @@ export function descritorCadastroConvenio(): DescriptorDocumento {
           secao.id === "vigencia"
             ? "O convênio vale por 5 anos a partir do início da vigência."
             : secao.descricao,
-        campos: secao.campos.filter(
-          (campo) => campo.id !== "fimVigencia" && campo.id !== "renovacoes",
-        ),
+        campos: secao.campos.filter((campo) => campo.id !== "renovacoes"),
       })),
   };
 }
