@@ -106,7 +106,7 @@ export default async function Page({ searchParams }: PageProps<"/coordenacao/est
         }))}
         dadosFluxo={dadosFluxo}
         exclusoesPendentes={exclusoesPendentes}
-        podeExcluir={usuario.papel === "administrador" || usuario.papel === "coordenador_curso"}
+        podeExcluir={usuario.papel !== "aluno"}
       />
     </PaginaArea>
   );

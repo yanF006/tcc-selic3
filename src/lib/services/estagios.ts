@@ -571,7 +571,7 @@ export async function excluirEstagio(estagioId: string, aluno: Usuario) {
   }
   const autor = aluno;
   const estagio = await exigirAcessoEstagio(autor, estagioId);
-  if (autor.id !== estagio.alunoId && autor.papel !== "administrador" && autor.papel !== "coordenador_curso")
+  if (autor.id !== estagio.alunoId && autor.papel === "aluno")
     throw new ErroDeRegra("Exclusão indisponível para este usuário.", "acesso_negado");
   if (estagio.excluidoEm) return estagio;
   aluno = obterEstado().usuarios.find((usuario) => usuario.id === estagio.alunoId) ?? autor;
@@ -595,6 +595,14 @@ export async function excluirEstagio(estagioId: string, aluno: Usuario) {
       (envio.destinatarioPapel === "aluno" || envio.destinatarioEmail === aluno.email)
     )
       envio.destinatarioEmail = "";
+  }
+  if (autor.id !== estagio.alunoId) {
+    for (const pedido of obterEstado().exclusoes.filter(
+      (item) => item.estagioId === estagioId && item.situacao === "pendente",
+    )) {
+      pedido.situacao = "autorizado";
+      pedido.decididoEm = estagio.excluidoEm;
+    }
   }
   return estagio;
 }
@@ -654,6 +662,63 @@ export async function exclusaoPendenteDoEstagio(estagioId: string): Promise<bool
   return obterEstado().exclusoes.some(
     (solicitacao) => solicitacao.estagioId === estagioId && solicitacao.situacao === "pendente",
   );
+}
+
+export type { PedidoExclusaoPendente } from "./exclusao-estagio-persistentes";
+
+/** Pedidos de exclusão pendentes visíveis ao usuário de gestão. */
+export async function listarExclusoesPendentes(
+  usuario: Usuario,
+): Promise<import("./exclusao-estagio-persistentes").PedidoExclusaoPendente[]> {
+  if (bancoConfigurado()) {
+    const { listarExclusoesPendentesPersistente } = await import("./exclusao-estagio-persistentes");
+    return listarExclusoesPendentesPersistente(usuario);
+  }
+  const estado = obterEstado();
+  const pedidos = [];
+  for (const pedido of estado.exclusoes.filter((item) => item.situacao === "pendente")) {
+    const estagio = await estagioPorId(pedido.estagioId);
+    if (!estagio || !(await podeConsultarEstagio(usuario, estagio))) continue;
+    pedidos.push({
+      id: pedido.id,
+      estagioId: pedido.estagioId,
+      nomeAluno:
+        estagio.nomeAlunoHistorico ??
+        estado.usuarios.find((registro) => registro.id === estagio.alunoId)?.nome ??
+        "Aluno",
+      nomeSolicitante:
+        estado.usuarios.find((registro) => registro.id === pedido.solicitanteId)?.nome ?? "—",
+      motivo: pedido.motivo,
+      criadoEm: pedido.criadoEm,
+    });
+  }
+  return pedidos;
+}
+
+/** Autoriza (exclui o estágio) ou recusa (preserva o estágio) um pedido pendente. */
+export async function decidirExclusaoEstagio(
+  solicitacaoId: string,
+  autor: Usuario,
+  autorizar: boolean,
+): Promise<void> {
+  if (autor.papel === "aluno")
+    throw new ErroDeRegra("Decisão indisponível para este usuário.", "acesso_negado");
+  const pendentes = await listarExclusoesPendentes(autor);
+  const pedido = pendentes.find((item) => item.id === solicitacaoId);
+  if (!pedido) throw new ErroDeRegra("Solicitação não encontrada ou já decidida.", "acesso_negado");
+  if (autorizar) {
+    await excluirEstagio(pedido.estagioId, autor);
+    return;
+  }
+  if (bancoConfigurado()) {
+    const { recusarExclusaoPersistente } = await import("./exclusao-estagio-persistentes");
+    return recusarExclusaoPersistente(solicitacaoId, autor);
+  }
+  const registro = obterEstado().exclusoes.find((item) => item.id === solicitacaoId);
+  if (registro) {
+    registro.situacao = "recusado";
+    registro.decididoEm = agora();
+  }
 }
 
 export async function estagiosDoCurso(cursoId: string): Promise<Estagio[]> {

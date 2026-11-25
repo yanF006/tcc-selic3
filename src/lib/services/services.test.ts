@@ -34,6 +34,8 @@ import {
   lancamentosDoEstagio,
   removerDocumentoEstagio,
   solicitarExclusaoEstagio,
+  listarExclusoesPendentes,
+  decidirExclusaoEstagio,
 } from "./estagios";
 import { corrigirLancamento, horasDaSemana, lancarHoras, resumoDaSemana } from "./lancamentos";
 import { entrar, membroComissaoEstagio, sair, temPapel, usuarioAtual } from "./sessao";
@@ -729,6 +731,42 @@ describe("documentos", () => {
     expect(solicitacao.situacao).toBe("pendente");
     expect(solicitacao.motivo).toBe("Mudança de empresa");
     expect(obterEstado().exclusoes).toContain(solicitacao);
+  });
+
+  it("administrador autoriza ou recusa pedidos de exclusão pendentes", async () => {
+    const aluno = await login("maria.souza@aluno.ifrj.edu.br");
+    const dados = {
+      convenioId: "conv-ti-pinheiral",
+      supervisorId: "sup-ricardo",
+      orientadorId: "ori-carla",
+      dataInicio: "2026-09-01",
+      dataFim: "2027-02-28",
+    };
+    const primeiro = await criarEstagio(aluno, dados);
+    const segundo = await criarEstagio(aluno, {
+      ...dados,
+      dataInicio: "2027-03-01",
+      dataFim: "2027-07-31",
+    });
+    const pedidoA = await solicitarExclusaoEstagio(primeiro.id, aluno.id, "Desistência");
+    const pedidoB = await solicitarExclusaoEstagio(segundo.id, aluno.id, "Duplicado");
+    const admin = obterEstado().usuarios.find((u) => u.id === "usr-admin") as Usuario;
+
+    const pendentes = await listarExclusoesPendentes(admin);
+    expect(pendentes.map((p) => p.id)).toEqual(expect.arrayContaining([pedidoA.id, pedidoB.id]));
+    expect(pendentes.find((p) => p.id === pedidoA.id)?.nomeAluno).toBe(aluno.nome);
+
+    await decidirExclusaoEstagio(pedidoA.id, admin, true);
+    await decidirExclusaoEstagio(pedidoB.id, admin, false);
+
+    expect(obterEstado().estagios.find((e) => e.id === primeiro.id)?.excluidoEm).toBeTruthy();
+    expect(obterEstado().estagios.find((e) => e.id === primeiro.id)?.nomeAlunoHistorico).toBe(aluno.nome);
+    expect(obterEstado().estagios.find((e) => e.id === segundo.id)?.excluidoEm).toBeFalsy();
+    expect(pedidoA.situacao).toBe("autorizado");
+    expect(pedidoB.situacao).toBe("recusado");
+    expect(await listarExclusoesPendentes(admin)).toHaveLength(0);
+    await expect(decidirExclusaoEstagio(pedidoB.id, admin, true)).rejects.toThrow();
+    await expect(decidirExclusaoEstagio(pedidoA.id, aluno, true)).rejects.toThrow();
   });
 
   it("restringe estágios ao curso do aluno", async () => {
