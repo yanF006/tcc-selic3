@@ -79,6 +79,7 @@ cp .env.example .env   # preencha DATABASE_URL e SELIC_PERSISTENCIA
 npm run db:generate    # gera o cliente em src/generated/prisma
 npm run db:deploy      # aplica as migrações versionadas (nunca db:push em produção)
 npm run db:carga-inicial   # cria só o primeiro administrador (SELIC_ADMIN_EMAIL/NOME)
+npm run db:restaurar-admin # devolve o cargo de administrador à conta de SELIC_ADMIN_EMAIL
 ```
 
 Cada conta tem um único cargo (`papel`): aluno, coordenador de curso, coordenador de
